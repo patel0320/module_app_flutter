@@ -1,0 +1,64 @@
+name: module_app_flutter
+description: "Cross-platform app for monitoring and controlling automation relays and lighting dimming modules."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Local storage
+  shared_preferences: ^2.3.3
+  path_provider: ^2.1.5
+  drift: ^2.24.1
+  sqlite3_flutter_libs: ^0.5.24
+  flutter_secure_storage: ^9.2.2
+
+  # Networking
+  async: ^2.11.0
+  dio: ^5.7.0
+  http: ^1.2.2
+  mqtt_client: ^10.0.0
+  multicast_dns: ^0.3.2
+
+  # Cloud backend
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.3
+  cloud_firestore: ^5.5.0
+
+  # Push notifications
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^17.2.4
+
+  # Localization
+  intl: any
+
+  # Config
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  riverpod_generator: ">=2.6.1 <2.6.4"
+  custom_lint: ^0.7.0
+  riverpod_lint: ">=2.6.2 <2.6.4"
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  generate: true
