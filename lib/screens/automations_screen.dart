@@ -69,7 +69,7 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
         heroTag: null,
         onPressed: _create,
         icon: const Icon(Icons.add),
-        label: const Text('New automation'),
+        label: const Text('New automation', style: AppTheme.fabLabelStyle),
       ),
     );
   }

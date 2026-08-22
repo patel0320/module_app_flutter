@@ -85,7 +85,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
         heroTag: null,
         onPressed: _addRoom,
         icon: const Icon(Icons.add),
-        label: const Text('Add room'),
+        label: const Text('Add room', style: AppTheme.fabLabelStyle),
       ),
     );
   }

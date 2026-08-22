@@ -1,27 +1,26 @@
 // lib/theme/app_theme.dart
 //
-// Centralized colors and ThemeData for the whole app (Material 3).
-// Design language: minimalist, high-contrast, black & white, with a
-// disciplined accent palette:
+// Centralized ThemeData for the whole app (Material 3), driven by the
+// SmartHome multi-theme palette system in theme_palettes.dart. The active
+// palette (aurora/cyberpunk/nordic/retrowave/terminal/stealth) picks the
+// primary/secondary/tertiary/background/text tokens, so every screen
+// following Theme.of(context) re-skins when the theme switcher changes.
+//
+// A disciplined semantic rule is kept stable across every palette:
 //   - green (#00A651) is reserved for "online" connectivity status only
 //   - red   (#D32F2F) is reserved for "offline" / alert states only
-// ON/OFF and active/inactive control states are communicated with
-// fill-vs-outline contrast (solid black = active, outlined = inactive)
-// rather than color, so they never collide with the online/offline meaning.
+// Control ON/OFF states still use fill-vs-outline contrast so they never
+// collide with the online/offline meaning.
 import 'package:flutter/material.dart';
 
-/// App-wide flat color palette, exactly as specified in the design brief.
+import 'theme_palettes.dart';
+
+/// App-wide semantic colors. Green/red are reserved for connectivity
+/// (online / offline-alert) and never change with the multi-theme, so their
+/// meaning stays stable across every palette.
 abstract class AppColors {
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF000000);
-  static const Color darkGray = Color(0xFF333333);
   static const Color online = Color(0xFF00A651);
   static const Color offlineAlert = Color(0xFFD32F2F);
-
-  // Supporting neutrals for dark mode surfaces / subtle fills.
-  static const Color darkSurface = Color(0xFF1A1A1A);
-  static const Color darkSurfaceAlt = Color(0xFF242424);
-  static const Color lightSurfaceAlt = Color(0xFFF3F3F3);
 }
 
 /// Global theme-mode holder. Kept as a plain [ValueNotifier] (no
@@ -30,29 +29,52 @@ abstract class AppColors {
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 abstract class AppTheme {
-  static ThemeData get light => _build(Brightness.light);
-  static ThemeData get dark => _build(Brightness.dark);
+  /// Shared label style for extended [FloatingActionButton]s, kept here so all
+  /// screens use one consistent bold label.
+  static const TextStyle fabLabelStyle =
+      TextStyle(fontWeight: FontWeight.w700, fontSize: 15);
 
-  static ThemeData _build(Brightness brightness) {
+  /// Global theme for the currently selected SmartHome palette + brightness.
+  static ThemeData get light => _forPalette(Brightness.light);
+  static ThemeData get dark => _forPalette(Brightness.dark);
+
+  /// Global theme for an explicit palette + brightness (used so [MaterialApp]
+  /// rebuilds when the multi-theme switcher changes the active palette).
+  static ThemeData lightFor(HomeThemeId id) => _forPalette(Brightness.light, id);
+  static ThemeData darkFor(HomeThemeId id) => _forPalette(Brightness.dark, id);
+
+  static ThemeData _forPalette(Brightness brightness, [HomeThemeId? id]) {
     final bool isLight = brightness == Brightness.light;
-    final Color onSurface = isLight ? AppColors.black : AppColors.white;
-    final Color background = isLight ? AppColors.white : AppColors.black;
-    final Color surface = isLight ? AppColors.white : AppColors.darkSurface;
+    final HomePalette p = HomeThemePalettes.byId(id ?? homeThemeIdNotifier.value);
+    final Color onSurface = isLight ? p.lightText : p.text;
+    final Color background = isLight
+        ? p.lightBackgroundGradient.colors.first
+        : p.backgroundGradient.colors.first;
+    final Color primary = isLight ? p.lightPrimary : p.primary;
+    final Color secondary = isLight ? p.lightBlue : p.accentBlue;
+    final Color tertiary = isLight ? p.lightViolet : p.accentViolet;
 
     final ColorScheme colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.darkGray,
+      seedColor: primary,
       brightness: brightness,
     ).copyWith(
-      primary: onSurface,
-      onPrimary: background,
-      secondary: AppColors.darkGray,
-      onSecondary: AppColors.white,
-      surface: surface,
+      primary: primary,
+      secondary: secondary,
+      tertiary: tertiary,
+      surface: background,
       onSurface: onSurface,
-      error: AppColors.offlineAlert,
-      onError: AppColors.white,
+      error: p.danger,
+      onError: isLight ? Colors.white : Colors.black,
       outline: onSurface.withOpacity(0.24),
     );
+    final Color surfaceAlt =
+        isLight ? Colors.black.withOpacity(0.05) : Colors.white.withOpacity(0.06);
+    // Frosted "glass" fill for cards, translucent over the palette base so
+    // panels read as subtle glass surfaces.
+    final Color glass =
+        isLight ? Colors.white.withOpacity(0.62) : Colors.white.withOpacity(0.07);
+    final Color accent = colorScheme.primary;
+    final Color onAccent = colorScheme.onPrimary;
 
     final ThemeData base = ThemeData(useMaterial3: true, brightness: brightness, colorScheme: colorScheme);
     final TextTheme textTheme = base.textTheme.apply(
@@ -61,6 +83,7 @@ abstract class AppTheme {
     );
 
     return base.copyWith(
+      // Solid palette base as the app background (no external backdrop).
       scaffoldBackgroundColor: background,
       textTheme: textTheme,
       splashFactory: InkRipple.splashFactory,
@@ -74,7 +97,7 @@ abstract class AppTheme {
         iconTheme: IconThemeData(color: onSurface),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: background,
+        backgroundColor: surfaceAlt,
         surfaceTintColor: Colors.transparent,
         indicatorColor: onSurface.withOpacity(0.1),
         height: 64,
@@ -92,12 +115,17 @@ abstract class AppTheme {
         ),
       ),
       cardTheme: CardTheme(
-        color: surface,
-        elevation: 0,
+        // Glass panel (matches Home): translucent over the backdrop, soft
+        // outer shadow, hairline border, generous radius.
+        color: glass,
+        elevation: 3,
+        shadowColor: Colors.black.withOpacity(0.20),
+        surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: onSurface.withOpacity(0.12)),
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: onSurface.withOpacity(0.10)),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -108,28 +136,28 @@ abstract class AppTheme {
       dividerTheme: DividerThemeData(color: onSurface.withOpacity(0.1), space: 1),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: onSurface,
-          foregroundColor: background,
-          disabledBackgroundColor: onSurface.withOpacity(0.3),
+          backgroundColor: accent,
+          foregroundColor: onAccent,
+          disabledBackgroundColor: accent.withOpacity(0.3),
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 48),
-          foregroundColor: onSurface,
-          side: BorderSide(color: onSurface, width: 1.4),
+          foregroundColor: accent,
+          side: BorderSide(color: accent, width: 1.4),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: onSurface,
+          foregroundColor: accent,
           minimumSize: const Size(48, 48),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
@@ -137,12 +165,12 @@ abstract class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           minimumSize: const Size(48, 48),
-          foregroundColor: onSurface,
+          foregroundColor: accent,
         ),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? AppColors.online : (isLight ? AppColors.white : AppColors.darkGray),
+          (states) => states.contains(WidgetState.selected) ? AppColors.online : onSurface.withOpacity(0.6),
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected) ? AppColors.online.withOpacity(0.4) : onSurface.withOpacity(0.15),
@@ -150,43 +178,45 @@ abstract class AppTheme {
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: onSurface,
+        activeTrackColor: accent,
         inactiveTrackColor: onSurface.withOpacity(0.15),
-        thumbColor: onSurface,
-        overlayColor: onSurface.withOpacity(0.1),
-        valueIndicatorColor: onSurface,
-        valueIndicatorTextStyle: TextStyle(color: background, fontWeight: FontWeight.w700),
+        thumbColor: accent,
+        overlayColor: accent.withOpacity(0.12),
+        valueIndicatorColor: accent,
+        valueIndicatorTextStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w700),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? onSurface : Colors.transparent,
+          (states) => states.contains(WidgetState.selected) ? accent : Colors.transparent,
         ),
-        checkColor: WidgetStateProperty.all(background),
-        side: BorderSide(color: onSurface, width: 1.4),
+        checkColor: WidgetStateProperty.all(onAccent),
+        side: BorderSide(color: accent, width: 1.4),
       ),
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.all(onSurface),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? accent : onSurface.withOpacity(0.5),
+        ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: isLight ? AppColors.lightSurfaceAlt : AppColors.darkSurfaceAlt,
-        selectedColor: onSurface,
+        backgroundColor: surfaceAlt,
+        selectedColor: accent,
         labelStyle: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
-        secondaryLabelStyle: TextStyle(color: background, fontWeight: FontWeight.w600),
-        side: BorderSide(color: onSurface.withOpacity(0.12)),
+        secondaryLabelStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w600),
+        side: BorderSide(color: accent.withOpacity(0.3)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
           minimumSize: const Size(48, 48),
           foregroundColor: onSurface,
-          selectedForegroundColor: background,
-          selectedBackgroundColor: onSurface,
-          side: BorderSide(color: onSurface, width: 1.2),
+          selectedForegroundColor: onAccent,
+          selectedBackgroundColor: accent,
+          side: BorderSide(color: accent, width: 1.2),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isLight ? AppColors.lightSurfaceAlt : AppColors.darkSurfaceAlt,
+        fillColor: surfaceAlt,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -198,26 +228,29 @@ abstract class AppTheme {
         hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
       ),
       dialogTheme: DialogTheme(
-        backgroundColor: surface,
+        backgroundColor: isLight ? glass.withOpacity(0.96) : glass,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: surface,
+        backgroundColor: glass,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: onSurface,
-        contentTextStyle: TextStyle(color: background, fontWeight: FontWeight.w600),
+        backgroundColor: accent,
+        contentTextStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w600),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: onSurface,
-        foregroundColor: background,
+        backgroundColor: accent,
+        foregroundColor: onAccent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: onSurface),
     );

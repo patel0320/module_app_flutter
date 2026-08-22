@@ -101,7 +101,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
         heroTag: null,
         onPressed: _addModule,
         icon: const Icon(Icons.add),
-        label: const Text('Add module'),
+        label: const Text('Add module', style: AppTheme.fabLabelStyle),
       ),
     );
   }

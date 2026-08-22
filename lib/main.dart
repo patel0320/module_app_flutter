@@ -24,6 +24,7 @@ import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/system_status_screen.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_palettes.dart';
 
 void main() {
   runApp(const AutomationApp());
@@ -42,28 +43,33 @@ class AutomationApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeModeNotifier,
       builder: (context, mode, _) {
-        return MaterialApp(
-          title: 'Relay & Dimming Control',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: mode,
-          scrollBehavior: const AppScrollBehavior(),
-          initialRoute: '/',
-          routes: {
-            '/': (context) => const SplashScreen(),
-            '/login': (context) => const LoginScreen(),
-            '/register': (context) => const RegisterScreen(),
-            '/forgot-password': (context) => const ForgotPasswordScreen(),
-            '/root': (context) => const RootShell(),
-            '/system-status': (context) => const SystemStatusScreen(),
-            '/add-module': (context) => const AddModuleScreen(),
-            '/rooms': (context) => const RoomsScreen(),
-            '/automations': (context) => const AutomationsScreen(),
-            '/event-history': (context) => const EventHistoryScreen(),
-            '/settings/account': (context) => const AccountScreen(),
-            '/settings/notifications': (context) => const NotificationsSettingsScreen(),
-            '/settings/language': (context) => const LanguageSettingsScreen(),
+        return ValueListenableBuilder<HomeThemeId>(
+          valueListenable: homeThemeIdNotifier,
+          builder: (context, themeId, _) {
+            return MaterialApp(
+              title: 'Relay & Dimming Control',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightFor(themeId),
+              darkTheme: AppTheme.darkFor(themeId),
+              themeMode: mode,
+              scrollBehavior: const AppScrollBehavior(),
+              initialRoute: '/',
+              routes: {
+                '/': (context) => const SplashScreen(),
+                '/login': (context) => const LoginScreen(),
+                '/register': (context) => const RegisterScreen(),
+                '/forgot-password': (context) => const ForgotPasswordScreen(),
+                '/root': (context) => const RootShell(),
+                '/system-status': (context) => const SystemStatusScreen(),
+                '/add-module': (context) => const AddModuleScreen(),
+                '/rooms': (context) => const RoomsScreen(),
+                '/automations': (context) => const AutomationsScreen(),
+                '/event-history': (context) => const EventHistoryScreen(),
+                '/settings/account': (context) => const AccountScreen(),
+                '/settings/notifications': (context) => const NotificationsSettingsScreen(),
+                '/settings/language': (context) => const LanguageSettingsScreen(),
+              },
+            );
           },
         );
       },

@@ -98,7 +98,7 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
         heroTag: null,
         onPressed: _createScenario,
         icon: const Icon(Icons.add),
-        label: const Text('New scenario'),
+        label: const Text('New scenario', style: AppTheme.fabLabelStyle),
       ),
     );
   }
