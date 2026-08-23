@@ -5,7 +5,7 @@
 // add new ones (via the self-discovery / manual-IP flow on AddModuleScreen).
 import 'package:flutter/material.dart';
 
-import '../data/mock_data.dart';
+import '../data/module_repository.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -38,15 +38,42 @@ class ConfigurationScreen extends StatefulWidget {
 }
 
 class _ConfigurationScreenState extends State<ConfigurationScreen> {
-  final List<DeviceModule> _modules = mockModules();
+  ModuleRepository? _repo;
+
+  /// Backing store of the visible module list, loaded asynchronously from
+  /// local storage (see [ModuleRepository]) on the first build.
+  List<DeviceModule> _modules = [];
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final repo = await ModuleRepository.load();
+    if (!mounted) return;
+    setState(() {
+      _repo = repo;
+      // Mock data is now only used by the repository to seed an empty store;
+      // the screen reads the persisted copy so edits survive restarts.
+      _modules = repo.fetch();
+      _loaded = true;
+    });
+  }
+
+  /// Replaces the locally visible list and persists it to local storage.
+  Future<void> _commit(List<DeviceModule> modules) async {
+    setState(() => _modules = modules);
+    await _repo?.saveAll(modules);
+  }
 
   Future<void> _addModule() async {
     final DeviceModule? added = await Navigator.of(context).push<DeviceModule>(
       MaterialPageRoute(builder: (_) => const AddModuleScreen()),
     );
-    if (added != null) {
-      setState(() => _modules.add(added));
-    }
+    if (added != null) await _commit([..._modules, added]);
   }
 
   Future<void> _renameModule(DeviceModule module) async {
@@ -55,7 +82,23 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       title: 'Rename module',
       initialValue: module.name,
     );
-    if (newName != null) setState(() => module.name = newName);
+    if (newName == null) return;
+    final updated = DeviceModule(
+      id: module.id,
+      name: newName,
+      type: module.type,
+      ipAddress: module.ipAddress,
+      status: module.status,
+      roomName: module.roomName,
+      internalTempC: module.internalTempC,
+      tempMinC: module.tempMinC,
+      tempMaxC: module.tempMaxC,
+      channels: module.channels,
+      inputs: module.inputs,
+    );
+    await _commit([
+      for (final m in _modules) m.id == module.id ? updated : m,
+    ]);
   }
 
   Future<void> _removeModule(DeviceModule module) async {
@@ -65,7 +108,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       message: 'Remove "${module.name}"? This cannot be undone.',
       confirmLabel: 'Remove',
     );
-    if (confirmed) setState(() => _modules.remove(module));
+    if (!confirmed) return;
+    await _commit(_modules.where((m) => m.id != module.id).toList());
   }
 
   @override
@@ -81,9 +125,11 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
           ),
         ],
       ),
-      body: _modules.isEmpty
+      body: _loaded && _modules.isEmpty
           ? const EmptyState(icon: Icons.dns_outlined, message: 'No modules added yet.')
-          : ListView.separated(
+          : (!_loaded
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: _modules.length,
               separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.betweenCards),
@@ -96,7 +142,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                   onRemove: () => _removeModule(module),
                 );
               },
-            ),
+            )),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         onPressed: _addModule,

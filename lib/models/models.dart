@@ -106,6 +106,36 @@ class ChannelOutput {
 
   /// Dimmer brightness percentage, 0-100 (0 = OFF, 100 = fully ON).
   int brightness;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'icon': iconToJson(icon),
+        'isOn': isOn,
+        'brightness': brightness,
+      };
+
+  factory ChannelOutput.fromJson(Map<String, Object?> json) => ChannelOutput(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        icon: iconFromJson(json['icon']),
+        isOn: json['isOn'] as bool? ?? false,
+        brightness: json['brightness'] as int? ?? 0,
+      );
+}
+
+/// Encodes an [IconData] for JSON storage (glyph codepoint + optional font).
+Map<String, Object?> iconToJson(IconData icon) => {
+      'fontFamily': icon.fontFamily,
+      'codePoint': icon.codePoint,
+    };
+
+/// Rebuilds an [IconData] from the JSON produced by [iconToJson].
+IconData iconFromJson(Object? json) {
+  if (json is! Map) return Icons.power;
+  final codePoint = (json['codePoint'] as num?)?.toInt() ?? Icons.power.codePoint;
+  final family = json['fontFamily'] as String?;
+  return IconData(codePoint, fontFamily: family);
 }
 
 /// A physical switch wired to a module (brief section 2.2).
@@ -121,6 +151,20 @@ class PhysicalInput {
   final String label;
   InputMode mode;
   String boundTo;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'label': label,
+        'mode': mode.name,
+        'boundTo': boundTo,
+      };
+
+  factory PhysicalInput.fromJson(Map<String, Object?> json) => PhysicalInput(
+        id: json['id'] as String,
+        label: json['label'] as String,
+        mode: InputMode.values.byName(json['mode'] as String),
+        boundTo: json['boundTo'] as String? ?? 'Not assigned',
+      );
 }
 
 /// A hardware module added to the system (brief section 2.1).
@@ -158,6 +202,40 @@ class DeviceModule {
 
   bool get isOverTemperature =>
       internalTempC > tempMaxC || internalTempC < tempMinC;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'type': type.name,
+        'ipAddress': ipAddress,
+        'status': status.name,
+        'roomName': roomName,
+        'internalTempC': internalTempC,
+        'tempMinC': tempMinC,
+        'tempMaxC': tempMaxC,
+        'channels': channels.map((c) => c.toJson()).toList(),
+        'inputs': inputs.map((i) => i.toJson()).toList(),
+      };
+
+  factory DeviceModule.fromJson(Map<String, Object?> json) => DeviceModule(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        type: ModuleType.values.byName(json['type'] as String),
+        ipAddress: json['ipAddress'] as String,
+        status: ConnectionStatus.values.byName(json['status'] as String),
+        roomName: json['roomName'] as String? ?? 'Unassigned',
+        internalTempC: (json['internalTempC'] as num?)?.toDouble() ?? 0,
+        tempMinC: (json['tempMinC'] as num?)?.toDouble() ?? 0,
+        tempMaxC: (json['tempMaxC'] as num?)?.toDouble() ?? 60,
+        channels: [
+          for (final c in json['channels'] as List? ?? const [])
+            ChannelOutput.fromJson((c as Map).cast<String, Object?>()),
+        ],
+        inputs: [
+          for (final i in json['inputs'] as List? ?? const [])
+            PhysicalInput.fromJson((i as Map).cast<String, Object?>()),
+        ],
+      );
 }
 
 /// A single command executed by a scenario or automation.

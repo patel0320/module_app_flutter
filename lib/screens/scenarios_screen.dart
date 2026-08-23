@@ -24,10 +24,12 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
 
   void _runScenario(Scenario scenario) {
     if (scenario.type == ScenarioType.manualSlider) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ManualDimmingSliderScreen(scenario: scenario)));
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ManualDimmingSliderScreen(scenario: scenario)));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Running "${scenario.name}"...')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Running "${scenario.name}"...')));
   }
 
   Future<void> _createScenario() async {
@@ -39,7 +41,8 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
 
   Future<void> _editScenario(Scenario scenario) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ScenarioEditorScreen(scenario: scenario)),
+      MaterialPageRoute(
+          builder: (_) => ScenarioEditorScreen(scenario: scenario)),
     );
     setState(() {});
   }
@@ -78,11 +81,14 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
         ],
       ),
       body: _scenarios.isEmpty
-          ? const EmptyState(icon: Icons.auto_awesome_outlined, message: 'No scenarios yet. Create your first one.')
+          ? const EmptyState(
+              icon: Icons.auto_awesome_outlined,
+              message: 'No scenarios yet. Create your first one.')
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: _scenarios.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.betweenCards),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.betweenCards),
               itemBuilder: (context, index) {
                 final scenario = _scenarios[index];
                 return _ScenarioCard(
@@ -90,7 +96,8 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
                   onRun: () => _runScenario(scenario),
                   onEdit: () => _editScenario(scenario),
                   onDelete: () => _deleteScenario(scenario),
-                  onShowInHomeChanged: (v) => setState(() => scenario.showInHome = v),
+                  onShowInHomeChanged: (v) =>
+                      setState(() => scenario.showInHome = v),
                 );
               },
             ),
@@ -140,7 +147,9 @@ class _ScenarioCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(scenario.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(scenario.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -148,9 +157,13 @@ class _ScenarioCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                isSlider ? 'Manual dimming slider' : '${scenario.actions.length} action(s)',
+                                isSlider
+                                    ? 'Manual dimming slider'
+                                    : '${scenario.actions.length} action(s)',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55)),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: onSurface.withOpacity(0.55)),
                               ),
                             ),
                           ],
@@ -159,7 +172,10 @@ class _ScenarioCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  IconButton.filled(onPressed: onRun, icon: Icon(isSlider ? Icons.open_in_full : Icons.play_arrow)),
+                  IconButton.outlined(
+                      onPressed: onRun,
+                      icon: Icon(
+                          isSlider ? Icons.open_in_full : Icons.play_arrow)),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'delete') onDelete();
@@ -174,8 +190,11 @@ class _ScenarioCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Show on Home', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Switch(value: scenario.showInHome, onChanged: onShowInHomeChanged),
+                  const Text('Show on Home',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Switch(
+                      value: scenario.showInHome,
+                      onChanged: onShowInHomeChanged),
                 ],
               ),
             ],

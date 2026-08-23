@@ -26,7 +26,8 @@ abstract class AppColors {
 /// Global theme-mode holder. Kept as a plain [ValueNotifier] (no
 /// third-party state management) so the Settings screen can flip
 /// Light / Dark / System instantly from anywhere in the widget tree.
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+final ValueNotifier<ThemeMode> themeModeNotifier =
+    ValueNotifier<ThemeMode>(ThemeMode.light);
 
 abstract class AppTheme {
   /// Shared label style for extended [FloatingActionButton]s, kept here so all
@@ -40,12 +41,14 @@ abstract class AppTheme {
 
   /// Global theme for an explicit palette + brightness (used so [MaterialApp]
   /// rebuilds when the multi-theme switcher changes the active palette).
-  static ThemeData lightFor(HomeThemeId id) => _forPalette(Brightness.light, id);
+  static ThemeData lightFor(HomeThemeId id) =>
+      _forPalette(Brightness.light, id);
   static ThemeData darkFor(HomeThemeId id) => _forPalette(Brightness.dark, id);
 
   static ThemeData _forPalette(Brightness brightness, [HomeThemeId? id]) {
     final bool isLight = brightness == Brightness.light;
-    final HomePalette p = HomeThemePalettes.byId(id ?? homeThemeIdNotifier.value);
+    final HomePalette p =
+        HomeThemePalettes.byId(id ?? homeThemeIdNotifier.value);
     final Color onSurface = isLight ? p.lightText : p.text;
     final Color background = isLight
         ? p.lightBackgroundGradient.colors.first
@@ -67,16 +70,19 @@ abstract class AppTheme {
       onError: isLight ? Colors.white : Colors.black,
       outline: onSurface.withOpacity(0.24),
     );
-    final Color surfaceAlt =
-        isLight ? Colors.black.withOpacity(0.05) : Colors.white.withOpacity(0.06);
+    final Color surfaceAlt = isLight
+        ? Colors.black.withOpacity(0.05)
+        : Colors.white.withOpacity(0.06);
     // Frosted "glass" fill for cards, translucent over the palette base so
     // panels read as subtle glass surfaces.
-    final Color glass =
-        isLight ? Colors.white.withOpacity(0.62) : Colors.white.withOpacity(0.07);
+    final Color glass = isLight
+        ? Colors.white.withOpacity(0.62)
+        : Colors.white.withOpacity(0.07);
     final Color accent = colorScheme.primary;
     final Color onAccent = colorScheme.onPrimary;
 
-    final ThemeData base = ThemeData(useMaterial3: true, brightness: brightness, colorScheme: colorScheme);
+    final ThemeData base = ThemeData(
+        useMaterial3: true, brightness: brightness, colorScheme: colorScheme);
     final TextTheme textTheme = base.textTheme.apply(
       bodyColor: onSurface,
       displayColor: onSurface,
@@ -93,7 +99,8 @@ abstract class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 22),
+        titleTextStyle: textTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.w700, fontSize: 22),
         iconTheme: IconThemeData(color: onSurface),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -104,13 +111,16 @@ abstract class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
             color: onSurface,
           ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
-            color: onSurface.withOpacity(states.contains(WidgetState.selected) ? 1 : 0.5),
+            color: onSurface
+                .withOpacity(states.contains(WidgetState.selected) ? 1 : 0.5),
           ),
         ),
       ),
@@ -133,7 +143,8 @@ abstract class AppTheme {
         textColor: onSurface,
         minVerticalPadding: 12,
       ),
-      dividerTheme: DividerThemeData(color: onSurface.withOpacity(0.1), space: 1),
+      dividerTheme:
+          DividerThemeData(color: onSurface.withOpacity(0.1), space: 1),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: accent,
@@ -141,7 +152,8 @@ abstract class AppTheme {
           disabledBackgroundColor: accent.withOpacity(0.3),
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
@@ -151,7 +163,8 @@ abstract class AppTheme {
           foregroundColor: accent,
           side: BorderSide(color: accent, width: 1.4),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
@@ -170,10 +183,14 @@ abstract class AppTheme {
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? AppColors.online : onSurface.withOpacity(0.6),
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.online
+              : onSurface.withOpacity(0.6),
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? AppColors.online.withOpacity(0.4) : onSurface.withOpacity(0.15),
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.online.withOpacity(0.4)
+              : onSurface.withOpacity(0.15),
         ),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
@@ -183,25 +200,31 @@ abstract class AppTheme {
         thumbColor: accent,
         overlayColor: accent.withOpacity(0.12),
         valueIndicatorColor: accent,
-        valueIndicatorTextStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w700),
+        valueIndicatorTextStyle:
+            TextStyle(color: onAccent, fontWeight: FontWeight.w700),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? accent : Colors.transparent,
+          (states) => states.contains(WidgetState.selected)
+              ? accent
+              : Colors.transparent,
         ),
         checkColor: WidgetStateProperty.all(onAccent),
         side: BorderSide(color: accent, width: 1.4),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? accent : onSurface.withOpacity(0.5),
+          (states) => states.contains(WidgetState.selected)
+              ? accent
+              : onSurface.withOpacity(0.5),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surfaceAlt,
         selectedColor: accent,
         labelStyle: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
-        secondaryLabelStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w600),
+        secondaryLabelStyle:
+            TextStyle(color: onAccent, fontWeight: FontWeight.w600),
         side: BorderSide(color: accent.withOpacity(0.3)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
@@ -217,9 +240,14 @@ abstract class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceAlt,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: onSurface, width: 1.6),
@@ -233,7 +261,9 @@ abstract class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: glass,
+        backgroundColor: isLight
+            ? Colors.white.withOpacity(0.9)
+            : Colors.black.withOpacity(0.9), //glass,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -241,7 +271,8 @@ abstract class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: accent,
-        contentTextStyle: TextStyle(color: onAccent, fontWeight: FontWeight.w600),
+        contentTextStyle:
+            TextStyle(color: onAccent, fontWeight: FontWeight.w600),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),

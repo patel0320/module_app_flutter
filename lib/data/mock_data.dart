@@ -129,37 +129,6 @@ List<DeviceModule> mockModules() => [
       ),
     ];
 
-/// Modules that can be "discovered" on the network by the Add Module screen
-/// (self-discovery broadcast simulation - brief section 2.1).
-List<DeviceModule> mockDiscoveredModules() => [
-      DeviceModule(
-        id: 'd1',
-        name: 'Unnamed Relay 8CH',
-        type: ModuleType.relay,
-        ipAddress: '192.168.1.110',
-        status: ConnectionStatus.online,
-        roomName: 'Unassigned',
-        internalTempC: 27,
-        channels: List.generate(
-          8,
-          (i) => ChannelOutput(id: 'd1c$i', name: 'Output ${i + 1}', icon: Icons.power),
-        ),
-      ),
-      DeviceModule(
-        id: 'd2',
-        name: 'Unnamed AC Dimmer',
-        type: ModuleType.dimmerAc,
-        ipAddress: '192.168.1.111',
-        status: ConnectionStatus.online,
-        roomName: 'Unassigned',
-        internalTempC: 30,
-        channels: List.generate(
-          4,
-          (i) => ChannelOutput(id: 'd2c$i', name: 'Channel ${i + 1}', icon: Icons.tune),
-        ),
-      ),
-    ];
-
 /// Tap-to-run scenarios and the manual dimming slider - brief section 2.4.
 List<Scenario> mockScenarios() => [
       Scenario(
