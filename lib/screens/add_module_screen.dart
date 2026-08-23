@@ -28,6 +28,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
 
   final _nameController = TextEditingController();
   final _ipController = TextEditingController();
+  final _tcpPortController = TextEditingController(text: '5005');
   ModuleType _manualType = ModuleType.relay;
 
   @override
@@ -41,6 +42,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   void dispose() {
     _nameController.dispose();
     _ipController.dispose();
+    _tcpPortController.dispose();
     super.dispose();
   }
 
@@ -101,6 +103,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       name: discovered.name.isNotEmpty ? discovered.name : 'Unnamed Relay',
       type: ModuleType.relay,
       ipAddress: discovered.ip,
+      tcpPort: discovered.tcpPort,
       status: ConnectionStatus.online,
       roomName: 'Unassigned',
       internalTempC: 25,
@@ -126,6 +129,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
           : _nameController.text.trim(),
       type: _manualType,
       ipAddress: _ipController.text.trim(),
+      tcpPort: int.tryParse(_tcpPortController.text.trim()) ?? 5005,
       status: ConnectionStatus.online,
       roomName: 'Unassigned',
       internalTempC: 25,
@@ -221,6 +225,15 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                 labelText: 'IP address',
                 hintText: '192.168.1.120',
                 prefixIcon: Icon(Icons.lan_outlined)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _tcpPortController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+                labelText: 'TCP port',
+                hintText: '5005',
+                prefixIcon: Icon(Icons.router_outlined)),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ModuleType>(

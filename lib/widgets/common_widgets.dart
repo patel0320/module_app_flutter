@@ -235,6 +235,66 @@ Future<String?> showTextInputDialog(
   return (result == null || result.isEmpty) ? null : result;
 }
 
+/// Dialog editing a module's identity (name, IP address, TCP port) in place.
+/// Returns true when the user saved; the passed [module] is updated directly.
+Future<bool> showEditModuleInfoDialog(BuildContext context, DeviceModule module) async {
+  final nameController = TextEditingController(text: module.name);
+  final ipController = TextEditingController(text: module.ipAddress);
+  final portController = TextEditingController(text: module.tcpPort.toString());
+
+  final bool? saved = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Edit module info'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+                labelText: 'Module name', prefixIcon: Icon(Icons.edit_outlined)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ipController,
+            decoration: const InputDecoration(
+                labelText: 'IP address', prefixIcon: Icon(Icons.lan_outlined)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: portController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+                labelText: 'TCP port', prefixIcon: Icon(Icons.router_outlined)),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+
+  final String name = nameController.text.trim();
+  final String ip = ipController.text.trim();
+  final int? port = int.tryParse(portController.text.trim());
+  nameController.dispose();
+  ipController.dispose();
+  portController.dispose();
+
+  if (saved == true) {
+    if (name.isNotEmpty) module.name = name;
+    if (ip.isNotEmpty) module.ipAddress = ip;
+    if (port != null) module.tcpPort = port;
+  }
+  return saved == true;
+}
+
 /// Compact status header (online/offline + IP/room + internal temperature)
 /// reused at the top of every module detail / control screen.
 class ModuleStatusHeader extends StatelessWidget {

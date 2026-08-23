@@ -30,19 +30,24 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: onSurface,
-                borderRadius: BorderRadius.circular(24),
+            Image.asset(
+              'assets/images/logo.png',
+              width: 300,
+              height: 92,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.power,
+                size: 92,
+                color: Colors.white,
               ),
-              child: Icon(Icons.bolt, color: Theme.of(context).colorScheme.surface, size: 52),
             ),
             const SizedBox(height: 24),
             Text(
               'RelayControl',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
@@ -53,7 +58,8 @@ class _SplashScreenState extends State<SplashScreen> {
             SizedBox(
               width: 28,
               height: 28,
-              child: CircularProgressIndicator(strokeWidth: 2.6, color: onSurface.withOpacity(0.4)),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2.6, color: onSurface.withOpacity(0.4)),
             ),
           ],
         ),

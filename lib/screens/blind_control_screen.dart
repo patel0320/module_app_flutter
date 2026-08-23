@@ -33,11 +33,19 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
     });
   }
 
+  Future<void> _editModuleInfo() async {
+    final saved = await showEditModuleInfoDialog(context, widget.module);
+    if (saved) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final module = widget.module;
     return Scaffold(
-      appBar: AppBar(title: Text(module.name)),
+      appBar: AppBar(
+        title: Text(module.name),
+        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [

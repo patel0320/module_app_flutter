@@ -35,9 +35,9 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
     setState(() {});
   }
 
-  Future<void> _renameModule() async {
-    final String? newName = await showTextInputDialog(context, title: 'Rename module', initialValue: widget.module.name);
-    if (newName != null) setState(() => widget.module.name = newName);
+  Future<void> _editModuleInfo() async {
+    final saved = await showEditModuleInfoDialog(context, widget.module);
+    if (saved) setState(() {});
   }
 
   @override
@@ -46,7 +46,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
-        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _renameModule)],
+        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),

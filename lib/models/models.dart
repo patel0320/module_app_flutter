@@ -177,17 +177,26 @@ class DeviceModule {
     required this.status,
     required this.roomName,
     required this.internalTempC,
+    int tcpPort = 5005,
     this.tempMinC = 0,
     this.tempMaxC = 60,
     List<ChannelOutput>? channels,
     List<PhysicalInput>? inputs,
-  })  : channels = channels ?? <ChannelOutput>[],
+  })  : _tcpPort = tcpPort,
+        channels = channels ?? <ChannelOutput>[],
         inputs = inputs ?? <PhysicalInput>[];
 
   final String id;
   String name;
   final ModuleType type;
-  final String ipAddress;
+  String ipAddress;
+
+  /// TCP port the module listens on (default 5005). Backed by a nullable
+  /// field so legacy persisted JSON (or any null) degrades to the default.
+  int? _tcpPort;
+  int get tcpPort => _tcpPort ?? 5005;
+  set tcpPort(int value) => _tcpPort = value;
+
   ConnectionStatus status;
   String roomName;
 
@@ -208,6 +217,7 @@ class DeviceModule {
         'name': name,
         'type': type.name,
         'ipAddress': ipAddress,
+        'tcpPort': tcpPort,
         'status': status.name,
         'roomName': roomName,
         'internalTempC': internalTempC,
@@ -222,6 +232,7 @@ class DeviceModule {
         name: json['name'] as String,
         type: ModuleType.values.byName(json['type'] as String),
         ipAddress: json['ipAddress'] as String,
+        tcpPort: (json['tcpPort'] as num?)?.toInt() ?? 5005,
         status: ConnectionStatus.values.byName(json['status'] as String),
         roomName: json['roomName'] as String? ?? 'Unassigned',
         internalTempC: (json['internalTempC'] as num?)?.toDouble() ?? 0,
