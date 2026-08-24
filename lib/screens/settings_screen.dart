@@ -5,11 +5,29 @@
 // ready even though v1 manages a single location (brief section 4.2).
 import 'package:flutter/material.dart';
 
+import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _clearEventHistory(BuildContext context) async {
+    final bool confirmed = await showConfirmDialog(
+      context,
+      title: 'Clear event history',
+      message: 'This will permanently delete all recorded events.',
+      confirmLabel: 'Clear',
+    );
+    if (confirmed) {
+      await EventLogStore.shared.clear();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event history cleared')),
+        );
+      }
+    }
+  }
 
   Future<void> _signOut(BuildContext context) async {
     final bool confirmed = await showConfirmDialog(
@@ -63,6 +81,13 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: const Text('English'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).pushNamed('/settings/language'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.history_outlined),
+                  title: const Text('Clear event history'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _clearEventHistory(context),
                 ),
                 const Divider(height: 1),
                 Padding(

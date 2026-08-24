@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:module_app_flutter/models/models.dart';
 import 'package:module_app_flutter/services/event_log_store.dart';
+import 'package:module_app_flutter/services/scenario_runner.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +62,31 @@ void main() {
           reason: 'Within-window entries must survive');
       expect(store.entries.any((e) => e.title == 'Ancient'), isFalse,
           reason: 'Entries older than 30 days must be pruned');
+    });
+
+    test('records per-action scenario traces with success/failure', () async {
+      final store = EventLogStore.forTesting();
+      await store.init();
+
+      await store.recordScenarioResult(const ScenarioRunResult(
+        scenarioName: 'Departure',
+        actions: [
+          ScenarioActionResult(
+            description: 'Cabin Light -> ON',
+            success: true,
+            detail: 'ACK',
+          ),
+          ScenarioActionResult(
+            description: 'Deck Floodlight -> ON',
+            success: false,
+            detail: 'not connected',
+          ),
+        ],
+      ));
+
+      expect(store.entries.first.title, contains('Failed: Deck Floodlight'));
+      expect(store.entries.first.subtitle, contains('Scenario: Departure'));
+      expect(store.entries[1].title, contains('Success: Cabin Light'));
     });
 
     test('clears the whole history', () async {

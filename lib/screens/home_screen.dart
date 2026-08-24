@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/event_log_store.dart';
 import '../services/module_status/module_status_service.dart';
+import '../services/scenario_runner.dart';
 import '../services/module_store.dart';
 import '../services/room_store.dart';
 import '../services/scenario_store.dart';
@@ -86,9 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
     ScenarioStore.shared.move(dragged.id, target);
   }
 
-  void _runScenario(Scenario scenario) {
-    EventLogStore.shared.recordScenario(scenarioName: scenario.name);
+  Future<void> _runScenario(Scenario scenario) async {
     if (scenario.type == ScenarioType.manualSlider) {
+      EventLogStore.shared.recordScenario(scenarioName: scenario.name);
       Navigator.of(context).push(
         MaterialPageRoute(
             builder: (_) => ManualDimmingSliderScreen(scenario: scenario)),
@@ -98,6 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Running "${scenario.name}"...')),
     );
+    final result = await ScenarioRunner.shared.run(scenario);
+    await EventLogStore.shared.recordScenarioResult(result);
   }
 
   void _showRoomScenarios(Room room) {

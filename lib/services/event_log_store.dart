@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/event_log_repository.dart';
 import '../models/models.dart';
+import 'scenario_runner.dart';
 
 class EventLogStore extends ChangeNotifier {
   EventLogStore._();
@@ -40,6 +41,21 @@ class EventLogStore extends ChangeNotifier {
   bool get loaded => _loaded;
 
   bool get isEmpty => _entries.isEmpty;
+
+  /// Tracks the most recent timestamp handed out so consecutive events always
+  /// get a strictly increasing time - this keeps [entries] (which is sorted
+  /// newest-first) deterministic even when several are recorded within the
+  /// same clock tick.
+  DateTime? _lastTime;
+
+  DateTime _nextTime() {
+    final now = DateTime.now();
+    final t = (_lastTime != null && !now.isAfter(_lastTime!))
+        ? _lastTime!.add(const Duration(milliseconds: 1))
+        : now;
+    _lastTime = t;
+    return t;
+  }
 
   /// Loads the persisted event history exactly once. Safe to call repeatedly.
   Future<void> init() async {
@@ -90,7 +106,7 @@ class EventLogStore extends ChangeNotifier {
     String source = 'Manual control',
   }) =>
       record(EventLogEntry(
-        time: DateTime.now(),
+        time: _nextTime(),
         title: '$outputName turned ${on ? 'ON' : 'OFF'}',
         subtitle: '$moduleName · $source',
       ));
@@ -103,7 +119,7 @@ class EventLogStore extends ChangeNotifier {
     String source = 'Manual control',
   }) =>
       record(EventLogEntry(
-        time: DateTime.now(),
+        time: _nextTime(),
         title: '$outputName set to $pct%',
         subtitle: '$moduleName · $source',
       ));
@@ -111,16 +127,31 @@ class EventLogStore extends ChangeNotifier {
   /// Records a tap-to-run scenario being executed.
   Future<void> recordScenario({required String scenarioName}) => record(
         EventLogEntry(
-          time: DateTime.now(),
+          time: _nextTime(),
           title: 'Scenario ran: $scenarioName',
           subtitle: 'Scenario',
         ),
       );
 
+  /// Records the outcome of every action in a scenario run, so the history
+  /// shows each action's detail and success/failure.
+  Future<void> recordScenarioResult(ScenarioRunResult result) async {
+    await init();
+    for (final action in result.actions) {
+      _entries.add(EventLogEntry(
+        time: _nextTime(),
+        title: '${action.success ? 'Success' : 'Failed'}: ${action.description}',
+        subtitle: 'Scenario: ${result.scenarioName} · ${action.detail}',
+      ));
+    }
+    await _prune();
+    await commit();
+  }
+
   /// Records an automation rule firing on its trigger.
   Future<void> recordAutomation({required String automationName}) => record(
         EventLogEntry(
-          time: DateTime.now(),
+          time: _nextTime(),
           title: 'Automation triggered: $automationName',
           subtitle: 'Automation',
         ),
