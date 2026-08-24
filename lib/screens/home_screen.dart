@@ -21,6 +21,7 @@ import '../data/mock_data.dart';
 import '../models/models.dart';
 import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
+import '../services/room_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_palettes.dart';
 import '../widgets/common_widgets.dart';
@@ -50,7 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ModuleStatusService.shared.refreshAll().ignore();
   }
 
-  final List<Room> _rooms = mockRooms();
+  /// Rooms order is shared with the Rooms screen via [RoomStore.shared].
+  List<Room> get _rooms => RoomStore.shared.rooms;
 
   /// Single source of truth for scenarios; the Home quick-access list below
   /// is a filtered *view* over this same list of object references, so
@@ -157,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return ListenableBuilder(
-      listenable: ModuleStore.shared,
+      listenable: Listenable.merge([ModuleStore.shared, RoomStore.shared]),
       builder: (context, _) => Scaffold(
         body: SafeArea(
           child: Column(
