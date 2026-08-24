@@ -6,14 +6,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class AppearanceSettingsScreen extends StatelessWidget {
   const AppearanceSettingsScreen({super.key});
 
-  void _select(BuildContext context, ThemeMode mode) {
-    themeModeNotifier.value = mode;
+  void _select(ThemeMode mode) {
+    SettingsStore.shared.setThemeMode(mode);
   }
 
   @override
@@ -25,33 +26,36 @@ class AppearanceSettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           SectionHeader(l10n.settingsTheme),
-          Card(
-            child: Column(
-              children: [
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.light,
-                  groupValue: themeModeNotifier.value,
-                  title: Text(l10n.settingsLight),
-                  secondary: const Icon(Icons.light_mode_outlined),
-                  onChanged: (v) => _select(context, v!),
-                ),
-                const Divider(height: 1),
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.dark,
-                  groupValue: themeModeNotifier.value,
-                  title: Text(l10n.settingsDark),
-                  secondary: const Icon(Icons.dark_mode_outlined),
-                  onChanged: (v) => _select(context, v!),
-                ),
-                const Divider(height: 1),
-                RadioListTile<ThemeMode>(
-                  value: ThemeMode.system,
-                  groupValue: themeModeNotifier.value,
-                  title: Text(l10n.settingsAuto),
-                  secondary: const Icon(Icons.settings_suggest_outlined),
-                  onChanged: (v) => _select(context, v!),
-                ),
-              ],
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeModeNotifier,
+            builder: (context, mode, _) => Card(
+              child: Column(
+                children: [
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.light,
+                    groupValue: mode,
+                    title: Text(l10n.settingsLight),
+                    secondary: const Icon(Icons.light_mode_outlined),
+                    onChanged: (v) => _select(v!),
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.dark,
+                    groupValue: mode,
+                    title: Text(l10n.settingsDark),
+                    secondary: const Icon(Icons.dark_mode_outlined),
+                    onChanged: (v) => _select(v!),
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<ThemeMode>(
+                    value: ThemeMode.system,
+                    groupValue: mode,
+                    title: Text(l10n.settingsAuto),
+                    secondary: const Icon(Icons.settings_suggest_outlined),
+                    onChanged: (v) => _select(v!),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

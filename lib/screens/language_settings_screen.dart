@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -13,7 +14,7 @@ class LanguageSettingsScreen extends StatelessWidget {
   const LanguageSettingsScreen({super.key});
 
   void _select(BuildContext context, String code) {
-    appLocaleNotifier.value = Locale(code);
+    SettingsStore.shared.setLocale(Locale(code));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).languageSaved)),
     );

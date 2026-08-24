@@ -29,6 +29,7 @@ import 'screens/system_status_screen.dart';
 import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/scenario_store.dart';
+import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_palettes.dart';
 
@@ -40,6 +41,7 @@ void main() {
   RoomStore.shared.init();
   ScenarioStore.shared.init();
   AutomationStore.shared.init();
+  SettingsStore.shared.init();
   runApp(const AutomationApp());
 }
 
