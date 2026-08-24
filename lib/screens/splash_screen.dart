@@ -6,6 +6,8 @@
 // account...").
 import 'package:flutter/material.dart';
 
+import '../services/module_status/module_status_service.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -17,6 +19,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // On app open: load the persisted module fleet into the app-wide store,
+    // then connect to every configured module and fetch its live status over
+    // the PROTOCOLS.md §1 TCP protocol. Fire-and-forget so bootstrap never
+    // blocks navigation; every screen watches the same store and rebuilds as
+    // status arrives (online/offline, temperature, output states).
+    ModuleStatusService.shared.refreshAll().ignore();
     Future.delayed(const Duration(milliseconds: 1400), () {
       if (mounted) Navigator.of(context).pushReplacementNamed('/login');
     });

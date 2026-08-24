@@ -180,6 +180,7 @@ class DeviceModule {
     int tcpPort = 5005,
     this.tempMinC = 0,
     this.tempMaxC = 60,
+    this.firmware,
     List<ChannelOutput>? channels,
     List<PhysicalInput>? inputs,
   })  : _tcpPort = tcpPort,
@@ -190,6 +191,9 @@ class DeviceModule {
   String name;
   final ModuleType type;
   String ipAddress;
+
+  /// Firmware/build reported by the module (e.g. `AT+VER` → `VER:`).
+  String? firmware;
 
   /// TCP port the module listens on (default 5005). Backed by a nullable
   /// field so legacy persisted JSON (or any null) degrades to the default.
@@ -223,6 +227,7 @@ class DeviceModule {
         'internalTempC': internalTempC,
         'tempMinC': tempMinC,
         'tempMaxC': tempMaxC,
+        'firmware': firmware,
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -238,6 +243,7 @@ class DeviceModule {
         internalTempC: (json['internalTempC'] as num?)?.toDouble() ?? 0,
         tempMinC: (json['tempMinC'] as num?)?.toDouble() ?? 0,
         tempMaxC: (json['tempMaxC'] as num?)?.toDouble() ?? 60,
+        firmware: json['firmware'] as String?,
         channels: [
           for (final c in json['channels'] as List? ?? const [])
             ChannelOutput.fromJson((c as Map).cast<String, Object?>()),

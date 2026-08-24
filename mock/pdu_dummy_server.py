@@ -461,6 +461,7 @@ def tcp_client_handler(client_sock: socket.socket, addr):
                 if not data:
                     break
                 buffer += data.decode(errors="replace")
+                print(f"[TCP] < {client_ip}: {buffer}")
                 while "\r" in buffer:
                     line, buffer = buffer.split("\r", 1)
                     line = line.strip()
@@ -827,7 +828,7 @@ def main():
         threading.Thread(target=tcp_server, daemon=True),
         threading.Thread(target=udp_server, daemon=True),
         threading.Thread(target=socketio_server, daemon=True),
-        threading.Thread(target=dummy_state_changer, daemon=True),
+        #threading.Thread(target=dummy_state_changer, daemon=True),
     ]
 
     for t in threads:

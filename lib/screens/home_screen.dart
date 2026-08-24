@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_palettes.dart';
 import '../widgets/common_widgets.dart';
@@ -34,7 +35,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<DeviceModule> _modules = mockModules();
+  /// The fleet is read from the app-wide [ModuleStore] so live status
+  /// (online/offline, temperature) refreshed on open is reflected here.
+  List<DeviceModule> get _modules => ModuleStore.shared.modules;
   final List<Room> _rooms = mockRooms();
 
   /// Single source of truth for scenarios; the Home quick-access list below
@@ -142,7 +145,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final onlineCount = _modules.length - offline.length;
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return ListenableBuilder(
+      listenable: ModuleStore.shared,
+      builder: (context, _) => Scaffold(
       body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,7 +283,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
 

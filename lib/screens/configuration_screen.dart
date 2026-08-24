@@ -5,8 +5,8 @@
 // add new ones (via the self-discovery / manual-IP flow on AddModuleScreen).
 import 'package:flutter/material.dart';
 
-import '../data/module_repository.dart';
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'add_module_screen.dart';
@@ -38,42 +38,19 @@ class ConfigurationScreen extends StatefulWidget {
 }
 
 class _ConfigurationScreenState extends State<ConfigurationScreen> {
-  ModuleRepository? _repo;
-
-  /// Backing store of the visible module list, loaded asynchronously from
-  /// local storage (see [ModuleRepository]) on the first build.
-  List<DeviceModule> _modules = [];
-  bool _loaded = false;
+  ModuleStore get _store => ModuleStore.shared;
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final repo = await ModuleRepository.load();
-    if (!mounted) return;
-    setState(() {
-      _repo = repo;
-      // Mock data is now only used by the repository to seed an empty store;
-      // the screen reads the persisted copy so edits survive restarts.
-      _modules = repo.fetch();
-      _loaded = true;
-    });
-  }
-
-  /// Replaces the locally visible list and persists it to local storage.
-  Future<void> _commit(List<DeviceModule> modules) async {
-    setState(() => _modules = modules);
-    await _repo?.saveAll(modules);
+    _store.init();
   }
 
   Future<void> _addModule() async {
     final DeviceModule? added = await Navigator.of(context).push<DeviceModule>(
       MaterialPageRoute(builder: (_) => const AddModuleScreen()),
     );
-    if (added != null) await _commit([..._modules, added]);
+    if (added != null) await _store.upsert(added);
   }
 
   Future<void> _renameModule(DeviceModule module) async {
@@ -83,22 +60,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       initialValue: module.name,
     );
     if (newName == null) return;
-    final updated = DeviceModule(
-      id: module.id,
-      name: newName,
-      type: module.type,
-      ipAddress: module.ipAddress,
-      status: module.status,
-      roomName: module.roomName,
-      internalTempC: module.internalTempC,
-      tempMinC: module.tempMinC,
-      tempMaxC: module.tempMaxC,
-      channels: module.channels,
-      inputs: module.inputs,
-    );
-    await _commit([
-      for (final m in _modules) m.id == module.id ? updated : m,
-    ]);
+    await _store.update(module.id, (m) => m.name = newName);
   }
 
   Future<void> _removeModule(DeviceModule module) async {
@@ -109,7 +71,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       confirmLabel: 'Remove',
     );
     if (!confirmed) return;
-    await _commit(_modules.where((m) => m.id != module.id).toList());
+    await _store.remove(module.id);
   }
 
   @override
@@ -125,24 +87,34 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
           ),
         ],
       ),
-      body: _loaded && _modules.isEmpty
-          ? const EmptyState(icon: Icons.dns_outlined, message: 'No modules added yet.')
-          : (!_loaded
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.outerPadding),
-              itemCount: _modules.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.betweenCards),
-              itemBuilder: (context, index) {
-                final module = _modules[index];
-                return _ModuleCard(
-                  module: module,
-                  onTap: () => openModuleDetail(context, module),
-                  onRename: () => _renameModule(module),
-                  onRemove: () => _removeModule(module),
-                );
-              },
-            )),
+      body: ListenableBuilder(
+        listenable: _store,
+        builder: (context, _) {
+          final modules = _store.modules;
+          if (!_store.loaded) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (modules.isEmpty) {
+            return const EmptyState(
+                icon: Icons.dns_outlined, message: 'No modules added yet.');
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.outerPadding),
+            itemCount: modules.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppSpacing.betweenCards),
+            itemBuilder: (context, index) {
+              final module = modules[index];
+              return _ModuleCard(
+                module: module,
+                onTap: () => openModuleDetail(context, module),
+                onRename: () => _renameModule(module),
+                onRemove: () => _removeModule(module),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         onPressed: _addModule,
@@ -169,6 +141,7 @@ class _ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final status = module.status;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -187,7 +160,7 @@ class _ModuleCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(color: Theme.of(context).cardColor, shape: BoxShape.circle),
-                      child: StatusDot(status: module.status),
+                      child: StatusDot(status: status),
                     ),
                   ),
                 ],
@@ -207,11 +180,11 @@ class _ModuleCard extends StatelessWidget {
                         RoomTag(label: module.roomName),
                         const SizedBox(width: 8),
                         Text(
-                          module.status == ConnectionStatus.online ? 'Online' : 'Offline',
+                          status == ConnectionStatus.online ? 'Online' : 'Offline',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: module.status == ConnectionStatus.online ? AppColors.online : AppColors.offlineAlert,
+                            color: status == ConnectionStatus.online ? AppColors.online : AppColors.offlineAlert,
                           ),
                         ),
                       ],
