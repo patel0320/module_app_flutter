@@ -70,4 +70,30 @@ class ScenarioStore extends ChangeNotifier {
     _scenarios.removeWhere((s) => s.id == id);
     await commit();
   }
+
+  /// Moves the item at [oldIndex] to [newIndex] using ReorderableListView
+  /// semantics (newIndex is the target "before" slot), then persists.
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    await init();
+    if (newIndex > oldIndex) newIndex -= 1;
+    await _move(oldIndex, newIndex);
+  }
+
+  /// Moves the scenario with [id] so it lands before the item currently at
+  /// global index [targetIndex] (or to the end when targetIndex == length),
+  /// then persists. This lets a filtered view (e.g. Home's show-in-home subset)
+  /// reorder within the full list.
+  Future<void> move(String id, int targetIndex) async {
+    await init();
+    final oldIndex = _scenarios.indexWhere((s) => s.id == id);
+    if (oldIndex < 0) return;
+    if (targetIndex > oldIndex) targetIndex -= 1;
+    await _move(oldIndex, targetIndex);
+  }
+
+  Future<void> _move(int oldIndex, int newIndex) async {
+    final scenario = _scenarios.removeAt(oldIndex);
+    _scenarios.insert(newIndex, scenario);
+    await commit();
+  }
 }

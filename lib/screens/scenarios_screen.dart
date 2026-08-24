@@ -5,24 +5,19 @@
 // to Automations, Rooms and the Event History.
 import 'package:flutter/material.dart';
 
-import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/scenario_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'manual_dimming_slider_screen.dart';
 import 'scenario_editor_screen.dart';
 
-class ScenariosScreen extends StatefulWidget {
+class ScenariosScreen extends StatelessWidget {
   const ScenariosScreen({super.key});
 
-  @override
-  State<ScenariosScreen> createState() => _ScenariosScreenState();
-}
+  static final ScenarioStore _store = ScenarioStore.shared;
 
-class _ScenariosScreenState extends State<ScenariosScreen> {
-  final List<Scenario> _scenarios = mockScenarios();
-
-  void _runScenario(Scenario scenario) {
+  void _runScenario(BuildContext context, Scenario scenario) {
     if (scenario.type == ScenarioType.manualSlider) {
       Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ManualDimmingSliderScreen(scenario: scenario)));
@@ -32,81 +27,104 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
         .showSnackBar(SnackBar(content: Text('Running "${scenario.name}"...')));
   }
 
-  Future<void> _createScenario() async {
+  Future<void> _createScenario(BuildContext context) async {
     final Scenario? created = await Navigator.of(context).push<Scenario>(
       MaterialPageRoute(builder: (_) => const ScenarioEditorScreen()),
     );
-    if (created != null) setState(() => _scenarios.add(created));
+    if (created != null) await _store.upsert(created);
   }
 
-  Future<void> _editScenario(Scenario scenario) async {
+  Future<void> _editScenario(BuildContext context, Scenario scenario) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
           builder: (_) => ScenarioEditorScreen(scenario: scenario)),
     );
-    setState(() {});
+    await _store.commit();
   }
 
-  Future<void> _deleteScenario(Scenario scenario) async {
+  Future<void> _deleteScenario(
+      BuildContext context, Scenario scenario) async {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Delete scenario',
       message: 'Delete "${scenario.name}"? This cannot be undone.',
       confirmLabel: 'Delete',
     );
-    if (confirmed) setState(() => _scenarios.remove(scenario));
+    if (confirmed) await _store.remove(scenario.id);
+  }
+
+  Future<void> _setShowInHome(Scenario scenario, bool value) async {
+    scenario.showInHome = value;
+    await _store.commit();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scenarios'),
-        actions: [
-          IconButton(
-            tooltip: 'Rooms',
-            icon: const Icon(Icons.meeting_room_outlined),
-            onPressed: () => Navigator.of(context).pushNamed('/rooms'),
+    return ListenableBuilder(
+      listenable: _store,
+      builder: (context, _) {
+        final scenarios = _store.scenarios;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Scenarios'),
+            actions: [
+              IconButton(
+                tooltip: 'Rooms',
+                icon: const Icon(Icons.meeting_room_outlined),
+                onPressed: () => Navigator.of(context).pushNamed('/rooms'),
+              ),
+              IconButton(
+                tooltip: 'Automations',
+                icon: const Icon(Icons.rule_outlined),
+                onPressed: () =>
+                    Navigator.of(context).pushNamed('/automations'),
+              ),
+              IconButton(
+                tooltip: 'Event history',
+                icon: const Icon(Icons.history),
+                onPressed: () =>
+                    Navigator.of(context).pushNamed('/event-history'),
+              ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Automations',
-            icon: const Icon(Icons.rule_outlined),
-            onPressed: () => Navigator.of(context).pushNamed('/automations'),
+          body: scenarios.isEmpty
+              ? const Center(
+                  child: EmptyState(
+                    icon: Icons.auto_awesome_outlined,
+                    message: 'No scenarios yet. Create your first one.',
+                  ),
+                )
+              : ReorderableListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.outerPadding),
+                  itemCount: scenarios.length,
+                  buildDefaultDragHandles: false,
+                  onReorder: _store.reorder,
+                  itemBuilder: (context, index) {
+                    final scenario = scenarios[index];
+                    return Padding(
+                      key: ValueKey(scenario.id),
+                      padding: const EdgeInsets.only(
+                          bottom: AppSpacing.betweenCards),
+                      child: _ScenarioCard(
+                        scenario: scenario,
+                        index: index,
+                        onRun: () => _runScenario(context, scenario),
+                        onEdit: () => _editScenario(context, scenario),
+                        onDelete: () => _deleteScenario(context, scenario),
+                        onShowInHomeChanged: (v) =>
+                            _setShowInHome(scenario, v),
+                      ),
+                    );
+                  },
+                ),
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: null,
+            onPressed: () => _createScenario(context),
+            icon: const Icon(Icons.add),
+            label: const Text('New scenario', style: AppTheme.fabLabelStyle),
           ),
-          IconButton(
-            tooltip: 'Event history',
-            icon: const Icon(Icons.history),
-            onPressed: () => Navigator.of(context).pushNamed('/event-history'),
-          ),
-        ],
-      ),
-      body: _scenarios.isEmpty
-          ? const EmptyState(
-              icon: Icons.auto_awesome_outlined,
-              message: 'No scenarios yet. Create your first one.')
-          : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.outerPadding),
-              itemCount: _scenarios.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.betweenCards),
-              itemBuilder: (context, index) {
-                final scenario = _scenarios[index];
-                return _ScenarioCard(
-                  scenario: scenario,
-                  onRun: () => _runScenario(scenario),
-                  onEdit: () => _editScenario(scenario),
-                  onDelete: () => _deleteScenario(scenario),
-                  onShowInHomeChanged: (v) =>
-                      setState(() => scenario.showInHome = v),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: _createScenario,
-        icon: const Icon(Icons.add),
-        label: const Text('New scenario', style: AppTheme.fabLabelStyle),
-      ),
+        );
+      },
     );
   }
 }
@@ -114,6 +132,7 @@ class _ScenariosScreenState extends State<ScenariosScreen> {
 class _ScenarioCard extends StatelessWidget {
   const _ScenarioCard({
     required this.scenario,
+    required this.index,
     required this.onRun,
     required this.onEdit,
     required this.onDelete,
@@ -121,6 +140,7 @@ class _ScenarioCard extends StatelessWidget {
   });
 
   final Scenario scenario;
+  final int index;
   final VoidCallback onRun;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -141,6 +161,14 @@ class _ScenarioCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(Icons.drag_indicator,
+                          color: onSurface.withOpacity(0.6), size: 22),
+                    ),
+                  ),
                   IconAvatar(icon: scenario.icon),
                   const SizedBox(width: 12),
                   Expanded(

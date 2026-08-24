@@ -17,11 +17,11 @@
 // stay green/red for consistency.
 import 'package:flutter/material.dart';
 
-import '../data/mock_data.dart';
 import '../models/models.dart';
 import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../services/room_store.dart';
+import '../services/scenario_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_palettes.dart';
 import '../widgets/common_widgets.dart';
@@ -54,12 +54,14 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Rooms order is shared with the Rooms screen via [RoomStore.shared].
   List<Room> get _rooms => RoomStore.shared.rooms;
 
-  /// Single source of truth for scenarios; the Home quick-access list below
-  /// is a filtered *view* over this same list of object references, so
-  /// slider edits made from a Home card stay consistent with the room
-  /// bottom sheet within this screen's lifetime.
-  late final List<Scenario> _allScenarios = mockScenarios();
-  late final List<Scenario> _homeScenarios =
+  /// Single source of truth for scenarios lives in [ScenarioStore.shared];
+  /// the Home quick-access list below is a filtered *view* over this same
+  /// list of object references, so slider edits made from a Home card stay
+  /// consistent with the room bottom sheet within this screen's lifetime.
+  List<Scenario> get _allScenarios => ScenarioStore.shared.scenarios;
+
+  /// Scenarios flagged "Show in Home", in global persisted order.
+  List<Scenario> get _homeScenarios =>
       _allScenarios.where((s) => s.showInHome).toList();
 
   List<DeviceModule> get _offlineModules =>
@@ -68,12 +70,19 @@ class _HomeScreenState extends State<HomeScreen> {
   List<DeviceModule> get _overTempModules =>
       _modules.where((m) => m.isOverTemperature).toList();
 
+  /// Translates a reorder within the Home (show-in-home) filtered subset into
+  /// a move in the global persisted scenario list.
   void _onReorderHomeScenarios(int oldIndex, int newIndex) {
-    setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
-      final item = _homeScenarios.removeAt(oldIndex);
-      _homeScenarios.insert(newIndex, item);
-    });
+    final home = _homeScenarios;
+    if (oldIndex >= home.length) return;
+    final dragged = home[oldIndex];
+    final all = ScenarioStore.shared.scenarios;
+    int target = all.length;
+    if (newIndex < home.length) {
+      target = all.indexOf(home[newIndex]);
+      if (target < 0) target = all.length;
+    }
+    ScenarioStore.shared.move(dragged.id, target);
   }
 
   void _runScenario(Scenario scenario) {
@@ -159,7 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return ListenableBuilder(
-      listenable: Listenable.merge([ModuleStore.shared, RoomStore.shared]),
+      listenable: Listenable.merge(
+          [ModuleStore.shared, RoomStore.shared, ScenarioStore.shared]),
       builder: (context, _) => Scaffold(
         body: SafeArea(
           child: Column(
@@ -263,8 +273,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 index: i,
                                 scenario: _homeScenarios[i],
                                 onRun: () => _runScenario(_homeScenarios[i]),
-                                onSliderChanged: (value) => setState(() =>
-                                    _homeScenarios[i].sliderValue = value),
+                                onSliderChanged: (value) => setState(() {
+                                  _homeScenarios[i].sliderValue = value;
+                                  ScenarioStore.shared.commit();
+                                }),
                                 onOpenSlider: () => Navigator.of(context).push(
                                   MaterialPageRoute(
                                       builder: (_) => ManualDimmingSliderScreen(
