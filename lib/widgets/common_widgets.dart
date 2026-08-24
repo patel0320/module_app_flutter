@@ -357,11 +357,15 @@ class DimmerChannelCard extends StatelessWidget {
     required this.channel,
     required this.onChanged,
     required this.onEdit,
+    this.onChangeEnd,
   });
 
   final ChannelOutput channel;
   final ValueChanged<int> onChanged;
   final VoidCallback onEdit;
+
+  /// Invoked once when a drag gesture ends, carrying the settled brightness.
+  final ValueChanged<int>? onChangeEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +392,10 @@ class DimmerChannelCard extends StatelessWidget {
                 IconButton(
                   tooltip: 'Turn off',
                   icon: const Icon(Icons.brightness_low),
-                  onPressed: () => onChanged(0),
+                  onPressed: () {
+                    onChanged(0);
+                    onChangeEnd?.call(0);
+                  },
                 ),
                 Expanded(
                   child: Slider(
@@ -398,12 +405,16 @@ class DimmerChannelCard extends StatelessWidget {
                     divisions: 100,
                     label: '${channel.brightness}%',
                     onChanged: (v) => onChanged(v.round()),
+                    onChangeEnd: (v) => onChangeEnd?.call(v.round()),
                   ),
                 ),
                 IconButton(
                   tooltip: 'Full brightness',
                   icon: const Icon(Icons.brightness_high),
-                  onPressed: () => onChanged(100),
+                  onPressed: () {
+                    onChanged(100);
+                    onChangeEnd?.call(100);
+                  },
                 ),
               ],
             ),

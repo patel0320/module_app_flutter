@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/event_log_store.dart';
 import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
@@ -52,6 +53,11 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
   /// the command service into the store, which rebuilds this screen to reflect
   /// the module-reported state.
   Future<void> _toggleOutput(DeviceModule module, int index, bool next) async {
+    EventLogStore.shared.recordModuleAction(
+      moduleName: module.name,
+      outputName: module.channels[index].name,
+      on: next,
+    );
     final service = ModuleStatusService.shared.commandServiceFor(module.id);
     if (service == null || !service.isConnected) {
       // No live command/status unit - fall back to a local toggle.

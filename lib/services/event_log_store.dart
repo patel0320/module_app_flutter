@@ -4,8 +4,10 @@
 // section 2.4). The Event History screen reads from this store and rebuilds
 // via ListenableBuilder / addListener.
 //
-// The in-memory list is persisted through [EventLogRepository] on every
-// mutation so history survives app restarts.
+// Every module ON/OFF action, scenario run and automation trigger is recorded
+// here through the helper methods below, then persisted through
+// [EventLogRepository] so history survives app restarts. A 30-day retention
+// policy prunes anything older than [retention].
 import 'package:flutter/foundation.dart';
 
 import '../data/event_log_repository.dart';
@@ -20,6 +22,9 @@ class EventLogStore extends ChangeNotifier {
   /// Creates an isolated store for tests (backed by the same persistence).
   @visibleForTesting
   static EventLogStore forTesting() => EventLogStore._();
+
+  /// Retention window for the rolling history (brief section 2.4).
+  static const Duration retention = Duration(days: 30);
 
   EventLogRepository? _repo;
   List<EventLogEntry> _entries = [];
@@ -46,7 +51,11 @@ class EventLogStore extends ChangeNotifier {
       _entries = [];
     }
     _loaded = true;
-    notifyListeners();
+    if (await _prune()) {
+      await commit();
+    } else {
+      notifyListeners();
+    }
   }
 
   /// Persists the current history and broadcasts a change.
@@ -55,17 +64,73 @@ class EventLogStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Appends a freshly occurred event and persists it to history.
+  /// Applies the 30-day retention policy, dropping any entry older than
+  /// [retention]. Returns whether anything was removed.
+  Future<bool> _prune() async {
+    final cutoff = DateTime.now().subtract(retention);
+    final before = _entries.length;
+    _entries.removeWhere((e) => e.time.isBefore(cutoff));
+    return _entries.length != before;
+  }
+
+  /// Appends a freshly occurred event, prunes out-of-window entries, then
+  /// persists everything.
   Future<void> record(EventLogEntry entry) async {
     await init();
     _entries.add(entry);
+    await _prune();
     await commit();
   }
+
+  /// Records a module output being switched ON or OFF (relay / blind).
+  Future<void> recordModuleAction({
+    required String moduleName,
+    required String outputName,
+    required bool on,
+    String source = 'Manual control',
+  }) =>
+      record(EventLogEntry(
+        time: DateTime.now(),
+        title: '$outputName turned ${on ? 'ON' : 'OFF'}',
+        subtitle: '$moduleName · $source',
+      ));
+
+  /// Records a dimmer output being set to a brightness level.
+  Future<void> recordBrightness({
+    required String moduleName,
+    required String outputName,
+    required int pct,
+    String source = 'Manual control',
+  }) =>
+      record(EventLogEntry(
+        time: DateTime.now(),
+        title: '$outputName set to $pct%',
+        subtitle: '$moduleName · $source',
+      ));
+
+  /// Records a tap-to-run scenario being executed.
+  Future<void> recordScenario({required String scenarioName}) => record(
+        EventLogEntry(
+          time: DateTime.now(),
+          title: 'Scenario ran: $scenarioName',
+          subtitle: 'Scenario',
+        ),
+      );
+
+  /// Records an automation rule firing on its trigger.
+  Future<void> recordAutomation({required String automationName}) => record(
+        EventLogEntry(
+          time: DateTime.now(),
+          title: 'Automation triggered: $automationName',
+          subtitle: 'Automation',
+        ),
+      );
 
   /// Clears the entire event history.
   Future<void> clear() async {
     await init();
     _entries = [];
-    await commit();
+    await _repo?.clear();
+    notifyListeners();
   }
 }

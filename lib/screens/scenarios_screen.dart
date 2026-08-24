@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/event_log_store.dart';
 import '../services/scenario_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -19,10 +20,12 @@ class ScenariosScreen extends StatelessWidget {
 
   void _runScenario(BuildContext context, Scenario scenario) {
     if (scenario.type == ScenarioType.manualSlider) {
+      EventLogStore.shared.recordScenario(scenarioName: scenario.name);
       Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ManualDimmingSliderScreen(scenario: scenario)));
       return;
     }
+    EventLogStore.shared.recordScenario(scenarioName: scenario.name);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('Running "${scenario.name}"...')));
   }

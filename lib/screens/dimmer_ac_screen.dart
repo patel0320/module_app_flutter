@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'channel_editor_screen.dart';
@@ -56,6 +57,11 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
               child: DimmerChannelCard(
                 channel: channel,
                 onChanged: (value) => setState(() => channel.brightness = value),
+                onChangeEnd: (value) => EventLogStore.shared.recordBrightness(
+                  moduleName: module.name,
+                  outputName: channel.name,
+                  pct: value,
+                ),
                 onEdit: () => _editChannel(channel),
               ),
             ),

@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/event_log_store.dart';
 import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../services/room_store.dart';
@@ -86,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _runScenario(Scenario scenario) {
+    EventLogStore.shared.recordScenario(scenarioName: scenario.name);
     if (scenario.type == ScenarioType.manualSlider) {
       Navigator.of(context).push(
         MaterialPageRoute(

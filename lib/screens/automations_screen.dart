@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'automation_editor_screen.dart';
@@ -61,7 +62,13 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
                   automation: automation,
                   onTap: () => _edit(automation),
                   onDelete: () => _delete(automation),
-                  onEnabledChanged: (v) => setState(() => automation.enabled = v),
+                  onEnabledChanged: (v) {
+                    setState(() => automation.enabled = v);
+                    if (v) {
+                      EventLogStore.shared
+                          .recordAutomation(automationName: automation.name);
+                    }
+                  },
                 );
               },
             ),
