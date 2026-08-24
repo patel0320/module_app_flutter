@@ -4,6 +4,7 @@
 // buttons with toggle-stop behaviour - a first press starts the motor in
 // that direction, a second press of the *same* button stops it.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -41,6 +42,7 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
   @override
   Widget build(BuildContext context) {
     final module = widget.module;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
@@ -51,7 +53,7 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
         children: [
           ModuleStatusHeader(module: module),
           const SizedBox(height: 24),
-          const SectionHeader('Blind / Motor Outputs'),
+          SectionHeader(l10n.blindHeader),
           for (final channel in module.channels)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
@@ -79,10 +81,11 @@ class _BlindCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final String status = switch (motion) {
-      _Motion.up => 'Moving up...',
-      _Motion.down => 'Moving down...',
-      _Motion.idle => 'Stopped',
+      _Motion.up => l10n.blindMovingUp,
+      _Motion.down => l10n.blindMovingDown,
+      _Motion.idle => l10n.blindStopped,
     };
 
     return Card(
@@ -114,7 +117,7 @@ class _BlindCard extends StatelessWidget {
                   child: _DirectionButton(
                     active: motion == _Motion.up,
                     icon: Icons.keyboard_arrow_up,
-                    idleLabel: 'UP',
+                    idleLabel: l10n.blindUp,
                     onPressed: onUp,
                   ),
                 ),
@@ -123,7 +126,7 @@ class _BlindCard extends StatelessWidget {
                   child: _DirectionButton(
                     active: motion == _Motion.down,
                     icon: Icons.keyboard_arrow_down,
-                    idleLabel: 'DOWN',
+                    idleLabel: l10n.blindDown,
                     onPressed: onDown,
                   ),
                 ),
@@ -153,12 +156,13 @@ class _DirectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final content = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(active ? Icons.stop_circle_outlined : icon),
         const SizedBox(width: 8),
-        Text(active ? 'STOP' : idleLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(active ? l10n.blindStop : idleLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     );
     return SizedBox(

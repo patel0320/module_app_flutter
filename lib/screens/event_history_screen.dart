@@ -3,6 +3,7 @@
 // Brief section 2.4 "Event Log (History)": a detailed, date-grouped log of
 // every ON/OFF action, retained (in the real product) for 30 days.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
@@ -26,10 +27,11 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
   }
 
   String _dateHeader(DateTime time) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final int diff = DateTime(now.year, now.month, now.day).difference(DateTime(time.year, time.month, time.day)).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
+    if (diff == 0) return l10n.eventHistoryToday;
+    if (diff == 1) return l10n.eventHistoryYesterday;
     return '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')}/${time.year}';
   }
 
@@ -57,9 +59,10 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Event History')),
+      appBar: AppBar(title: Text(l10n.eventHistoryTitle)),
       body: ListenableBuilder(
         listenable: _store,
         builder: (context, _) {
@@ -73,13 +76,13 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                 color: onSurface.withOpacity(0.05),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.outerPadding, vertical: 10),
                 child: Text(
-                  'Showing the last 30 days of ON/OFF activity',
+                  l10n.eventHistoryShowing,
                   style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6)),
                 ),
               ),
               Expanded(
                 child: rows.isEmpty
-                    ? const EmptyState(icon: Icons.history, message: 'No events recorded yet.')
+                    ? EmptyState(icon: Icons.history, message: l10n.eventHistoryEmpty)
                     : ListView.builder(
                         padding: const EdgeInsets.all(AppSpacing.outerPadding),
                         itemCount: rows.length,

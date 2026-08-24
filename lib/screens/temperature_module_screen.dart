@@ -5,6 +5,7 @@
 // explicit note, advanced thermostat functionality is not exposed in this
 // phase (Level 1) - shown here as a disabled row for transparency.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -31,10 +32,11 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
   Widget build(BuildContext context) {
     final module = widget.module;
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final bool alert = module.isOverTemperature;
     final String statusLabel = !alert
-        ? 'Normal'
-        : (module.internalTempC > module.tempMaxC ? 'Above maximum threshold' : 'Below minimum threshold');
+        ? l10n.tempStatusNormal
+        : (module.internalTempC > module.tempMaxC ? l10n.tempStatusAboveMax : l10n.tempStatusBelowMin);
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +52,7 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
             child: Column(
               children: [
                 Text(
-                  '${module.internalTempC.toStringAsFixed(1)}°C',
+                  l10n.tempValueCelsius(module.internalTempC.toStringAsFixed(1)),
                   style: TextStyle(
                     fontSize: 56,
                     fontWeight: FontWeight.w800,
@@ -66,19 +68,19 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Alert Thresholds'),
+          SectionHeader(l10n.tempThresholdsHeader),
           Card(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 children: [
                   _ThresholdSlider(
-                    label: 'Minimum',
+                    label: l10n.tempMinimum,
                     value: module.tempMinC,
                     onChanged: (v) => setState(() => module.tempMinC = v),
                   ),
                   _ThresholdSlider(
-                    label: 'Maximum',
+                    label: l10n.tempMaximum,
                     value: module.tempMaxC,
                     onChanged: (v) => setState(() => module.tempMaxC = v),
                   ),
@@ -87,33 +89,33 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Available Functions'),
+          SectionHeader(l10n.tempFunctionsHeader),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('High / Low Threshold Alerts'),
-                  subtitle: const Text('Notify when temperature exits the range above'),
+                  title: Text(l10n.tempFuncHighLow),
+                  subtitle: Text(l10n.tempFuncHighLowDesc),
                   value: _alertsEnabled,
                   onChanged: (v) => setState(() => _alertsEnabled = v),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  title: Text('Temperature Display'),
-                  subtitle: Text('Live reading from the module sensor'),
-                  trailing: Icon(Icons.check_circle_outline),
+                ListTile(
+                  title: Text(l10n.tempFuncDisplay),
+                  subtitle: Text(l10n.tempFuncDisplayDesc),
+                  trailing: const Icon(Icons.check_circle_outline),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  title: const Text('Advanced Thermostat Control'),
-                  subtitle: const Text('Managed by the module\'s internal server - not available in this phase'),
+                  title: Text(l10n.tempFuncThermostat),
+                  subtitle: Text(l10n.tempFuncThermostatDesc),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: onSurface.withOpacity(0.25)),
                     ),
-                    child: const Text('Coming soon', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    child: Text(l10n.comingSoon, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                   enabled: false,
                 ),
@@ -135,6 +137,8 @@ class _ThresholdSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final String celsius = value.toStringAsFixed(0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,7 +146,7 @@ class _ThresholdSlider extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('${value.toStringAsFixed(0)}°C'),
+            Text(l10n.tempValueCelsius(celsius)),
           ],
         ),
         Slider(
@@ -150,7 +154,7 @@ class _ThresholdSlider extends StatelessWidget {
           min: 0,
           max: 100,
           divisions: 100,
-          label: '${value.toStringAsFixed(0)}°C',
+          label: l10n.tempValueCelsius(celsius),
           onChanged: onChanged,
         ),
       ],

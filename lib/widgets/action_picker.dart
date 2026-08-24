@@ -5,6 +5,7 @@
 // outputs, regardless of whether they belong to relay modules (ON/OFF) or
 // dimmer modules (intensity control)" (brief section 2.4).
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 
@@ -54,6 +55,7 @@ Future<ScenarioAction?> showAddActionSheet(
         builder: (context, setSheetState) {
           final bool isDimmer = selectedModule?.type == ModuleType.dimmerDc ||
               selectedModule?.type == ModuleType.dimmerAc;
+          final l10n = AppLocalizations.of(context);
 
           return Padding(
             padding: EdgeInsets.only(
@@ -66,15 +68,15 @@ Future<ScenarioAction?> showAddActionSheet(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(isEditing ? 'Edit action' : 'Add action',
+                Text(isEditing ? l10n.actionPickerEditTitle : l10n.actionPickerAddTitle,
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 if (eligible.isEmpty)
-                  const Text('No controllable outputs available.')
+                  Text(l10n.actionPickerNoOutputs)
                 else ...[
                   DropdownButtonFormField<DeviceModule>(
                     value: selectedModule,
-                    decoration: const InputDecoration(labelText: 'Module'),
+                    decoration: InputDecoration(labelText: l10n.actionPickerModuleLabel),
                     items: [
                       for (final m in eligible) DropdownMenuItem(value: m, child: Text(m.name)),
                     ],
@@ -86,7 +88,7 @@ Future<ScenarioAction?> showAddActionSheet(
                   const SizedBox(height: 12),
                   DropdownButtonFormField<ChannelOutput>(
                     value: selectedChannel,
-                    decoration: const InputDecoration(labelText: 'Output'),
+                    decoration: InputDecoration(labelText: l10n.actionPickerOutputLabel),
                     items: [
                       for (final c in selectedModule?.channels ?? const <ChannelOutput>[])
                         DropdownMenuItem(value: c, child: Text(c.name)),
@@ -95,7 +97,7 @@ Future<ScenarioAction?> showAddActionSheet(
                   ),
                   const SizedBox(height: 16),
                   if (isDimmer) ...[
-                    Text('Brightness: $brightness%', style: Theme.of(context).textTheme.bodyLarge),
+                    Text(l10n.actionPickerBrightness(brightness), style: Theme.of(context).textTheme.bodyLarge),
                     Slider(
                       value: brightness.toDouble(),
                       min: 0,
@@ -105,12 +107,12 @@ Future<ScenarioAction?> showAddActionSheet(
                       onChanged: (v) => setSheetState(() => brightness = v.round()),
                     ),
                   ] else ...[
-                    Text('State', style: Theme.of(context).textTheme.bodyLarge),
+                    Text(l10n.actionPickerState, style: Theme.of(context).textTheme.bodyLarge),
                     const SizedBox(height: 8),
                     SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: true, label: Text('ON')),
-                        ButtonSegment(value: false, label: Text('OFF')),
+                      segments: [
+                        ButtonSegment(value: true, label: Text(l10n.on)),
+                        ButtonSegment(value: false, label: Text(l10n.off)),
                       ],
                       selected: {turnOn},
                       onSelectionChanged: (s) => setSheetState(() => turnOn = s.first),
@@ -131,7 +133,7 @@ Future<ScenarioAction?> showAddActionSheet(
                                 brightnessPct: brightness,
                               ),
                             ),
-                    child: Text(isEditing ? 'Save' : 'Add action'),
+                    child: Text(isEditing ? l10n.actionPickerSave : l10n.actionPickerAdd),
                   ),
                 ],
               ],

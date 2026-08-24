@@ -4,6 +4,7 @@
 // physical switch wired to a module behaves - momentary, toggle, or
 // associated to a specific output / scenario.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -37,17 +38,18 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.input.label)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           Text(
-            'On module: ${widget.module.name}',
+            l10n.inputEditorOnModule(widget.module.name),
             style: TextStyle(color: onSurface.withOpacity(0.55)),
           ),
           const SizedBox(height: 20),
-          const SectionHeader('Behavior'),
+          SectionHeader(l10n.inputEditorBehavior),
           Card(
             child: Column(
               children: [
@@ -65,17 +67,17 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Bound target'),
+          SectionHeader(l10n.inputEditorBoundTarget),
           DropdownButtonFormField<String>(
             value: _targets.contains(_boundTo) ? _boundTo : null,
-            decoration: const InputDecoration(labelText: 'Output or scenario', prefixIcon: Icon(Icons.link)),
+            decoration: InputDecoration(labelText: l10n.inputEditorOutputScenarioLabel, prefixIcon: const Icon(Icons.link)),
             items: [
               for (final target in _targets) DropdownMenuItem(value: target, child: Text(target)),
             ],
             onChanged: (value) => setState(() => _boundTo = value ?? _boundTo),
           ),
           const SizedBox(height: 32),
-          FilledButton(onPressed: _save, child: const Text('Save')),
+          FilledButton(onPressed: _save, child: Text(l10n.save)),
         ],
       ),
     );

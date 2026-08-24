@@ -4,6 +4,7 @@
 // list of automatic rules triggered by time of day or another device's
 // state, with an enable/disable switch for each.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -39,19 +40,20 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
   Future<void> _delete(Automation automation) async {
     final confirmed = await showConfirmDialog(
       context,
-      title: 'Delete automation',
-      message: 'Delete "${automation.name}"?',
-      confirmLabel: 'Delete',
+      title: AppLocalizations.of(context).automationsDeleteDialog,
+      message: AppLocalizations.of(context).automationsDeleteMsg(automation.name),
+      confirmLabel: AppLocalizations.of(context).delete,
     );
     if (confirmed) setState(() => _automations.remove(automation));
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Automations')),
+      appBar: AppBar(title: Text(l10n.automationsTitle)),
       body: _automations.isEmpty
-          ? const EmptyState(icon: Icons.rule_outlined, message: 'No automations yet.')
+          ? EmptyState(icon: Icons.rule_outlined, message: l10n.automationsEmpty)
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: _automations.length,
@@ -76,7 +78,7 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
         heroTag: null,
         onPressed: _create,
         icon: const Icon(Icons.add),
-        label: const Text('New automation', style: AppTheme.fabLabelStyle),
+        label: Text(l10n.automationsNew, style: AppTheme.fabLabelStyle),
       ),
     );
   }
@@ -98,6 +100,7 @@ class _AutomationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final bool isTime = automation.triggerType == AutomationTriggerType.time;
     return Card(
       child: InkWell(
@@ -117,7 +120,7 @@ class _AutomationCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(automation.triggerSummary, style: TextStyle(fontSize: 13, color: onSurface.withOpacity(0.6))),
                     const SizedBox(height: 2),
-                    Text('${automation.actions.length} action(s)',
+                    Text(l10n.homeActionsCount(automation.actions.length),
                         style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.45))),
                   ],
                 ),
@@ -127,8 +130,8 @@ class _AutomationCard extends StatelessWidget {
                 onSelected: (value) {
                   if (value == 'delete') onDelete();
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
                 ],
               ),
             ],

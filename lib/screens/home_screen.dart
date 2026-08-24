@@ -16,6 +16,7 @@
 // screen matches every other screen in the app. Offline/temperature semantics
 // stay green/red for consistency.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
@@ -97,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Running "${scenario.name}"...')),
+      SnackBar(content: Text(AppLocalizations.of(context).homeRunningScenario(scenario.name))),
     );
     final result = await ScenarioRunner.shared.run(scenario);
     await EventLogStore.shared.recordScenarioResult(result);
@@ -106,7 +107,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showRoomScenarios(Room room) {
     final scenarios =
         _allScenarios.where((s) => s.roomName == room.name).toList();
-    final cs = Theme.of(context).colorScheme;
+      final cs = Theme.of(context).colorScheme;
+      final l10n = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: cs.surfaceContainerHigh,
@@ -123,20 +125,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: _Greeting(room.name,
-                        subtitle: 'Scenarios · ${scenarios.length}'),
+                        subtitle: l10n.homeScenariosCount(scenarios.length)),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(sheetContext),
                     icon: const Icon(Icons.close),
-                    tooltip: 'Close',
+                    tooltip: l10n.close,
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               if (scenarios.isEmpty)
-                const EmptyState(
+                EmptyState(
                     icon: Icons.auto_awesome_outlined,
-                    message: 'No scenarios assigned to this room yet.')
+                    message: l10n.homeNoScenariosInRoom)
               else
                 for (final s in scenarios)
                   ListTile(
@@ -146,8 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
                       s.type == ScenarioType.manualSlider
-                          ? 'Manual dimming slider'
-                          : '${s.actions.length} action(s)',
+                          ? l10n.homeManualDimmingSlider
+                          : l10n.homeActionsCount(s.actions.length),
                       style: TextStyle(
                           color: cs.onSurface.withOpacity(0.6), fontSize: 13),
                     ),
@@ -169,8 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final offline = _offlineModules;
     final overTemp = _overTempModules;
-    final onlineCount = _modules.length - offline.length;
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return ListenableBuilder(
       listenable: Listenable.merge(
@@ -187,9 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: _Greeting(
-                        'Home',
-                        subtitle:
-                            '${_modules.length - offline.length}/${_modules.length} modules online',
+                        l10n.homeTitle,
+                        subtitle: l10n.homeModulesOnline(
+                            _modules.length - offline.length, _modules.length),
                       ),
                     ),
                     _StatusPill(
@@ -208,8 +210,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _AlertBanner(
                         icon: Icons.wifi_off_rounded,
                         message: offline.length == 1
-                            ? '${offline.first.name} is offline'
-                            : '${offline.length} modules are offline',
+                            ? l10n.homeModuleOffline(offline.first.name)
+                            : l10n.homeModulesOffline(offline.length),
                         onTap: () =>
                             Navigator.of(context).pushNamed('/system-status'),
                       ),
@@ -218,16 +220,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (overTemp.isNotEmpty) ...[
                       _AlertBanner(
                         icon: Icons.thermostat,
-                        message:
-                            '${overTemp.first.name}: temperature out of range '
-                            '(${overTemp.first.internalTempC.toStringAsFixed(1)}°C)',
+                        message: l10n.homeTempOutOfRange(
+                            overTemp.first.name,
+                            overTemp.first.internalTempC.toStringAsFixed(1)),
                         onTap: () =>
                             Navigator.of(context).pushNamed('/system-status'),
                       ),
                       const SizedBox(height: AppSpacing.betweenCards),
                     ],
                     const SizedBox(height: 12),
-                    const _SectionLabel('Rooms'),
+                    _SectionLabel(l10n.homeSectionRooms),
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 56,
@@ -246,9 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        const Expanded(child: _SectionLabel('Quick Scenarios')),
+                        Expanded(child: _SectionLabel(l10n.homeSectionQuickScenarios)),
                         Text(
-                          'Hold & drag to reorder',
+                          l10n.homeHoldDragReorder,
                           style: TextStyle(
                               fontSize: 12,
                               color: cs.onSurface.withOpacity(0.6)),
@@ -257,10 +259,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 10),
                     if (_homeScenarios.isEmpty)
-                      const EmptyState(
+                      EmptyState(
                         icon: Icons.auto_awesome_outlined,
-                        message:
-                            'Enable "Show in Home" on a scenario to pin it here.',
+                        message: l10n.homePinToHomeHint,
                       )
                     else
                       ReorderableListView(
@@ -298,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     const SizedBox(height: 24),
-                    const _SectionLabel('Temperature Monitoring'),
+                    _SectionLabel(l10n.homeSectionTempMonitoring),
                     const SizedBox(height: 10),
                     for (final module in _modules)
                       Padding(
@@ -549,6 +550,7 @@ class _QuickScenarioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final isSlider = scenario.type == ScenarioType.manualSlider;
 
     return Card(
@@ -593,8 +595,8 @@ class _QuickScenarioCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               isSlider
-                                  ? 'Manual dimming'
-                                  : '${scenario.actions.length} action(s)',
+                                  ? l10n.homeManualDimming
+                                  : l10n.homeActionsCount(scenario.actions.length),
                               style: TextStyle(
                                   fontSize: 12,
                                   color: cs.onSurface.withOpacity(0.6)),
@@ -803,6 +805,7 @@ class _TemperatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final bool alert = module.isOverTemperature;
     final Color valueColor = alert ? cs.error : cs.primary;
     return Card(
@@ -835,7 +838,10 @@ class _TemperatureRow extends StatelessWidget {
                             color: cs.onSurface)),
                     const SizedBox(height: 2),
                     Text(
-                      '${module.roomName} · range ${module.tempMinC.toStringAsFixed(0)}-${module.tempMaxC.toStringAsFixed(0)}°C',
+                      l10n.homeTempRange(
+                          module.roomName,
+                          module.tempMinC.toStringAsFixed(0),
+                          module.tempMaxC.toStringAsFixed(0)),
                       style: TextStyle(
                           fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
                     ),
@@ -898,6 +904,7 @@ class _ThemePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -912,10 +919,10 @@ class _ThemePickerSheet extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionLabel('Theme'),
+                _SectionLabel(l10n.homeSectionTheme),
                 const SizedBox(height: 6),
                 Text(
-                  'Choose a color palette for the deck.',
+                  l10n.homeChoosePalette,
                   style: TextStyle(
                       color: cs.onSurface.withOpacity(0.6), fontSize: 13),
                 ),

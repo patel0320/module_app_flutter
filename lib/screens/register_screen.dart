@@ -3,6 +3,7 @@
 // Account creation screen (brief section 3.1: "Mandatory Account
 // Creation/Authentication"). Purely local form validation - no network call.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -32,13 +33,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields.')),
+        SnackBar(content: Text(AppLocalizations.of(context).registerFillAll)),
       );
       return;
     }
     if (_passwordController.text != _confirmController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match.')),
+        SnackBar(content: Text(AppLocalizations.of(context).registerPassMismatch)),
       );
       return;
     }
@@ -47,8 +48,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(l10n.registerTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -56,27 +58,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'A free account keeps your modules, scenarios and settings backed up '
-                'and in sync across devices.',
+                l10n.registerDesc,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline)),
+                decoration: InputDecoration(labelText: l10n.registerFullName, prefixIcon: const Icon(Icons.person_outline)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                decoration: InputDecoration(labelText: l10n.loginEmail, prefixIcon: const Icon(Icons.mail_outline)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: l10n.loginPassword,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
@@ -88,10 +89,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextField(
                 controller: _confirmController,
                 obscureText: _obscurePassword,
-                decoration: const InputDecoration(labelText: 'Confirm password', prefixIcon: Icon(Icons.lock_outline)),
+                decoration: InputDecoration(labelText: l10n.registerConfirmPassword, prefixIcon: const Icon(Icons.lock_outline)),
               ),
               const SizedBox(height: 24),
-              FilledButton(onPressed: _submit, child: const Text('Create Account')),
+              FilledButton(onPressed: _submit, child: Text(l10n.registerSubmit)),
             ],
           ),
         ),

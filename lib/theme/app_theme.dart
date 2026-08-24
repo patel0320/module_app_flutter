@@ -29,6 +29,12 @@ abstract class AppColors {
 final ValueNotifier<ThemeMode> themeModeNotifier =
     ValueNotifier<ThemeMode>(ThemeMode.light);
 
+/// Global application locale holder. Used by the Language settings screen to
+/// switch the active language (English / Romanian) at runtime.
+final ValueNotifier<Locale> appLocaleNotifier = ValueNotifier<Locale>(
+  const Locale('en'),
+);
+
 abstract class AppTheme {
   /// Shared label style for extended [FloatingActionButton]s, kept here so all
   /// screens use one consistent bold label.

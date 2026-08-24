@@ -3,6 +3,7 @@
 // Brief section 2.5 "Organization by Rooms (Zones)": create, rename,
 // reorder and delete the rooms/zones used to group scenarios and modules.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/room_store.dart';
@@ -15,21 +16,25 @@ class RoomsScreen extends StatelessWidget {
   static final RoomStore _store = RoomStore.shared;
 
   Future<void> _addRoom(BuildContext context) async {
-    final String? name = await showTextInputDialog(context, title: 'New room', hint: 'e.g. Guest Cabin');
+    final String? name = await showTextInputDialog(context,
+        title: AppLocalizations.of(context).roomsNew,
+        hint: AppLocalizations.of(context).roomsNewHint);
     if (name != null) _store.add(name);
   }
 
   Future<void> _renameRoom(BuildContext context, Room room) async {
-    final String? name = await showTextInputDialog(context, title: 'Rename room', initialValue: room.name);
+    final String? name = await showTextInputDialog(context,
+        title: AppLocalizations.of(context).roomsRename,
+        initialValue: room.name);
     if (name != null) _store.rename(room, name);
   }
 
   Future<void> _deleteRoom(BuildContext context, Room room) async {
     final confirmed = await showConfirmDialog(
       context,
-      title: 'Delete room',
-      message: 'Delete "${room.name}"? Scenarios assigned to it will show as "No room".',
-      confirmLabel: 'Delete',
+      title: AppLocalizations.of(context).roomsDelete,
+      message: AppLocalizations.of(context).roomsDeleteMsg(room.name),
+      confirmLabel: AppLocalizations.of(context).delete,
     );
     if (confirmed) _store.remove(room);
   }
@@ -40,13 +45,14 @@ class RoomsScreen extends StatelessWidget {
       listenable: _store,
       builder: (context, _) {
         final rooms = _store.rooms;
+        final l10n = AppLocalizations.of(context);
         return Scaffold(
-          appBar: AppBar(title: const Text('Rooms')),
+          appBar: AppBar(title: Text(l10n.roomsTitle)),
               body: rooms.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: EmptyState(
                         icon: Icons.meeting_room_outlined,
-                        message: 'No rooms yet.',
+                        message: l10n.roomsEmpty,
                       ),
                     )
                   : ReorderableListView.builder(
@@ -79,7 +85,7 @@ class RoomsScreen extends StatelessWidget {
                               title: Text(room.name,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700)),
-                              subtitle: const Text('Hold & drag to reorder'),
+                              subtitle: Text(l10n.homeHoldDragReorder),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -104,7 +110,7 @@ class RoomsScreen extends StatelessWidget {
             heroTag: null,
             onPressed: () => _addRoom(context),
             icon: const Icon(Icons.add),
-            label: const Text('Add room', style: AppTheme.fabLabelStyle),
+            label: Text(l10n.roomsAdd, style: AppTheme.fabLabelStyle),
           ),
         );
       },

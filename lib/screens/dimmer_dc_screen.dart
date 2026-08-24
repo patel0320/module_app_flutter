@@ -3,6 +3,7 @@
 // Brief section 2.3 "Lighting Dimming Modules (DC)": intensity (PWM)
 // control for the 4 outputs of 12-24V DC lighting.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
@@ -35,6 +36,7 @@ class _DimmerDcScreenState extends State<DimmerDcScreen> {
   @override
   Widget build(BuildContext context) {
     final module = widget.module;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
@@ -46,11 +48,11 @@ class _DimmerDcScreenState extends State<DimmerDcScreen> {
           ModuleStatusHeader(module: module),
           const SizedBox(height: 8),
           Text(
-            '12-24V DC dimming outputs (PWM)',
+            l10n.dimmerDcSubtitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55)),
           ),
           const SizedBox(height: 16),
-          SectionHeader('Dimming Channels (${module.channels.length})'),
+          SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),
           for (final channel in module.channels)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),

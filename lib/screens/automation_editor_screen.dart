@@ -4,6 +4,7 @@
 // trigger by time of day or by another device's state - with one or more
 // resulting actions.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -54,16 +55,18 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   }
 
   String get _triggerSummary {
+    final l10n = AppLocalizations.of(context);
     if (_triggerType == AutomationTriggerType.time) {
       final hh = _time.hour.toString().padLeft(2, '0');
       final mm = _time.minute.toString().padLeft(2, '0');
-      return 'Every day at $hh:$mm';
+      return l10n.automationEveryDayAt('$hh:$mm');
     }
-    return 'When $_deviceChannelName turns ${_deviceTurnsOn ? 'ON' : 'OFF'}';
+    return l10n.automationWhenTurns(
+        _deviceChannelName, _deviceTurnsOn ? l10n.on : l10n.off);
   }
 
   void _save() {
-    final String name = _nameController.text.trim().isEmpty ? 'Untitled Automation' : _nameController.text.trim();
+    final String name = _nameController.text.trim().isEmpty ? AppLocalizations.of(context).automationUntitled : _nameController.text.trim();
     if (widget.automation != null) {
       final a = widget.automation!;
       a.name = name;
@@ -88,21 +91,22 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final channelNames = _channelNames;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? 'New Automation' : 'Edit Automation')),
+      appBar: AppBar(title: Text(_isNew ? l10n.automationNewTitle : l10n.automationEditTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Automation name', prefixIcon: Icon(Icons.label_outline)),
+            decoration: InputDecoration(labelText: l10n.automationNameLabel, prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 20),
-          const SectionHeader('IF (trigger)'),
+          SectionHeader(l10n.automationSectionIf),
           SegmentedButton<AutomationTriggerType>(
-            segments: const [
-              ButtonSegment(value: AutomationTriggerType.time, label: Text('Time of Day'), icon: Icon(Icons.schedule)),
-              ButtonSegment(value: AutomationTriggerType.deviceState, label: Text('Device State'), icon: Icon(Icons.sensors)),
+            segments: [
+              ButtonSegment(value: AutomationTriggerType.time, label: Text(l10n.automationTriggerTime), icon: const Icon(Icons.schedule)),
+              ButtonSegment(value: AutomationTriggerType.deviceState, label: Text(l10n.automationTriggerDevice), icon: const Icon(Icons.sensors)),
             ],
             selected: {_triggerType},
             onSelectionChanged: (s) => setState(() => _triggerType = s.first),
@@ -112,7 +116,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.access_time),
-                title: const Text('Trigger time'),
+                title: Text(l10n.automationTriggerTimeLabel),
                 subtitle: Text(_time.format(context)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _pickTime,
@@ -121,15 +125,15 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
           else ...[
             DropdownButtonFormField<String>(
               value: channelNames.contains(_deviceChannelName) ? _deviceChannelName : null,
-              decoration: const InputDecoration(labelText: 'When this output', prefixIcon: Icon(Icons.sensors)),
+              decoration: InputDecoration(labelText: l10n.automationWhenOutputLabel, prefixIcon: const Icon(Icons.sensors)),
               items: [for (final c in channelNames) DropdownMenuItem(value: c, child: Text(c))],
               onChanged: (v) => setState(() => _deviceChannelName = v ?? _deviceChannelName),
             ),
             const SizedBox(height: 12),
             SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Turns ON')),
-                ButtonSegment(value: false, label: Text('Turns OFF')),
+              segments: [
+                ButtonSegment(value: true, label: Text(l10n.automationTurnsOn)),
+                ButtonSegment(value: false, label: Text(l10n.automationTurnsOff)),
               ],
               selected: {_deviceTurnsOn},
               onSelectionChanged: (s) => setState(() => _deviceTurnsOn = s.first),
@@ -137,11 +141,11 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
           ],
           const SizedBox(height: 24),
           SectionHeader(
-            'THEN (actions)',
-            trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: const Text('Add')),
+            l10n.automationSectionThen,
+            trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: Text(l10n.add)),
           ),
           if (_actions.isEmpty)
-            const EmptyState(icon: Icons.flash_on_outlined, message: 'Add at least one action to run.')
+            EmptyState(icon: Icons.flash_on_outlined, message: l10n.automationActionsEmpty)
           else
             for (int i = 0; i < _actions.length; i++)
               Padding(
@@ -150,7 +154,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
                   child: ListTile(
                     leading: IconAvatar(icon: _actions[i].icon),
                     title: Text(_actions[i].channelName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text('${_actions[i].moduleName} · ${_actions[i].summary}'),
+                    subtitle: Text(l10n.scenarioActionModuleSummary(_actions[i].moduleName, _actions[i].summary)),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () => setState(() => _actions.removeAt(i)),
@@ -159,7 +163,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
                 ),
               ),
           const SizedBox(height: 24),
-          FilledButton(onPressed: _save, child: const Text('Save Automation')),
+          FilledButton(onPressed: _save, child: Text(l10n.automationSave)),
         ],
       ),
     );

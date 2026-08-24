@@ -4,6 +4,7 @@
 // and appearance, plus a reminder that the architecture is multi-location
 // ready even though v1 manages a single location (brief section 4.2).
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';
@@ -13,28 +14,30 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   Future<void> _clearEventHistory(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final bool confirmed = await showConfirmDialog(
       context,
-      title: 'Clear event history',
-      message: 'This will permanently delete all recorded events.',
-      confirmLabel: 'Clear',
+      title: l10n.settingsClearEventHistory,
+      message: l10n.settingsClearHistoryMsg,
+      confirmLabel: l10n.settingsClear,
     );
     if (confirmed) {
       await EventLogStore.shared.clear();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Event history cleared')),
+          SnackBar(content: Text(l10n.settingsHistoryCleared)),
         );
       }
     }
   }
 
   Future<void> _signOut(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final bool confirmed = await showConfirmDialog(
       context,
-      title: 'Sign out',
-      message: 'You will need to sign in again to access your modules and scenarios.',
-      confirmLabel: 'Sign out',
+      title: l10n.settingsSignOutDialog,
+      message: l10n.settingsSignOutMsg,
+      confirmLabel: l10n.settingsSignOutDialog,
     );
     if (confirmed && context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
@@ -44,8 +47,9 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
@@ -64,28 +68,28 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Preferences'),
+          SectionHeader(l10n.settingsPreferences),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Notifications'),
+                  title: Text(l10n.settingsNotifications),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).pushNamed('/settings/notifications'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.language_outlined),
-                  title: const Text('Language'),
-                  subtitle: const Text('English'),
+                  title: Text(l10n.settingsLanguage),
+                  subtitle: Text(l10n.settingsLanguageEn),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).pushNamed('/settings/language'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.history_outlined),
-                  title: const Text('Clear event history'),
+                  title: Text(l10n.settingsClearEventHistory),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _clearEventHistory(context),
                 ),
@@ -96,14 +100,14 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       const Icon(Icons.contrast_outlined),
                       const SizedBox(width: 16),
-                      const Expanded(child: Text('Appearance')),
+                      Expanded(child: Text(l10n.settingsAppearance)),
                       ValueListenableBuilder<ThemeMode>(
                         valueListenable: themeModeNotifier,
                         builder: (context, mode, _) => SegmentedButton<ThemeMode>(
-                          segments: const [
-                            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Light')),
-                            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Dark')),
-                            ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.settings_suggest_outlined), label: Text('Auto')),
+                          segments: [
+                            ButtonSegment(value: ThemeMode.light, icon: const Icon(Icons.light_mode_outlined), label: Text(l10n.settingsLight)),
+                            ButtonSegment(value: ThemeMode.dark, icon: const Icon(Icons.dark_mode_outlined), label: Text(l10n.settingsDark)),
+                            ButtonSegment(value: ThemeMode.system, icon: const Icon(Icons.settings_suggest_outlined), label: Text(l10n.settingsAuto)),
                           ],
                           selected: {mode},
                           showSelectedIcon: false,
@@ -117,12 +121,12 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Location'),
-          const Card(
+          SectionHeader(l10n.settingsLocation),
+          Card(
             child: ListTile(
-              leading: Icon(Icons.other_houses_outlined),
-              title: Text('Home'),
-              subtitle: Text('Single location in this version - multi-location support is planned'),
+              leading: const Icon(Icons.other_houses_outlined),
+              title: Text(l10n.settingsHome),
+              subtitle: Text(l10n.settingsSingleLocation),
             ),
           ),
           const SizedBox(height: 24),
@@ -136,12 +140,12 @@ class SettingsScreen extends StatelessWidget {
               ),
               onPressed: () => _signOut(context),
               icon: const Icon(Icons.logout),
-              label: const Text('Sign Out'),
+              label: Text(l10n.settingsSignOut),
             ),
           ),
           const SizedBox(height: 12),
           Center(
-            child: Text('App version 1.0.0', style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.4))),
+            child: Text(l10n.appVersion, style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.4))),
           ),
         ],
       ),

@@ -5,6 +5,7 @@
 // dedicated "Manual dimming Slider" scenario controlling a single dimmer
 // output.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -82,7 +83,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   }
 
   void _save() {
-    final String name = _nameController.text.trim().isEmpty ? 'Untitled Scenario' : _nameController.text.trim();
+    final String name = _nameController.text.trim().isEmpty ? AppLocalizations.of(context).scenarioUntitled : _nameController.text.trim();
     if (widget.scenario != null) {
       final s = widget.scenario!;
       s.name = name;
@@ -115,11 +116,12 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final roomOptions = ['No room', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? 'New Scenario' : 'Edit Scenario')),
+      appBar: AppBar(title: Text(_isNew ? l10n.scenarioNewTitle : l10n.scenarioEditTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
@@ -146,14 +148,14 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           const SizedBox(height: 20),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Scenario name', prefixIcon: Icon(Icons.label_outline)),
+            decoration: InputDecoration(labelText: l10n.scenarioNameLabel, prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 20),
-          const SectionHeader('Type'),
+          SectionHeader(l10n.scenarioTypeSection),
           SegmentedButton<ScenarioType>(
-            segments: const [
-              ButtonSegment(value: ScenarioType.tapToRun, label: Text('Tap to Run'), icon: Icon(Icons.touch_app_outlined)),
-              ButtonSegment(value: ScenarioType.manualSlider, label: Text('Manual Slider'), icon: Icon(Icons.tune)),
+            segments: [
+              ButtonSegment(value: ScenarioType.tapToRun, label: Text(l10n.scenarioTypeTapToRun), icon: const Icon(Icons.touch_app_outlined)),
+              ButtonSegment(value: ScenarioType.manualSlider, label: Text(l10n.scenarioTypeManualSlider), icon: const Icon(Icons.tune)),
             ],
             selected: {_type},
             onSelectionChanged: (s) => setState(() => _type = s.first),
@@ -161,25 +163,25 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           const SizedBox(height: 20),
           DropdownButtonFormField<String>(
             value: roomOptions.contains(_roomName) ? _roomName : roomOptions.first,
-            decoration: const InputDecoration(labelText: 'Room', prefixIcon: Icon(Icons.meeting_room_outlined)),
+            decoration: InputDecoration(labelText: l10n.scenarioRoomLabel, prefixIcon: const Icon(Icons.meeting_room_outlined)),
             items: [for (final room in roomOptions) DropdownMenuItem(value: room, child: Text(room))],
             onChanged: (value) => setState(() => _roomName = value ?? _roomName),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Show on Home'),
-            subtitle: const Text('Pin this scenario to the Home quick-access list'),
+            title: Text(l10n.showOnHome),
+            subtitle: Text(l10n.scenarioPinHint),
             value: _showInHome,
             onChanged: (v) => setState(() => _showInHome = v),
           ),
           const SizedBox(height: 12),
           if (_type == ScenarioType.tapToRun) ...[
             SectionHeader(
-              'Actions',
-              trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: const Text('Add')),
+              l10n.scenarioActionsSection,
+              trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: Text(l10n.add)),
             ),
             if (_actions.isEmpty)
-              const EmptyState(icon: Icons.flash_on_outlined, message: 'Add at least one action to this scenario.')
+              EmptyState(icon: Icons.flash_on_outlined, message: l10n.scenarioActionsEmpty)
             else
               for (int i = 0; i < _actions.length; i++)
                 Padding(
@@ -188,17 +190,17 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     child: ListTile(
                       leading: IconAvatar(icon: _actions[i].icon),
                       title: Text(_actions[i].channelName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text('${_actions[i].moduleName} · ${_actions[i].summary}'),
+                      subtitle: Text(l10n.scenarioActionModuleSummary(_actions[i].moduleName, _actions[i].summary)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Edit action',
+                            tooltip: l10n.scenarioEditActionTooltip,
                             icon: const Icon(Icons.edit_outlined),
                             onPressed: () => _editAction(i),
                           ),
                           IconButton(
-                            tooltip: 'Delete action',
+                            tooltip: l10n.scenarioDeleteActionTooltip,
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () => setState(() => _actions.removeAt(i)),
                           ),
@@ -208,15 +210,15 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                   ),
                 ),
           ] else ...[
-            const SectionHeader('Slider target'),
+            SectionHeader(l10n.scenarioSliderTargetSection),
             DropdownButtonFormField<String>(
               value: dimmerTargets.contains(_sliderTargetName) ? _sliderTargetName : null,
-              decoration: const InputDecoration(labelText: 'Dimmer output', prefixIcon: Icon(Icons.lightbulb_outline)),
+              decoration: InputDecoration(labelText: l10n.scenarioDimmerOutputLabel, prefixIcon: const Icon(Icons.lightbulb_outline)),
               items: [for (final t in dimmerTargets) DropdownMenuItem(value: t, child: Text(t))],
               onChanged: (value) => setState(() => _sliderTargetName = value ?? _sliderTargetName),
             ),
             const SizedBox(height: 16),
-            Text('Default brightness: $_sliderValue%', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.scenarioDefaultBrightness(_sliderValue), style: const TextStyle(fontWeight: FontWeight.w600)),
             Slider(
               value: _sliderValue.toDouble(),
               min: 0,
@@ -227,7 +229,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
             ),
           ],
           const SizedBox(height: 24),
-          FilledButton(onPressed: _save, child: const Text('Save Scenario')),
+          FilledButton(onPressed: _save, child: Text(l10n.scenarioSave)),
         ],
       ),
     );

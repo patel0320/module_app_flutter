@@ -4,6 +4,7 @@
 // every added module with an online/offline indicator, and lets the user
 // add new ones (via the self-discovery / manual-IP flow on AddModuleScreen).
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/module_status/module_status_service.dart';
@@ -62,7 +63,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Future<void> _renameModule(DeviceModule module) async {
     final String? newName = await showTextInputDialog(
       context,
-      title: 'Rename module',
+      title: AppLocalizations.of(context).configRenameDialog,
       initialValue: module.name,
     );
     if (newName == null) return;
@@ -74,9 +75,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Future<void> _removeModule(DeviceModule module) async {
     final bool confirmed = await showConfirmDialog(
       context,
-      title: 'Remove module',
-      message: 'Remove "${module.name}"? This cannot be undone.',
-      confirmLabel: 'Remove',
+      title: AppLocalizations.of(context).configRemoveDialog,
+      message: AppLocalizations.of(context).configRemoveMsg(module.name),
+      confirmLabel: AppLocalizations.of(context).remove,
     );
     if (!confirmed) return;
     await _store.remove(module.id);
@@ -87,13 +88,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configuration'),
+        title: Text(l10n.configTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Add module',
+            tooltip: l10n.configAddTooltip,
             onPressed: _addModule,
           ),
         ],
@@ -106,8 +108,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (modules.isEmpty) {
-            return const EmptyState(
-                icon: Icons.dns_outlined, message: 'No modules added yet.');
+            return EmptyState(
+                icon: Icons.dns_outlined, message: l10n.configEmpty);
           }
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.outerPadding),
@@ -130,7 +132,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
         heroTag: null,
         onPressed: _addModule,
         icon: const Icon(Icons.add),
-        label: const Text('Add module', style: AppTheme.fabLabelStyle),
+        label: Text(l10n.configAddTooltip, style: AppTheme.fabLabelStyle),
       ),
     );
   }
@@ -152,6 +154,7 @@ class _ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final status = module.status;
     return Card(
       child: InkWell(
@@ -183,7 +186,7 @@ class _ModuleCard extends StatelessWidget {
                   children: [
                     Text(module.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 2),
-                    Text('${module.type.label} · ${module.ipAddress}',
+                    Text(l10n.configModuleSummary(module.type.label, module.ipAddress),
                         style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55))),
                     const SizedBox(height: 2),
                     Row(
@@ -191,7 +194,7 @@ class _ModuleCard extends StatelessWidget {
                         RoomTag(label: module.roomName),
                         const SizedBox(width: 8),
                         Text(
-                          status == ConnectionStatus.online ? 'Online' : 'Offline',
+                          status == ConnectionStatus.online ? l10n.online : l10n.offline,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -208,9 +211,9 @@ class _ModuleCard extends StatelessWidget {
                   if (value == 'rename') onRename();
                   if (value == 'remove') onRemove();
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'rename', child: Text('Rename')),
-                  PopupMenuItem(value: 'remove', child: Text('Remove')),
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: 'rename', child: Text(l10n.configRenameDialog)),
+                  PopupMenuItem(value: 'remove', child: Text(l10n.remove)),
                 ],
               ),
             ],

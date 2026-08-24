@@ -3,6 +3,7 @@
 // Small reusable UI building blocks shared by several screens, kept in one
 // file to avoid duplicating the same layout code across the prototype.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -191,7 +192,9 @@ Future<bool> showConfirmDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
           style: destructive
               ? FilledButton.styleFrom(backgroundColor: AppColors.offlineAlert, foregroundColor: Colors.white)
@@ -224,7 +227,9 @@ Future<String?> showTextInputDialog(
         decoration: InputDecoration(hintText: hint),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
           onPressed: () => Navigator.pop(context, controller.text.trim()),
           child: Text(confirmLabel),
@@ -245,36 +250,41 @@ Future<bool> showEditModuleInfoDialog(BuildContext context, DeviceModule module)
   final bool? saved = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Edit module info'),
+      title: Text(AppLocalizations.of(context).moduleInfoTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: nameController,
             autofocus: true,
-            decoration: const InputDecoration(
-                labelText: 'Module name', prefixIcon: Icon(Icons.edit_outlined)),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).moduleName,
+                prefixIcon: const Icon(Icons.edit_outlined)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: ipController,
-            decoration: const InputDecoration(
-                labelText: 'IP address', prefixIcon: Icon(Icons.lan_outlined)),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).ipAddress,
+                prefixIcon: const Icon(Icons.lan_outlined)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: portController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-                labelText: 'TCP port', prefixIcon: Icon(Icons.router_outlined)),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).tcpPort,
+                prefixIcon: const Icon(Icons.router_outlined)),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Save'),
+          child: Text(AppLocalizations.of(context).save),
         ),
       ],
     ),
@@ -320,7 +330,7 @@ class ModuleStatusHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    online ? 'Online' : 'Offline',
+                    online ? AppLocalizations.of(context).online : AppLocalizations.of(context).offline,
                     style: TextStyle(fontWeight: FontWeight.w800, color: online ? AppColors.online : AppColors.offlineAlert),
                   ),
                   const SizedBox(height: 2),
@@ -390,7 +400,7 @@ class DimmerChannelCard extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  tooltip: 'Turn off',
+                  tooltip: AppLocalizations.of(context).cwTurnOff,
                   icon: const Icon(Icons.brightness_low),
                   onPressed: () {
                     onChanged(0);
@@ -409,7 +419,7 @@ class DimmerChannelCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Full brightness',
+                  tooltip: AppLocalizations.of(context).cwFullBrightness,
                   icon: const Icon(Icons.brightness_high),
                   onPressed: () {
                     onChanged(100);
@@ -426,11 +436,11 @@ class DimmerChannelCard extends StatelessWidget {
 }
 
 /// Formats a [DateTime] as a short relative-ish timestamp for log lists.
-String formatLogTimestamp(DateTime time) {
+String formatLogTimestamp(DateTime time, AppLocalizations l10n) {
   final Duration diff = DateTime.now().difference(time);
-  if (diff.inMinutes < 1) return 'Just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-  if (diff.inHours < 24) return '${diff.inHours} h ago';
-  if (diff.inDays < 30) return '${diff.inDays} d ago';
+  if (diff.inMinutes < 1) return l10n.cwJustNow;
+  if (diff.inMinutes < 60) return l10n.cwMinutesAgo(diff.inMinutes);
+  if (diff.inHours < 24) return l10n.cwHoursAgo(diff.inHours);
+  if (diff.inDays < 30) return l10n.cwDaysAgo(diff.inDays);
   return '${time.day}/${time.month}/${time.year}';
 }

@@ -3,6 +3,7 @@
 // Mandatory sign-in screen (brief section 3.1). Authentication is only
 // simulated: any non-empty email/password navigates into the app.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email and password.')),
+        SnackBar(content: Text(AppLocalizations.of(context).loginError)),
       );
       return;
     }
@@ -41,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -51,29 +53,29 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 32),
               Image.asset('assets/images/logo.png', height: 92),
               const SizedBox(height: 16),
-              Text('Welcome back',
+              Text(l10n.loginWelcome,
                   style: Theme.of(context)
                       .textTheme
                       .headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(
-                'Sign in to access your modules, scenarios and settings.',
+                l10n.loginSubtitle,
                 style: TextStyle(color: onSurface.withOpacity(0.6)),
               ),
               const SizedBox(height: 32),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                    labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                decoration: InputDecoration(
+                    labelText: l10n.loginEmail, prefixIcon: const Icon(Icons.mail_outline)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: l10n.loginPassword,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword
@@ -91,21 +93,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     MaterialPageRoute(
                         builder: (_) => const ForgotPasswordScreen()),
                   ),
-                  child: const Text('Forgot password?'),
+                  child: Text(l10n.loginForgot),
                 ),
               ),
               const SizedBox(height: 12),
-              FilledButton(onPressed: _submit, child: const Text('Sign In')),
+              FilledButton(onPressed: _submit, child: Text(l10n.loginSignIn)),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account?"),
+                  Text(l10n.loginNoAccount),
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const RegisterScreen()),
                     ),
-                    child: const Text('Create one'),
+                    child: Text(l10n.loginCreateOne),
                   ),
                 ],
               ),

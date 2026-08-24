@@ -4,6 +4,7 @@
 // profile details, password change, and cloud backup/restore - the
 // mechanism that lets a user move to a new phone without reconfiguring.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -34,33 +35,38 @@ class _AccountScreenState extends State<AccountScreen> {
     final bool? result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change password'),
+        title: Text(AppLocalizations.of(context).accountChangePassword),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: currentController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Current password'),
+              decoration: InputDecoration(labelText: AppLocalizations.of(context).accountCurrentPassword),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: newController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'New password'),
+              decoration: InputDecoration(labelText: AppLocalizations.of(context).accountNewPassword),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Update')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppLocalizations.of(context).cancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(AppLocalizations.of(context).update)),
         ],
       ),
     );
     currentController.dispose();
     newController.dispose();
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).accountPasswordUpdated)));
     }
   }
 
@@ -72,56 +78,60 @@ class _AccountScreenState extends State<AccountScreen> {
       _backingUp = false;
       _lastBackup = DateTime.now();
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup completed.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).accountBackupCompleted)));
   }
 
   Future<void> _restoreBackup() async {
     final bool confirmed = await showConfirmDialog(
       context,
-      title: 'Restore backup',
-      message: 'This will overwrite the current configuration on this device with your last cloud backup.',
-      confirmLabel: 'Restore',
+      title: AppLocalizations.of(context).accountRestoreDialog,
+      message: AppLocalizations.of(context).accountRestoreMsg,
+      confirmLabel: AppLocalizations.of(context).restore,
       destructive: false,
     );
     if (confirmed && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configuration restored from backup.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).accountConfigRestored)));
     }
   }
 
   void _saveProfile() {
     FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).accountProfileUpdated)));
   }
 
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(title: Text(l10n.accountTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
-          const SectionHeader('Profile'),
+          SectionHeader(l10n.accountProfileSection),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline)),
+            decoration: InputDecoration(labelText: l10n.accountFullName, prefixIcon: const Icon(Icons.person_outline)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _emailController,
             readOnly: true,
-            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+            decoration: InputDecoration(labelText: l10n.accountEmail, prefixIcon: const Icon(Icons.mail_outline)),
           ),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _saveProfile, child: const Text('Save changes')),
+          FilledButton(onPressed: _saveProfile, child: Text(l10n.accountSaveChanges)),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _changePassword,
             icon: const Icon(Icons.lock_reset_outlined),
-            label: const Text('Change password'),
+            label: Text(l10n.accountChangePassword),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Cloud Backup & Sync'),
+          SectionHeader(l10n.accountCloudSection),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -132,20 +142,21 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: [
                       const Icon(Icons.cloud_done_outlined),
                       const SizedBox(width: 12),
-                      Expanded(child: Text('Last backup: ${formatLogTimestamp(_lastBackup)}')),
+                      Expanded(
+                          child: Text(l10n.accountLastBackup(
+                              formatLogTimestamp(_lastBackup, l10n)))),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Your modules, scenarios, rooms and settings are backed up to the '
-                    'cloud so you can switch to a new phone without any reconfiguration.',
+                    l10n.accountBackupDesc,
                     style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(onPressed: _restoreBackup, child: const Text('Restore')),
+                        child: OutlinedButton(onPressed: _restoreBackup, child: Text(l10n.restore)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -160,7 +171,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                     color: Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 )
-                              : const Text('Back Up Now'),
+                              : Text(l10n.accountBackUpNow),
                         ),
                       ),
                     ],

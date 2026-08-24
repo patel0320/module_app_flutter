@@ -4,57 +4,52 @@
 // English ship at launch; Spanish, French and German are architected for
 // but not yet enabled.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-class LanguageSettingsScreen extends StatefulWidget {
+class LanguageSettingsScreen extends StatelessWidget {
   const LanguageSettingsScreen({super.key});
 
-  @override
-  State<LanguageSettingsScreen> createState() => _LanguageSettingsScreenState();
-}
-
-class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
-  String _selected = 'en';
-
-  void _select(String code) {
-    setState(() => _selected = code);
+  void _select(BuildContext context, String code) {
+    appLocaleNotifier.value = Locale(code);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Language preference saved.')),
+      SnackBar(content: Text(AppLocalizations.of(context).languageSaved)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Language')),
+      appBar: AppBar(title: Text(l10n.settingsLanguage)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
-          const SectionHeader('Available at launch'),
+          SectionHeader(l10n.languageAvailable),
           Card(
             child: Column(
               children: [
                 RadioListTile<String>(
                   value: 'en',
-                  groupValue: _selected,
+                  groupValue: appLocaleNotifier.value.languageCode,
                   title: const Text('English'),
-                  onChanged: (v) => _select(v!),
+                  onChanged: (v) => _select(context, v!),
                 ),
                 const Divider(height: 1),
                 RadioListTile<String>(
                   value: 'ro',
-                  groupValue: _selected,
+                  groupValue: appLocaleNotifier.value.languageCode,
                   title: const Text('Română'),
-                  onChanged: (v) => _select(v!),
+                  onChanged: (v) => _select(context, v!),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Coming soon'),
+          SectionHeader(l10n.comingSoon),
           Card(
             child: Column(
               children: [
@@ -68,7 +63,7 @@ class _LanguageSettingsScreenState extends State<LanguageSettingsScreen> {
                         border: Border.all(color: onSurface.withOpacity(0.2)),
                       ),
                       child: Text(
-                        'Soon',
+                        l10n.soon,
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withOpacity(0.5)),
                       ),
                     ),

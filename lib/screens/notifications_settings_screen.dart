@@ -3,6 +3,7 @@
 // Brief section 3.2 "Push Notifications": toggles for the real-time alerts
 // the app sends even when it is closed.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -22,39 +23,40 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: Text(l10n.notificationsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
-          const SectionHeader('Push notifications'),
+          SectionHeader(l10n.notificationsPushSection),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('Module offline / back online'),
-                  subtitle: const Text('Alert when a module disconnects or reconnects'),
+                  title: Text(l10n.notificationsModuleOffline),
+                  subtitle: Text(l10n.notificationsModuleOfflineDesc),
                   value: _moduleStatus,
                   onChanged: (v) => setState(() => _moduleStatus = v),
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
-                  title: const Text('Output left ON too long'),
-                  subtitle: const Text('Alert when an output stays on for an extended period'),
+                  title: Text(l10n.notificationsOutputLongOn),
+                  subtitle: Text(l10n.notificationsOutputLongOnDesc),
                   value: _outputLeftOn,
                   onChanged: (v) => setState(() => _outputLeftOn = v),
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
-                  title: const Text('Temperature threshold exceeded'),
-                  subtitle: const Text("Alert when a module's internal temperature is out of range"),
+                  title: Text(l10n.notificationsTempExceeded),
+                  subtitle: Text(l10n.notificationsTempExceededDesc),
                   value: _temperature,
                   onChanged: (v) => setState(() => _temperature = v),
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
-                  title: const Text('Automation triggered'),
-                  subtitle: const Text('Notify when a smart automation runs'),
+                  title: Text(l10n.notificationsAutomation),
+                  subtitle: Text(l10n.notificationsAutomationDesc),
                   value: _automationTriggered,
                   onChanged: (v) => setState(() => _automationTriggered = v),
                 ),

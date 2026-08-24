@@ -4,6 +4,7 @@
 // tap-to-run scenarios (and the manual dimming slider), with quick access
 // to Automations, Rooms and the Event History.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
@@ -26,8 +27,8 @@ class ScenariosScreen extends StatelessWidget {
           builder: (_) => ManualDimmingSliderScreen(scenario: scenario)));
       return;
     }
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Running "${scenario.name}"...')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).homeRunningScenario(scenario.name))));
     final result = await ScenarioRunner.shared.run(scenario);
     await EventLogStore.shared.recordScenarioResult(result);
   }
@@ -51,9 +52,9 @@ class ScenariosScreen extends StatelessWidget {
       BuildContext context, Scenario scenario) async {
     final confirmed = await showConfirmDialog(
       context,
-      title: 'Delete scenario',
-      message: 'Delete "${scenario.name}"? This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: AppLocalizations.of(context).scenariosDeleteDialog,
+      message: AppLocalizations.of(context).scenariosDeleteMsg(scenario.name),
+      confirmLabel: AppLocalizations.of(context).delete,
     );
     if (confirmed) await _store.remove(scenario.id);
   }
@@ -69,23 +70,24 @@ class ScenariosScreen extends StatelessWidget {
       listenable: _store,
       builder: (context, _) {
         final scenarios = _store.scenarios;
+        final l10n = AppLocalizations.of(context);
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Scenarios'),
+            title: Text(l10n.scenariosTitle),
             actions: [
               IconButton(
-                tooltip: 'Rooms',
+                tooltip: l10n.scenariosRooms,
                 icon: const Icon(Icons.meeting_room_outlined),
                 onPressed: () => Navigator.of(context).pushNamed('/rooms'),
               ),
               IconButton(
-                tooltip: 'Automations',
+                tooltip: l10n.scenariosAutomations,
                 icon: const Icon(Icons.rule_outlined),
                 onPressed: () =>
                     Navigator.of(context).pushNamed('/automations'),
               ),
               IconButton(
-                tooltip: 'Event history',
+                tooltip: l10n.scenariosEventHistory,
                 icon: const Icon(Icons.history),
                 onPressed: () =>
                     Navigator.of(context).pushNamed('/event-history'),
@@ -93,10 +95,10 @@ class ScenariosScreen extends StatelessWidget {
             ],
           ),
           body: scenarios.isEmpty
-              ? const Center(
+              ? Center(
                   child: EmptyState(
                     icon: Icons.auto_awesome_outlined,
-                    message: 'No scenarios yet. Create your first one.',
+                    message: l10n.scenariosEmpty,
                   ),
                 )
               : ReorderableListView.builder(
@@ -126,7 +128,7 @@ class ScenariosScreen extends StatelessWidget {
             heroTag: null,
             onPressed: () => _createScenario(context),
             icon: const Icon(Icons.add),
-            label: const Text('New scenario', style: AppTheme.fabLabelStyle),
+            label: Text(l10n.scenariosNew, style: AppTheme.fabLabelStyle),
           ),
         );
       },
@@ -154,6 +156,7 @@ class _ScenarioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     final bool isSlider = scenario.type == ScenarioType.manualSlider;
     return Card(
       child: InkWell(
@@ -191,8 +194,8 @@ class _ScenarioCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 isSlider
-                                    ? 'Manual dimming slider'
-                                    : '${scenario.actions.length} action(s)',
+                                    ? l10n.homeManualDimmingSlider
+                                    : l10n.homeActionsCount(scenario.actions.length),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontSize: 12,
@@ -213,8 +216,8 @@ class _ScenarioCard extends StatelessWidget {
                     onSelected: (value) {
                       if (value == 'delete') onDelete();
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
                     ],
                   ),
                 ],
@@ -223,8 +226,8 @@ class _ScenarioCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Show on Home',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(l10n.showOnHome,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
                   Switch(
                       value: scenario.showInHome,
                       onChanged: onShowInHomeChanged),

@@ -6,6 +6,8 @@
 // lib/data/mock_data.dart and mutated only in local widget state.
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'screens/account_screen.dart';
 import 'screens/add_module_screen.dart';
@@ -56,14 +58,25 @@ class AutomationApp extends StatelessWidget {
         return ValueListenableBuilder<HomeThemeId>(
           valueListenable: homeThemeIdNotifier,
           builder: (context, themeId, _) {
-            return MaterialApp(
-              title: 'Relay & Dimming Control',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightFor(themeId),
-              darkTheme: AppTheme.darkFor(themeId),
-              themeMode: mode,
-              scrollBehavior: const AppScrollBehavior(),
-              initialRoute: '/',
+            return ValueListenableBuilder<Locale>(
+              valueListenable: appLocaleNotifier,
+              builder: (context, locale, _) {
+                return MaterialApp(
+                  onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightFor(themeId),
+                  darkTheme: AppTheme.darkFor(themeId),
+                  themeMode: mode,
+                  locale: locale,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  scrollBehavior: const AppScrollBehavior(),
+                  initialRoute: '/',
               routes: {
                 '/': (context) => const SplashScreen(),
                 '/login': (context) => const LoginScreen(),
@@ -78,6 +91,8 @@ class AutomationApp extends StatelessWidget {
                 '/settings/account': (context) => const AccountScreen(),
                 '/settings/notifications': (context) => const NotificationsSettingsScreen(),
                 '/settings/language': (context) => const LanguageSettingsScreen(),
+              },
+            );
               },
             );
           },
@@ -133,26 +148,26 @@ class _RootShellState extends State<RootShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _onDestinationSelected,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: AppLocalizations.of(context).tabHome,
           ),
           NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune),
-            label: 'Configuration',
+            icon: const Icon(Icons.tune_outlined),
+            selectedIcon: const Icon(Icons.tune),
+            label: AppLocalizations.of(context).tabConfiguration,
           ),
           NavigationDestination(
-            icon: Icon(Icons.flash_on_outlined),
-            selectedIcon: Icon(Icons.flash_on),
-            label: 'Scenarios',
+            icon: const Icon(Icons.flash_on_outlined),
+            selectedIcon: const Icon(Icons.flash_on),
+            label: AppLocalizations.of(context).tabScenarios,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: AppLocalizations.of(context).tabSettings,
           ),
         ],
       ),

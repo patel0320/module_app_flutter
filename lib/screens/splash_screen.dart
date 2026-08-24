@@ -5,6 +5,7 @@
 // 3.1: "On first launch, the application will request the creation of an
 // account...").
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../services/module_status/module_status_service.dart';
 
@@ -33,6 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Center(
         child: Column(
@@ -51,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'RelayControl',
+              l10n.splashAppName,
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -59,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Relays · Dimmers · Scenarios',
+              l10n.splashTagline,
               style: TextStyle(color: onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 40),

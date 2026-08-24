@@ -4,6 +4,7 @@
 // output, plus (brief section 2.2) naming/icon customization and physical
 // switch input configuration.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
@@ -13,7 +14,6 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'channel_editor_screen.dart';
 import 'input_editor_screen.dart';
-import '../services/module_status/pdu_protocol.dart';
 
 class RelayControlScreen extends StatefulWidget {
   const RelayControlScreen({super.key, required this.module});
@@ -93,13 +93,14 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
       builder: (context, _) {
         final module =
             ModuleStore.shared.byId(widget.module.id) ?? widget.module;
+        final l10n = AppLocalizations.of(context);
         return Scaffold(
           appBar: AppBar(
             title: Text(module.name),
             actions: [
               IconButton(
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: l10n.relayRefreshTooltip,
                   onPressed: _refresh),
               IconButton(
                   icon: const Icon(Icons.edit_outlined),
@@ -111,7 +112,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
             children: [
               ModuleStatusHeader(module: module),
               const SizedBox(height: 24),
-              SectionHeader('Outputs (${module.channels.length})'),
+              SectionHeader(l10n.relayOutputsHeader(module.channels.length)),
               for (int i = 0; i < module.channels.length; i++)
                 Padding(
                   padding:
@@ -126,7 +127,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
                 ),
               if (module.inputs.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                const SectionHeader('Physical Inputs'),
+                SectionHeader(l10n.relayPhysicalInputs),
                 for (final input in module.inputs)
                   Padding(
                     padding:
@@ -158,6 +159,7 @@ class _OutputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -173,7 +175,7 @@ class _OutputRow extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 16)),
                   const SizedBox(height: 2),
-                  Text('Output ${index + 1}',
+                  Text(l10n.relayOutput(index + 1),
                       style: TextStyle(
                           fontSize: 12, color: onSurface.withOpacity(0.5))),
                 ],
@@ -183,9 +185,9 @@ class _OutputRow extends StatelessWidget {
               width: 88,
               height: 48,
               child: channel.isOn
-                  ? FilledButton(onPressed: onToggle, child: const Text('ON'))
+                  ? FilledButton(onPressed: onToggle, child: Text(l10n.on))
                   : OutlinedButton(
-                      onPressed: onToggle, child: const Text('OFF')),
+                      onPressed: onToggle, child: Text(l10n.off)),
             ),
             IconButton(
                 icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
@@ -205,6 +207,7 @@ class _InputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -223,7 +226,7 @@ class _InputRow extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
-                      '${input.mode.label} · bound to ${input.boundTo}',
+                      l10n.relayInputSummary(input.mode.label, input.boundTo),
                       style: TextStyle(
                           fontSize: 12, color: onSurface.withOpacity(0.55)),
                     ),

@@ -3,6 +3,7 @@
 // Brief section 2.2 "Customization": rename an output and associate a
 // simple icon with it, for quick and intuitive identification.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -39,8 +40,9 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Output')),
+      appBar: AppBar(title: Text(l10n.channelEditorTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
@@ -50,10 +52,10 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
           const SizedBox(height: 20),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Output name', prefixIcon: Icon(Icons.label_outline)),
+            decoration: InputDecoration(labelText: l10n.channelNameLabel, prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 24),
-          const SectionHeader('Choose an icon'),
+          SectionHeader(l10n.channelChooseIcon),
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -76,7 +78,7 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
             ],
           ),
           const SizedBox(height: 32),
-          FilledButton(onPressed: _save, child: const Text('Save')),
+          FilledButton(onPressed: _save, child: Text(l10n.save)),
         ],
       ),
     );

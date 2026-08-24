@@ -3,6 +3,7 @@
 // "System Status" page reached by tapping the offline/temperature alert
 // banners on Home (brief section I, point 2: "a log of error messages").
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
@@ -16,11 +17,12 @@ class SystemStatusScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = mockStatusLog()..sort((a, b) => b.time.compareTo(a.time));
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('System Status')),
+      appBar: AppBar(title: Text(l10n.systemStatusTitle)),
       body: entries.isEmpty
-          ? const EmptyState(icon: Icons.verified_outlined, message: 'No issues reported.')
+          ? EmptyState(icon: Icons.verified_outlined, message: l10n.systemStatusNoIssues)
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: entries.length,
@@ -40,6 +42,7 @@ class _StatusTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color accent = entry.isAlert ? AppColors.offlineAlert : AppColors.online;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -63,7 +66,7 @@ class _StatusTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              formatLogTimestamp(entry.time),
+              formatLogTimestamp(entry.time, l10n),
               style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.5)),
             ),
           ],

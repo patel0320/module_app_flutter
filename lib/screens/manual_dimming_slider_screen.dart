@@ -4,6 +4,7 @@
 // that controls a single dimmer output and can be opened directly from
 // Home for quick intensity adjustment.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +31,7 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.scenario.name)),
       body: Padding(
@@ -46,7 +48,7 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
             Text('$_value%', style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
-              widget.scenario.sliderTargetName.isEmpty ? 'Dimmer output' : widget.scenario.sliderTargetName,
+              widget.scenario.sliderTargetName.isEmpty ? l10n.manualDimDefaultLabel : widget.scenario.sliderTargetName,
               style: TextStyle(color: onSurface.withOpacity(0.55)),
             ),
             const Spacer(),
@@ -68,9 +70,9 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
             ),
             Row(
               children: [
-                Expanded(child: OutlinedButton(onPressed: () => _update(0), child: const Text('OFF'))),
+                Expanded(child: OutlinedButton(onPressed: () => _update(0), child: Text(l10n.off))),
                 const SizedBox(width: 12),
-                Expanded(child: FilledButton(onPressed: () => _update(100), child: const Text('ON'))),
+                Expanded(child: FilledButton(onPressed: () => _update(100), child: Text(l10n.on))),
               ],
             ),
             const SizedBox(height: 8),

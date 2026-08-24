@@ -4,6 +4,7 @@
 // standard password reset functionality via email is implemented"). The
 // "send" action only flips local UI state - no email is actually sent.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -25,7 +26,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   void _sendResetLink() {
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email address.')),
+        SnackBar(content: Text(AppLocalizations.of(context).forgotEnterEmail)),
       );
       return;
     }
@@ -35,8 +36,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
+      appBar: AppBar(title: Text(l10n.forgotTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -45,32 +47,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               if (!_sent) ...[
                 Text(
-                  'Enter the email address associated with your account and we will '
-                  'send you a link to reset your password.',
+                  l10n.forgotDesc,
                   style: TextStyle(color: onSurface.withOpacity(0.6)),
                 ),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                  decoration: InputDecoration(labelText: l10n.loginEmail, prefixIcon: const Icon(Icons.mail_outline)),
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: _sendResetLink, child: const Text('Send reset link')),
+                FilledButton(onPressed: _sendResetLink, child: Text(l10n.forgotSend)),
               ] else ...[
                 const SizedBox(height: 24),
                 Icon(Icons.mark_email_read_outlined, size: 56, color: onSurface),
                 const SizedBox(height: 16),
-                Text('Check your inbox', style: Theme.of(context).textTheme.titleLarge),
+                Text(l10n.forgotCheckInbox, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
-                  'If an account exists for ${_emailController.text.trim()}, a reset link has been sent.',
+                  l10n.forgotSentMsg(_emailController.text.trim()),
                   style: TextStyle(color: onSurface.withOpacity(0.6)),
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Back to Sign In'),
+                  child: Text(l10n.forgotBackToSignIn),
                 ),
               ],
             ],

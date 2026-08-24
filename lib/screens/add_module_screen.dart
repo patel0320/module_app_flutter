@@ -7,6 +7,7 @@
 // submitting a module simply returns it to the Configuration screen via
 // `Navigator.pop`.
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../core/discovery/module_discovery.dart';
 import '../models/models.dart';
@@ -46,24 +47,21 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     super.dispose();
   }
 
-  List<ChannelOutput> _defaultChannelsFor(ModuleType type) {
+  List<ChannelOutput> _defaultChannelsFor(ModuleType type, AppLocalizations l10n) {
     switch (type) {
       case ModuleType.relay:
-        return List.generate(
-            8,
+        return List.generate(8,
             (i) => ChannelOutput(
-                id: 'new-r$i', name: 'Output ${i + 1}', icon: Icons.power));
+                id: 'new-r$i', name: l10n.addModuleOutput(i + 1), icon: Icons.power));
       case ModuleType.blind:
-        return List.generate(
-            2,
+        return List.generate(2,
             (i) => ChannelOutput(
-                id: 'new-b$i', name: 'Blind ${i + 1}', icon: Icons.blinds));
+                id: 'new-b$i', name: l10n.addModuleBlind(i + 1), icon: Icons.blinds));
       case ModuleType.dimmerDc:
       case ModuleType.dimmerAc:
-        return List.generate(
-            4,
+        return List.generate(4,
             (i) => ChannelOutput(
-                id: 'new-d$i', name: 'Channel ${i + 1}', icon: Icons.tune));
+                id: 'new-d$i', name: l10n.addModuleChannel(i + 1), icon: Icons.tune));
       case ModuleType.temperature:
         return [];
     }
@@ -100,14 +98,14 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   DeviceModule _toDeviceModule(DiscoveredModule discovered) {
     return DeviceModule(
       id: 'discovered-${discovered.serial.isNotEmpty ? discovered.serial : discovered.guid}',
-      name: discovered.name.isNotEmpty ? discovered.name : 'Unnamed Relay',
+      name: discovered.name.isNotEmpty ? discovered.name : AppLocalizations.of(context).addModuleUnnamedRelay,
       type: ModuleType.relay,
       ipAddress: discovered.ip,
       tcpPort: discovered.tcpPort,
       status: ConnectionStatus.online,
-      roomName: 'Unassigned',
+      roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
-      channels: _defaultChannelsFor(ModuleType.relay),
+      channels: _defaultChannelsFor(ModuleType.relay, AppLocalizations.of(context)),
     );
   }
 
@@ -118,7 +116,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   void _addManual() {
     if (_ipController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the module IP address.')),
+        SnackBar(content: Text(AppLocalizations.of(context).addModuleEnterIp)),
       );
       return;
     }
@@ -131,9 +129,9 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       ipAddress: _ipController.text.trim(),
       tcpPort: int.tryParse(_tcpPortController.text.trim()) ?? 5005,
       status: ConnectionStatus.online,
-      roomName: 'Unassigned',
+      roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
-      channels: _defaultChannelsFor(_manualType),
+      channels: _defaultChannelsFor(_manualType, AppLocalizations.of(context)),
     );
     Navigator.of(context).pop(module);
   }
@@ -141,15 +139,16 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Module')),
+      appBar: AppBar(title: Text(l10n.addModuleTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           SectionHeader(
-            'Discovered on network',
+            l10n.addModuleDiscovered,
             trailing: IconButton(
-              tooltip: 'Refresh discovery',
+              tooltip: l10n.addModuleRefreshTooltip,
               onPressed: _scanning ? null : _refreshDiscovery,
               icon: Icon(
                 _scanning ? Icons.sync : Icons.refresh,
@@ -157,25 +156,25 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
             ),
           ),
           if (_scanning)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Column(
                   children: [
-                    SizedBox(
+                    const SizedBox(
                         width: 28,
                         height: 28,
                         child: CircularProgressIndicator(strokeWidth: 2.6)),
-                    SizedBox(height: 12),
-                    Text('Listening for self-discovery broadcast...'),
+                    const SizedBox(height: 12),
+                    Text(l10n.addModuleListening),
                   ],
                 ),
               ),
             )
           else if (_discovered.isEmpty)
-            const EmptyState(
+            EmptyState(
                 icon: Icons.wifi_find_outlined,
-                message: 'No new modules found on the network.')
+                message: l10n.addModuleNoneFound)
           else
             for (final module in _discovered)
               Padding(
@@ -195,7 +194,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 2),
-                              Text('${module.type.label} · ${module.ipAddress}',
+                              Text(l10n.configModuleSummary(module.type.label, module.ipAddress),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: onSurface.withOpacity(0.55))),
@@ -204,43 +203,43 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                         ),
                         FilledButton(
                             onPressed: () => _addDiscovered(module),
-                            child: const Text('Add')),
+                            child: Text(l10n.addModuleButton)),
                       ],
                     ),
                   ),
                 ),
               ),
           const SizedBox(height: 24),
-          const SectionHeader('Add manually by IP address'),
+          SectionHeader(l10n.addModuleManualSection),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-                labelText: 'Module name (optional)',
-                prefixIcon: Icon(Icons.edit_outlined)),
+            decoration: InputDecoration(
+                labelText: l10n.addModuleNameOptional,
+                prefixIcon: const Icon(Icons.edit_outlined)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _ipController,
-            decoration: const InputDecoration(
-                labelText: 'IP address',
+            decoration: InputDecoration(
+                labelText: l10n.ipAddress,
                 hintText: '192.168.1.120',
-                prefixIcon: Icon(Icons.lan_outlined)),
+                prefixIcon: const Icon(Icons.lan_outlined)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _tcpPortController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-                labelText: 'TCP port',
+            decoration: InputDecoration(
+                labelText: l10n.tcpPort,
                 hintText: '5005',
-                prefixIcon: Icon(Icons.router_outlined)),
+                prefixIcon: const Icon(Icons.router_outlined)),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ModuleType>(
             value: _manualType,
-            decoration: const InputDecoration(
-                labelText: 'Module type',
-                prefixIcon: Icon(Icons.category_outlined)),
+            decoration: InputDecoration(
+                labelText: l10n.addModuleType,
+                prefixIcon: const Icon(Icons.category_outlined)),
             items: [
               for (final type in ModuleType.values)
                 DropdownMenuItem(value: type, child: Text(type.label)),
@@ -252,7 +251,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
           FilledButton.icon(
               onPressed: _addManual,
               icon: const Icon(Icons.add),
-              label: const Text('Add module')),
+              label: Text(l10n.addModuleAddAction)),
         ],
       ),
     );
