@@ -9,6 +9,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import 'appearance_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -94,27 +95,14 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => _clearEventHistory(context),
                 ),
                 const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.contrast_outlined),
-                      const SizedBox(width: 16),
-                      Expanded(child: Text(l10n.settingsAppearance)),
-                      ValueListenableBuilder<ThemeMode>(
-                        valueListenable: themeModeNotifier,
-                        builder: (context, mode, _) => SegmentedButton<ThemeMode>(
-                          segments: [
-                            ButtonSegment(value: ThemeMode.light, icon: const Icon(Icons.light_mode_outlined), label: Text(l10n.settingsLight)),
-                            ButtonSegment(value: ThemeMode.dark, icon: const Icon(Icons.dark_mode_outlined), label: Text(l10n.settingsDark)),
-                            ButtonSegment(value: ThemeMode.system, icon: const Icon(Icons.settings_suggest_outlined), label: Text(l10n.settingsAuto)),
-                          ],
-                          selected: {mode},
-                          showSelectedIcon: false,
-                          onSelectionChanged: (s) => themeModeNotifier.value = s.first,
-                        ),
-                      ),
-                    ],
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: themeModeNotifier,
+                  builder: (context, mode, _) => ListTile(
+                    leading: const Icon(Icons.contrast_outlined),
+                    title: Text(l10n.settingsAppearance),
+                    subtitle: Text(appearanceLabel(mode, l10n)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pushNamed('/settings/appearance'),
                   ),
                 ),
               ],

@@ -47,6 +47,7 @@
   "settingsLight": "Light",
   "settingsDark": "Dark",
   "settingsAuto": "Auto",
+  "settingsTheme": "Theme",
   "settingsSignOut": "Sign Out",
   "settingsSignOutDialog": "Sign out",
   "settingsSignOutMsg": "You will need to sign in again to access your modules and scenarios.",

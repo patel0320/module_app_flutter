@@ -11,6 +11,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'screens/account_screen.dart';
 import 'screens/add_module_screen.dart';
+import 'screens/appearance_settings_screen.dart';
 import 'screens/automations_screen.dart';
 import 'screens/configuration_screen.dart';
 import 'screens/event_history_screen.dart';
@@ -91,6 +92,7 @@ class AutomationApp extends StatelessWidget {
                 '/settings/account': (context) => const AccountScreen(),
                 '/settings/notifications': (context) => const NotificationsSettingsScreen(),
                 '/settings/language': (context) => const LanguageSettingsScreen(),
+                '/settings/appearance': (context) => const AppearanceSettingsScreen(),
               },
             );
               },

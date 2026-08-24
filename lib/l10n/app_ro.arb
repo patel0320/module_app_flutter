@@ -47,6 +47,7 @@
   "settingsLight": "Luminos",
   "settingsDark": "Întunecat",
   "settingsAuto": "Auto",
+  "settingsTheme": "Temă",
   "settingsSignOut": "Deconectare",
   "settingsSignOutDialog": "Deconectare",
   "settingsSignOutMsg": "Va trebui să vă autentificați din nou pentru a accesa modulele și scenariile dvs.",
