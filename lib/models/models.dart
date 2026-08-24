@@ -84,6 +84,11 @@ class Room {
 
   final String id;
   String name;
+
+  Map<String, Object?> toJson() => {'id': id, 'name': name};
+
+  factory Room.fromJson(Map<String, Object?> json) =>
+      Room(id: json['id'] as String, name: json['name'] as String? ?? '');
 }
 
 /// A single output/channel on a module (relay output, dimmer channel or
@@ -275,6 +280,24 @@ class ScenarioAction {
 
   String get summary =>
       isDimmerAction ? '$channelName -> $brightnessPct%' : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
+
+  Map<String, Object?> toJson() => {
+        'moduleName': moduleName,
+        'channelName': channelName,
+        'icon': iconToJson(icon),
+        'isDimmerAction': isDimmerAction,
+        'turnOn': turnOn,
+        'brightnessPct': brightnessPct,
+      };
+
+  factory ScenarioAction.fromJson(Map<String, Object?> json) => ScenarioAction(
+        moduleName: json['moduleName'] as String,
+        channelName: json['channelName'] as String,
+        icon: iconFromJson(json['icon']),
+        isDimmerAction: json['isDimmerAction'] as bool? ?? false,
+        turnOn: json['turnOn'] as bool? ?? true,
+        brightnessPct: json['brightnessPct'] as int? ?? 100,
+      );
 }
 
 /// A tap-to-run scenario or manual dimming slider (brief section 2.4).
@@ -302,6 +325,33 @@ class Scenario {
   // Only used when [type] == ScenarioType.manualSlider.
   String sliderTargetName;
   int sliderValue;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'icon': iconToJson(icon),
+        'type': type.name,
+        'roomName': roomName,
+        'showInHome': showInHome,
+        'actions': actions.map((a) => a.toJson()).toList(),
+        'sliderTargetName': sliderTargetName,
+        'sliderValue': sliderValue,
+      };
+
+  factory Scenario.fromJson(Map<String, Object?> json) => Scenario(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        icon: iconFromJson(json['icon']),
+        type: ScenarioType.values.byName(json['type'] as String),
+        roomName: json['roomName'] as String? ?? 'No room',
+        showInHome: json['showInHome'] as bool? ?? false,
+        actions: [
+          for (final a in json['actions'] as List? ?? const [])
+            ScenarioAction.fromJson((a as Map).cast<String, Object?>()),
+        ],
+        sliderTargetName: json['sliderTargetName'] as String? ?? '',
+        sliderValue: json['sliderValue'] as int? ?? 0,
+      );
 }
 
 /// An IF...THEN... smart automation (brief section 2.4).
