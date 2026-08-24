@@ -401,6 +401,18 @@ class EventLogEntry {
   final DateTime time;
   final String title;
   final String subtitle;
+
+  Map<String, Object?> toJson() => {
+        'time': time.toIso8601String(),
+        'title': title,
+        'subtitle': subtitle,
+      };
+
+  factory EventLogEntry.fromJson(Map<String, Object?> json) => EventLogEntry(
+        time: DateTime.parse(json['time'] as String),
+        title: json['title'] as String,
+        subtitle: json['subtitle'] as String? ?? '',
+      );
 }
 
 /// A single row in the System Status error/event log (brief section I, point 2).
