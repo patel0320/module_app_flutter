@@ -371,6 +371,27 @@ class Automation {
   AutomationTriggerType triggerType;
   String triggerSummary;
   final List<ScenarioAction> actions;
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'enabled': enabled,
+        'triggerType': triggerType.name,
+        'triggerSummary': triggerSummary,
+        'actions': actions.map((a) => a.toJson()).toList(),
+      };
+
+  factory Automation.fromJson(Map<String, Object?> json) => Automation(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        enabled: json['enabled'] as bool? ?? true,
+        triggerType: AutomationTriggerType.values.byName(json['triggerType'] as String),
+        triggerSummary: json['triggerSummary'] as String? ?? '',
+        actions: [
+          for (final a in json['actions'] as List? ?? const [])
+            ScenarioAction.fromJson((a as Map).cast<String, Object?>()),
+        ],
+      );
 }
 
 /// A single row in the 30-day event history (brief section 2.4).

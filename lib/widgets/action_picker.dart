@@ -11,16 +11,40 @@ import '../models/models.dart';
 /// Shows a bottom sheet that lets the user pick a module + output and an
 /// ON/OFF state (relay/blind) or a brightness percentage (dimmer). Returns
 /// the resulting [ScenarioAction], or null if the user cancelled.
+///
+/// When an [initial] action is provided the sheet pre-populates its fields
+/// and behaves as an "edit" instead of "add".
 Future<ScenarioAction?> showAddActionSheet(
   BuildContext context,
-  List<DeviceModule> modules,
-) {
+  List<DeviceModule> modules, {
+  ScenarioAction? initial,
+}) {
   final List<DeviceModule> eligible = modules.where((m) => m.channels.isNotEmpty).toList();
 
   DeviceModule? selectedModule = eligible.isNotEmpty ? eligible.first : null;
   ChannelOutput? selectedChannel = selectedModule?.channels.first;
   bool turnOn = true;
   int brightness = 100;
+
+  if (initial != null) {
+    for (final m in eligible) {
+      if (m.name == initial.moduleName) {
+        selectedModule = m;
+        break;
+      }
+    }
+    selectedChannel = null;
+    for (final c in selectedModule?.channels ?? const <ChannelOutput>[]) {
+      if (c.name == initial.channelName) {
+        selectedChannel = c;
+        break;
+      }
+    }
+    turnOn = initial.turnOn;
+    brightness = initial.brightnessPct;
+  }
+
+  final bool isEditing = initial != null;
 
   return showModalBottomSheet<ScenarioAction>(
     context: context,
@@ -42,7 +66,8 @@ Future<ScenarioAction?> showAddActionSheet(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Add action', style: Theme.of(context).textTheme.titleLarge),
+                Text(isEditing ? 'Edit action' : 'Add action',
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 if (eligible.isEmpty)
                   const Text('No controllable outputs available.')
@@ -106,7 +131,7 @@ Future<ScenarioAction?> showAddActionSheet(
                                 brightnessPct: brightness,
                               ),
                             ),
-                    child: const Text('Add action'),
+                    child: Text(isEditing ? 'Save' : 'Add action'),
                   ),
                 ],
               ],

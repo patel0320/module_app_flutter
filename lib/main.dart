@@ -23,6 +23,7 @@ import 'screens/scenarios_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/system_status_screen.dart';
+import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/scenario_store.dart';
 import 'theme/app_theme.dart';
@@ -30,10 +31,12 @@ import 'theme/theme_palettes.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Kick off loading the persisted room and scenario lists before the first
-  // frame so the Rooms / Scenarios / Home screens reflect storage immediately.
+  // Kick off loading the persisted room, scenario and automation lists before
+  // the first frame so the Rooms / Scenarios / Automations / Home screens
+  // reflect storage immediately.
   RoomStore.shared.init();
   ScenarioStore.shared.init();
+  AutomationStore.shared.init();
   runApp(const AutomationApp());
 }
 

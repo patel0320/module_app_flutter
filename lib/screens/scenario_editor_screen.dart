@@ -76,6 +76,11 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     if (action != null) setState(() => _actions.add(action));
   }
 
+  Future<void> _editAction(int index) async {
+    final action = await showAddActionSheet(context, _modules, initial: _actions[index]);
+    if (action != null) setState(() => _actions[index] = action);
+  }
+
   void _save() {
     final String name = _nameController.text.trim().isEmpty ? 'Untitled Scenario' : _nameController.text.trim();
     if (widget.scenario != null) {
@@ -184,9 +189,20 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                       leading: IconAvatar(icon: _actions[i].icon),
                       title: Text(_actions[i].channelName, style: const TextStyle(fontWeight: FontWeight.w700)),
                       subtitle: Text('${_actions[i].moduleName} · ${_actions[i].summary}'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => setState(() => _actions.removeAt(i)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Edit action',
+                            icon: const Icon(Icons.edit_outlined),
+                            onPressed: () => _editAction(i),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete action',
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => setState(() => _actions.removeAt(i)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
