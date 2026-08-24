@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_palettes.dart';
@@ -38,6 +39,17 @@ class _HomeScreenState extends State<HomeScreen> {
   /// The fleet is read from the app-wide [ModuleStore] so live status
   /// (online/offline, temperature) refreshed on open is reflected here.
   List<DeviceModule> get _modules => ModuleStore.shared.modules;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('HomeScreen initState: refreshing all modules...');
+    // Re-probe every module whenever Home is opened so the online/offline
+    // count reflects live status instead of a stale/persisted snapshot. The
+    // store commits + notifies as results arrive, rebuilding this count.
+    ModuleStatusService.shared.refreshAll().ignore();
+  }
+
   final List<Room> _rooms = mockRooms();
 
   /// Single source of truth for scenarios; the Home quick-access list below
@@ -123,9 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                           color: cs.onSurface.withOpacity(0.6), fontSize: 13),
                     ),
-                    trailing:
-                        Icon(Icons.chevron_right,
-                            color: cs.onSurface.withOpacity(0.6)),
+                    trailing: Icon(Icons.chevron_right,
+                        color: cs.onSurface.withOpacity(0.6)),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _runScenario(s);
@@ -148,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListenableBuilder(
       listenable: ModuleStore.shared,
       builder: (context, _) => Scaffold(
-      body: SafeArea(
+        body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -161,10 +172,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _Greeting(
                         'Home',
                         subtitle:
-                            '$onlineCount/${_modules.length} modules online',
+                            '${_modules.length - offline.length}/${_modules.length} modules online',
                       ),
                     ),
-                    _StatusPill(officers: onlineCount, total: _modules.length),
+                    _StatusPill(
+                        officers: _modules.length - offline.length,
+                        total: _modules.length),
                     const SizedBox(width: 10),
                     const _ThemeSwitcherButton(),
                   ],
@@ -216,8 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        const Expanded(
-                            child: _SectionLabel('Quick Scenarios')),
+                        const Expanded(child: _SectionLabel('Quick Scenarios')),
                         Text(
                           'Hold & drag to reorder',
                           style: TextStyle(
@@ -336,7 +348,8 @@ class _Greeting extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+            style:
+                TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
           ),
         ],
       ],
@@ -360,7 +373,8 @@ class _StatusPill extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(100),
         side: BorderSide(
-          color: allOk ? cs.primary.withOpacity(0.4) : cs.error.withOpacity(0.45),
+          color:
+              allOk ? cs.primary.withOpacity(0.4) : cs.error.withOpacity(0.45),
         ),
       ),
       child: Padding(
@@ -441,7 +455,9 @@ class _AlertBanner extends StatelessWidget {
                 child: Text(
                   message,
                   style: TextStyle(
-                      color: cs.error, fontWeight: FontWeight.w700, fontSize: 14),
+                      color: cs.error,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14),
                 ),
               ),
               Icon(Icons.chevron_right, color: cs.error),
@@ -701,8 +717,7 @@ class _RunButton extends StatelessWidget {
       child: Ink(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-              colors: [cs.primary, cs.primary]),
+          gradient: LinearGradient(colors: [cs.primary, cs.primary]),
           boxShadow: [
             BoxShadow(color: cs.primary.withOpacity(0.4), blurRadius: 14),
           ],
@@ -882,8 +897,8 @@ class _ThemePickerSheet extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Choose a color palette for the deck.',
-                  style:
-                      TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13),
+                  style: TextStyle(
+                      color: cs.onSurface.withOpacity(0.6), fontSize: 13),
                 ),
                 const SizedBox(height: 8),
                 Flexible(

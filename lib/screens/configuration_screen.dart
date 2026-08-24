@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -50,7 +51,12 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     final DeviceModule? added = await Navigator.of(context).push<DeviceModule>(
       MaterialPageRoute(builder: (_) => const AddModuleScreen()),
     );
-    if (added != null) await _store.upsert(added);
+    if (added != null) {
+      await _store.upsert(added);
+      // New modules are seeded online; probe it now so its real status is
+      // reflected in the list and on the Home screen immediately.
+      await ModuleStatusService.shared.refreshOne(added);
+    }
   }
 
   Future<void> _renameModule(DeviceModule module) async {
@@ -61,6 +67,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     );
     if (newName == null) return;
     await _store.update(module.id, (m) => m.name = newName);
+    // Re-fetch the module's live status after editing it.
+    await ModuleStatusService.shared.refreshOne(module);
   }
 
   Future<void> _removeModule(DeviceModule module) async {
@@ -72,6 +80,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     );
     if (!confirmed) return;
     await _store.remove(module.id);
+    // Drop the module's persistent connection so it stops reconnecting and the
+    // fleet/status counts update to exactly the remaining modules.
+    ModuleStatusService.shared.removeModule(module.id);
   }
 
   @override

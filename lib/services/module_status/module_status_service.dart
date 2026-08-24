@@ -18,6 +18,7 @@
 //   - [refreshAll] / [refreshOne] remain the explicit "please re-ask for a
 //     fresh dump now" entry points and also coalesce concurrent calls.
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../models/models.dart';
@@ -114,16 +115,31 @@ class ModuleStatusService {
     return ok;
   }
 
-  Future<bool> _refreshOne(DeviceModule module) async {
-    final fetcher = _fetchers.forType(module.type);
-    if (fetcher == null) {
-      // Unsupported module type - leave untouched, treat as offline.
-      return false;
-    }
+  /// Tears down the live command/status unit for [moduleId]. Used when a
+  /// module is removed so its socket/reconnect timers stop and the fleet
+  /// counts reflect exactly the modules that remain.
+  void removeModule(String moduleId) {
+    _units.remove(moduleId)?.dispose();
+  }
 
+  Future<bool> _refreshOne(DeviceModule module) async {
     // The store may hold a newer instance of the same module; operate on that
     // live object so mutations propagate to every screen.
     final live = store.byId(module.id) ?? module;
+
+    final fetcher = _fetchers.forType(module.type);
+    if (fetcher == null) {
+      // Unsupported module type - no status probe exists, so it cannot be
+      // confirmed reachable; mark it offline so the UI represents it clearly.
+      live.status = ConnectionStatus.offline;
+      return false;
+    }
+
+    // Optimistically reset the module to offline so the UI never shows a stale
+    // "online" from a previous seed/run while this probe is in flight; the
+    // module is only flipped back to online once the full dump is acknowledged.
+    live.status = ConnectionStatus.offline;
+
     final unit = _ensureUnit(live, fetcher);
     unit.attach(live);
 
@@ -131,9 +147,9 @@ class ModuleStatusService {
       await unit.connect();
       debugPrint('Module ${module.name} (${module.id}) connected');
       if (!unit.isConnected) {
-        live.status = ConnectionStatus.offline;
         return false;
       }
+      debugPrint('Module ${module.name} (${module.id}) connected, fetching...');
       final allOk = await unit.run(fetcher.fetchCommands);
       debugPrint('Module ${module.name} (${module.id}) refresh: $allOk');
       live.status = allOk ? ConnectionStatus.online : ConnectionStatus.offline;
