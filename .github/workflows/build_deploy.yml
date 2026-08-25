@@ -182,6 +182,8 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_RELEASE_KEYSTORE: ${{ secrets.ANDROID_RELEASE_KEYSTORE }}
+      FIREBASE_GOOGLE_SERVICES: ${{ secrets.FIREBASE_GOOGLE_SERVICES }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -208,16 +210,16 @@ jobs:
           flutter gen-l10n
 
       - name: Recreate release keystore from secret
-        if: ${{ secrets.ANDROID_RELEASE_KEYSTORE != '' }}
+        if: ${{ env.ANDROID_RELEASE_KEYSTORE != '' }}
         run: |
-          echo "${{ secrets.ANDROID_RELEASE_KEYSTORE }}" | base64 --decode > android/app/upload-keystore.jks
+          echo "${{ env.ANDROID_RELEASE_KEYSTORE }}" | base64 --decode > android/app/upload-keystore.jks
           echo "keystore recreated at android/app/upload-keystore.jks"
 
       # Optional: inject Firebase google-services.json from secret.
       - name: Recreate google-services.json
-        if: ${{ secrets.FIREBASE_GOOGLE_SERVICES != '' }}
+        if: ${{ env.FIREBASE_GOOGLE_SERVICES != '' }}
         run: |
-          echo "${{ secrets.FIREBASE_GOOGLE_SERVICES }}" | base64 --decode > android/app/google-services.json
+          echo "${{ env.FIREBASE_GOOGLE_SERVICES }}" | base64 --decode > android/app/google-services.json
 
       - name: Build debug APK
         run: flutter build apk --debug --dart-define=APP_ENV=${{ env.APP_ENV }}
@@ -265,6 +267,8 @@ jobs:
     name: iOS Build & Deploy
     needs: analyze
     runs-on: macos-latest
+    env:
+      IOS_GOOGLE_SERVICE_PLIST: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -298,9 +302,9 @@ jobs:
           pod install
 
       - name: Recreate GoogleService-Info.plist
-        if: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST != '' }}
+        if: ${{ env.IOS_GOOGLE_SERVICE_PLIST != '' }}
         run: |
-          echo "${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          echo "${{ env.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
 
       - name: Setup fastlane
         run: |
