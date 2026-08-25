@@ -1,0 +1,355 @@
+# ============================================================================
+# Flutter Cross-Platform Build & Deploy Pipeline
+# Targets: Android (APK/AAB → Google Play), iOS (IPA → TestFlight/App Store),
+#          Windows (EXE/MSIX → GitHub Releases)
+#
+# Triggers:
+#   - Manual via GitHub Actions "Run workflow" (workflow_dispatch)
+#   - Automatically on tags matching v* (e.g. v1.0.0)
+#
+# Required repository Secrets (Settings → Secrets and variables → Actions):
+# ----------------------------------------------------------------------------
+# ANDROID_RELEASE_KEYSTORE   Base64 of the release .jks keystore
+# ANDROID_KEYSTORE_PASSWORD  Keystore password
+# ANDROID_KEY_ALIAS          Key alias (e.g. "upload")
+# ANDROID_KEY_PASSWORD       Key password
+# ANDROID_SERVICE_ACCOUNT_JSON Base64 of the Google Play service-account JSON
+# PLAY_PACKAGE_NAME          Android applicationId (com.moduledistributie...)
+# FIREBASE_GOOGLE_SERVICES    (optional) Base64 of android google-services.json
+# IOS_MATCH_GIT_URL           Git URL of the match certificates repo
+# IOS_MATCH_PASSWORD          match encryption password
+# IOS_MATCH_CERT_API_KEY      (optional, if using fastlane.app credentials)
+# IOS_MATCH_CERT_API_KEY_ID   (optional)
+# IOS_MATCH_CERT_ISSUER_ID    (optional)
+# IOS_FASTLANE_USER           (optional) App Store Connect username
+# IOS_APPLE_APP_SPECIFIC_PASSWORD (optional)
+# IOS_APPLE_TEAM_ID           (optional) Your Developer Team ID
+# IOS_APPLE_BUNDLE_ID         iOS bundle identifier (com.moduledistributie...)
+# IOS_GOOGLE_SERVICE_PLIST    (optional) Base64 of iOS GoogleService-Info.plist
+# APPSPOT_APPLE_ID            (optional) when not using match (password auth)
+# GH_RELEASE_TOKEN            (optional) PAT for Release upload (default: GITHUB_TOKEN)
+# ============================================================================
+
+name: Build & Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Build environment (APP_ENV dart-define)'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      platform:
+        description: 'Platform(s) to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - android
+          - ios
+          - windows
+          - all
+      deploy_android:
+        description: 'Deploy AAB to Google Play (Internal testing)'
+        required: false
+        default: false
+        type: boolean
+      deploy_ios:
+        description: 'Upload IPA to TestFlight'
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+# Minimal permissions; checkout needs contents, releases upload needs contents.
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: ${{ github.event.inputs.environment || 'prod' }}
+  # Checks run unconditionally (before build selection).
+  RUN_ANDROID: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') || startsWith(github.ref, 'refs/tags/v') }}
+  RUN_IOS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios') || github.runner.os == 'macOS' }}
+  RUN_WINDOWS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows') || github.runner.os == 'Windows' }}
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. Static analysis + unit tests (fast gate before any build)
+  # --------------------------------------------------------------------------
+  analyze:
+    name: Flutter Analyze + Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ hashFiles('pubspec.lock') }}
+
+      - name: Enable Flutter pub cache (faster repeated installs)
+        run: flutter pub get
+
+      - name: Run code generator (riverpod, drift)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Static analysis (fatal on issues)
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Run unit & widget tests
+        run: flutter test --coverage
+
+  # --------------------------------------------------------------------------
+  # 2. Windows executable build (fastest, runs on Windows runner)
+  # --------------------------------------------------------------------------
+  windows:
+    name: Windows Build
+    needs: analyze
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ hashFiles('pubspec.lock') }}
+          architecture: x64
+
+      - name: Enable Windows Desktop support
+        run: flutter config --enable-windows-desktop
+
+      - name: Restore pub dependencies
+        run: flutter pub get
+
+      - name: Generate codegen + l10n
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+
+      - name: Build Windows release executable
+        run: flutter build windows --release --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      - name: Stage artifacts
+        shell: bash
+        run: |
+          mkdir -p dist/windows
+          cp -r build/windows/x64/runner/Release/. dist/windows/
+
+      # Optional: build an MSIX package (requires msix config in pubspec).
+      # - name: Build MSIX package
+      #   run: |
+      #     flutter pub get
+      #     dart run msix:create --architecture x64 --store false
+
+      - name: Publish Windows installer binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/windows/
+
+  # --------------------------------------------------------------------------
+  # 3. Android build: debug APK, release APK, release AAB (signed)
+  # --------------------------------------------------------------------------
+  android:
+    name: Android Build
+    needs: analyze
+    runs-on: ubuntu-latest
+    env:
+      # Instruct the Gradle signing block (see README) to use CI values.
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17 (required for current Android Gradle Plugin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ hashFiles('pubspec.lock') }}
+
+      - name: Restore pub dependencies
+        run: flutter pub get
+
+      - name: Generate codegen + l10n
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+
+      - name: Recreate release keystore from secret
+        if: ${{ secrets.ANDROID_RELEASE_KEYSTORE != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_RELEASE_KEYSTORE }}" | base64 --decode > android/app/upload-keystore.jks
+          echo "keystore recreated at android/app/upload-keystore.jks"
+
+      # Optional: inject Firebase google-services.json from secret.
+      - name: Recreate google-services.json
+        if: ${{ secrets.FIREBASE_GOOGLE_SERVICES != '' }}
+        run: |
+          echo "${{ secrets.FIREBASE_GOOGLE_SERVICES }}" | base64 --decode > android/app/google-services.json
+
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      - name: Build signed release APK
+        run: flutter build apk --release --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      - name: Build signed release App Bundle (AAB)
+        run: flutter build appbundle --release --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      - name: Publish APK + AAB artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+
+      # Optional: attach binaries to the release that triggered the tag.
+      - name: Upload Android assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+      # Deploy AAB to Google Play Console using the service-account key.
+      - name: Deploy to Google Play (Internal testing)
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_android == 'true') || startsWith(github.ref, 'refs/tags/v') }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.PLAY_PACKAGE_NAME }}
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: distribution/whatsnew/  # optional release notes dir
+
+  # --------------------------------------------------------------------------
+  # 4. iOS build: signed IPA via fastlane + match, deploy to TestFlight
+  #    (requires a macOS runner; Xcode 15 via actions setup)
+  # --------------------------------------------------------------------------
+  ios:
+    name: iOS Build & Deploy
+    needs: analyze
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 15
+        run: sudo xcode-select -s /Applications/Xcode_15.app
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ hashFiles('pubspec.lock') }}
+
+      - name: Restore pub dependencies
+        run: flutter pub get
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods
+          pod setup
+
+      - name: Generate codegen + l10n
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+
+      - name: Pod install
+        run: |
+          cd ios
+          pod install
+
+      - name: Recreate GoogleService-Info.plist
+        if: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST != '' }}
+        run: |
+          echo "${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+
+      - name: Setup fastlane
+        run: |
+          cd ios
+          gem install fastlane
+
+      # fastlane match pulls signing certs + provisioning profiles from the
+      # certs repo. Provide MATCH_PASSWORD to decrypt. Pull before building.
+      - name: Sync signing certs & profiles via match (development only)
+        if: ${{ github.ref != 'refs/tags/v' }}
+        run: |
+          cd ios
+          bundle exec fastlane match development --readonly true \
+            --git_url "${{ secrets.IOS_MATCH_GIT_URL }}" \
+            --api_key_path /tmp/match_api_key.json
+
+      - name: Build unsigned IPA (no code signing) for artifact-only runs
+        run: flutter build ipa --release --no-codesign --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      # Append the signed IPA build when we intend to deploy to TestFlight.
+      - name: Build + upload signed IPA to TestFlight via fastlane
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
+          FASTLANE_USER: ${{ secrets.IOS_FASTLANE_USER }}
+          FASTLANE_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
+          APP_STORE_CONNECT_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
+          # Keys for match when using fastlane.app API credentials (optional).
+          MATCH_API_KEY: ${{ secrets.IOS_MATCH_CERT_API_KEY }}
+          MATCH_API_KEY_ID: ${{ secrets.IOS_MATCH_CERT_API_KEY_ID }}
+          MATCH_API_ISSUER_ID: ${{ secrets.IOS_MATCH_CERT_ISSUER_ID }}
+          BUNDLE_ID: ${{ secrets.IOS_APPLE_BUNDLE_ID }}
+        run: |
+          cd ios
+          bundle exec fastlane beta
+
+      - name: Publish iOS IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: |
+            build/ios/**/*.ipa
+            build/ios/ipa/*.ipa
+
+      - name: Upload iOS IPA to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/ios/ipa/*.ipa
