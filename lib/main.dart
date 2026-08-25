@@ -28,6 +28,8 @@ import 'screens/splash_screen.dart';
 import 'screens/system_status_screen.dart';
 import 'services/automation_store.dart';
 import 'services/room_store.dart';
+import 'services/module_status/background_status_worker.dart';
+import 'services/module_status/module_status_scheduler.dart';
 import 'services/scenario_store.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
@@ -42,6 +44,11 @@ void main() {
   ScenarioStore.shared.init();
   AutomationStore.shared.init();
   SettingsStore.shared.init();
+  // Register the OS background worker that polls module online/offline status
+  // after the app is suspended, then start the lifecycle-aware scheduler:
+  // persistent sockets while foreground, timed polling while backgrounded.
+  BackgroundStatusWorker.initialize().ignore();
+  ModuleStatusScheduler.shared.start();
   runApp(const AutomationApp());
 }
 

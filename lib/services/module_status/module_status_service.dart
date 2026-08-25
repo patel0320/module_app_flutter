@@ -18,6 +18,8 @@
 //   - [refreshAll] / [refreshOne] remain the explicit "please re-ask for a
 //     fresh dump now" entry points and also coalesce concurrent calls.
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -120,6 +122,106 @@ class ModuleStatusService {
   /// counts reflect exactly the modules that remain.
   void removeModule(String moduleId) {
     _units.remove(moduleId)?.dispose();
+  }
+
+  /// Closes every persistent socket (and stops each unit's auto-reconnect)
+  /// while keeping the units themselves alive so the app can resume quickly.
+  /// Used by the lifecycle scheduler when the app moves to the background,
+  /// where keeping sockets open wastes battery.
+  Future<void> suspendAll() async {
+    for (final unit in _units.values) {
+      await unit.disconnect();
+    }
+  }
+
+  /// Brings every module back to the persistent-socket live mode. Disconnected
+  /// sockets are reopened and a fresh status pass is run. Safe to call when
+  /// sockets are already live (a no-op reconnect + coalesced refresh).
+  Future<ModuleStatusResult> resumeAll() async {
+    await store.init();
+    for (final module in store.modules) {
+      final unit = _units[module.id];
+      if (unit != null) {
+        await unit.connect();
+      }
+    }
+    return refreshAll();
+  }
+
+  /// Lightweight background poll: for every module, opens a one-shot TCP
+  /// socket, sends an `AT\r` ping, awaits the `OK` terminator and closes it
+  /// again - no persistent connection is kept. Each module's online/offline
+  /// slot is updated in the store and committed once at the end.
+  Future<ModuleStatusResult> pollAll() async {
+    await store.init();
+    final modules = store.modules;
+    final online = <DeviceModule>[];
+    final offline = <DeviceModule>[];
+
+    for (final module in modules) {
+      final ok = await _pollConnectivity(module);
+      ok ? online.add(module) : offline.add(module);
+    }
+
+    await store.commit();
+    _lastResult = ModuleStatusResult(online: online, offline: offline);
+    return _lastResult!;
+  }
+
+  /// Opens a temporary socket to [module] and pings it for a single `OK`,
+  /// closing it immediately after. Returns whether it answered. Unsupported
+  /// module types are treated as offline.
+  Future<bool> _pollConnectivity(DeviceModule module) async {
+    final live = store.byId(module.id) ?? module;
+    if (_fetchers.forType(module.type) == null) {
+      live.status = ConnectionStatus.offline;
+      return false;
+    }
+
+    Socket? socket;
+    var reachable = false;
+    try {
+      socket = await Socket.connect(live.ipAddress, live.tcpPort,
+          timeout: timeout);
+      socket.setOption(SocketOption.tcpNoDelay, true);
+      socket.write('AT\r');
+
+      final buffer = StringBuffer();
+      final done = Completer<void>();
+      final timer = Timer(timeout, () {
+        if (!done.isCompleted) done.complete();
+      });
+
+      socket.listen(
+        (bytes) {
+          buffer.write(utf8.decode(bytes));
+          final raw = buffer.toString().trimRight();
+          if (raw.endsWith('\r\nOK') || raw.endsWith('\r\nERROR')) {
+            if (!done.isCompleted) done.complete();
+          }
+        },
+        onDone: () {
+          if (!done.isCompleted) done.complete();
+        },
+        onError: (Object _) {
+          if (!done.isCompleted) done.complete();
+        },
+      );
+
+      await done.future;
+      timer.cancel();
+      reachable = buffer.toString().trimRight().endsWith('\r\nOK');
+    } catch (_) {
+      reachable = false;
+    } finally {
+      try {
+        socket?.destroy();
+      } catch (_) {/* ignore */}
+    }
+
+    live.status =
+        reachable ? ConnectionStatus.online : ConnectionStatus.offline;
+    return reachable;
   }
 
   Future<bool> _refreshOne(DeviceModule module) async {

@@ -84,6 +84,11 @@ class ModuleCommandService {
   /// Opens the connection, delegating to the underlying transport.
   Future<void> connect() => _connection.connect();
 
+  /// Closes the live socket and stops the transport's auto-reconnect. The
+  /// service itself is kept intact so it can be resumed later with [connect].
+  /// Used by the lifecycle scheduler when the app goes to the background.
+  Future<void> disconnect() => _connection.disconnect();
+
   /// Feeds every decoded chunk to both the status parser and the pending
   /// command state machine.
   void _handleData(String data) {
