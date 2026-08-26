@@ -67,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Scenario> get _homeScenarios =>
       _allScenarios.where((s) => s.showInHome).toList();
 
+  int get _onlineCount => _onlineModules.length;
+
   List<DeviceModule> get _offlineModules =>
       _modules.where((m) => m.status == ConnectionStatus.offline).toList();
 
@@ -101,7 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).homeRunningScenario(scenario.name))),
+      SnackBar(
+          content: Text(
+              AppLocalizations.of(context).homeRunningScenario(scenario.name))),
     );
     final result = await ScenarioRunner.shared.run(scenario);
     await EventLogStore.shared.recordScenarioResult(result);
@@ -110,8 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showRoomScenarios(Room room) {
     final scenarios =
         _allScenarios.where((s) => s.roomName == room.name).toList();
-      final cs = Theme.of(context).colorScheme;
-      final l10n = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: cs.surfaceContainerHigh,
@@ -172,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final offline = _offlineModules;
     final overTemp = _overTempModules;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
@@ -194,12 +197,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _Greeting(
                         l10n.homeTitle,
                         subtitle: l10n.homeModulesOnline(
-                            _modules.length - offline.length, _modules.length),
+                            _onlineCount, _modules.length),
                       ),
                     ),
-                    _StatusPill(
-                        officers: _modules.length - offline.length,
-                        total: _modules.length),
+                    _StatusPill(officers: _onlineCount, total: _modules.length),
                     const SizedBox(width: 10),
                     const _ThemeSwitcherButton(),
                   ],
@@ -209,12 +210,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                   children: [
-                    if (offline.isNotEmpty) ...[
+                    if (_modules
+                        .where((m) => m.status == ConnectionStatus.offline)
+                        .toList()
+                        .isNotEmpty) ...[
                       _AlertBanner(
                         icon: Icons.wifi_off_rounded,
-                        message: offline.length == 1
-                            ? l10n.homeModuleOffline(offline.first.name)
-                            : l10n.homeModulesOffline(offline.length),
+                        message: _modules
+                                    .where((m) =>
+                                        m.status == ConnectionStatus.offline)
+                                    .toList()
+                                    .length ==
+                                1
+                            ? l10n.homeModuleOffline(_modules
+                                .where(
+                                    (m) => m.status == ConnectionStatus.offline)
+                                .toList()
+                                .first
+                                .name)
+                            : l10n.homeModulesOffline(_modules
+                                .where(
+                                    (m) => m.status == ConnectionStatus.offline)
+                                .toList()
+                                .length),
                         onTap: () =>
                             Navigator.of(context).pushNamed('/system-status'),
                       ),
@@ -223,8 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (overTemp.isNotEmpty) ...[
                       _AlertBanner(
                         icon: Icons.thermostat,
-                        message: l10n.homeTempOutOfRange(
-                            overTemp.first.name,
+                        message: l10n.homeTempOutOfRange(overTemp.first.name,
                             overTemp.first.internalTempC.toStringAsFixed(1)),
                         onTap: () =>
                             Navigator.of(context).pushNamed('/system-status'),
@@ -251,7 +268,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        Expanded(child: _SectionLabel(l10n.homeSectionQuickScenarios)),
+                        Expanded(
+                            child:
+                                _SectionLabel(l10n.homeSectionQuickScenarios)),
                         Text(
                           l10n.homeHoldDragReorder,
                           style: TextStyle(
@@ -599,7 +618,8 @@ class _QuickScenarioCard extends StatelessWidget {
                             Text(
                               isSlider
                                   ? l10n.homeManualDimming
-                                  : l10n.homeActionsCount(scenario.actions.length),
+                                  : l10n.homeActionsCount(
+                                      scenario.actions.length),
                               style: TextStyle(
                                   fontSize: 12,
                                   color: cs.onSurface.withOpacity(0.6)),
