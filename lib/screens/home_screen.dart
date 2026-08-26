@@ -70,6 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<DeviceModule> get _offlineModules =>
       _modules.where((m) => m.status == ConnectionStatus.offline).toList();
 
+  List<DeviceModule> get _onlineModules =>
+      _modules.where((m) => m.status == ConnectionStatus.online).toList();
+
   List<DeviceModule> get _overTempModules =>
       _modules.where((m) => m.isOverTemperature).toList();
 
@@ -301,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     _SectionLabel(l10n.homeSectionTempMonitoring),
                     const SizedBox(height: 10),
-                    for (final module in _modules)
+                    for (final module in _onlineModules)
                       Padding(
                         padding: const EdgeInsets.only(
                             bottom: AppSpacing.betweenCards),
