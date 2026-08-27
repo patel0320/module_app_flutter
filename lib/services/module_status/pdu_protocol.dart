@@ -25,15 +25,18 @@ class PduAtCommands {
   static const String temperature = 'AT+TEMP\r';
   static const String allOutputStates = 'AT+OUTSTAT\r';
   static const String allInputStates = 'AT+INSTAT\r';
+  static const String channelNames = 'AT+CHNAMES\r';
 }
 
 /// A parsed single-command response from a PDU.
 ///
-/// A line-oriented response may contain three kinds of payload, all of which
+/// A line-oriented response may contain five kinds of payload, all of which
 /// are extracted here:
-///   - `KEY:value` scalar lines  -> [kv]        (e.g. `SYSTEMP:34`)
-///   - `OUT:<pin>:<ON|OFF>`      -> [outputs]
-///   - `IN:<pin>:<ON|OFF>`       -> [inputs]
+///   - `KEY:value` scalar lines        -> [kv]        (e.g. `SYSTEMP:34`)
+///   - `OUT:<pin>:<ON|OFF>`            -> [outputs]
+///   - `IN:<pin>:<ON|OFF>`             -> [inputs]
+///   - `CHNAME_OUT:<pin>:<name>`       -> [outputNames]
+///   - `CHNAME_IN:<pin>:<name>`        -> [inputNames]
 class PduResponse {
   /// True when the response was terminated by `OK`, false for `ERROR`.
   final bool ok;
@@ -47,11 +50,19 @@ class PduResponse {
   /// Input pin -> ON state (0-indexed pins).
   final Map<int, bool> inputs;
 
+  /// Output pin -> device-reported channel name (`CHNAME_OUT:<pin>:<name>`).
+  final Map<int, String> outputNames;
+
+  /// Input pin -> device-reported channel name (`CHNAME_IN:<pin>:<name>`).
+  final Map<int, String> inputNames;
+
   const PduResponse({
     required this.ok,
     this.kv = const {},
     this.outputs = const {},
     this.inputs = const {},
+    this.outputNames = const {},
+    this.inputNames = const {},
   });
 
   /// Parses the raw (line-terminator-free) response body into a [PduResponse].
@@ -59,9 +70,13 @@ class PduResponse {
     final kv = <String, String>{};
     final outputs = <int, bool>{};
     final inputs = <int, bool>{};
+    final outputNames = <int, String>{};
+    final inputNames = <int, String>{};
 
     // OUT:pin:ON|OFF  and  IN:pin:ON|OFF triplets.
     final triplet = RegExp(r'^(OUT|IN):(\d+):(ON|OFF)$');
+    // CHNAME_OUT:pin:name  and  CHNAME_IN:pin:name triplets.
+    final chname = RegExp(r'^CHNAME_(OUT|IN):(\d+):(.*)$');
     final scalar = RegExp(r'^([A-Z_]+):(.*)$');
 
     for (final line in raw.split(RegExp(r'[\r\n]+'))) {
@@ -80,6 +95,20 @@ class PduResponse {
         continue;
       }
 
+      final c = chname.firstMatch(trimmed);
+      if (c != null) {
+        final pin = int.parse(c.group(2)!);
+        final name = c.group(3)!.trim();
+        if (name.isNotEmpty) {
+          if (c.group(1) == 'OUT') {
+            outputNames[pin] = name;
+          } else {
+            inputNames[pin] = name;
+          }
+        }
+        continue;
+      }
+
       final s = scalar.firstMatch(trimmed);
       if (s != null) {
         final key = s.group(1)!;
@@ -88,7 +117,14 @@ class PduResponse {
       }
     }
 
-    return PduResponse(ok: ok, kv: kv, outputs: outputs, inputs: inputs);
+    return PduResponse(
+      ok: ok,
+      kv: kv,
+      outputs: outputs,
+      inputs: inputs,
+      outputNames: outputNames,
+      inputNames: inputNames,
+    );
   }
 
   /// Parses a numeric value out of a scalar, tolerating units/postfix

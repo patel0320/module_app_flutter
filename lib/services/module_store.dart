@@ -69,14 +69,16 @@ class ModuleStore extends ChangeNotifier {
     await commit();
   }
 
-  /// Inserts [module] or replaces it when an id already exists.
+  /// Inserts [module] or, when an id already exists, merges it into the stored
+  /// copy so user-defined channel names/icons survive a re-add (e.g. a device
+  /// picked up again by discovery).
   Future<void> upsert(DeviceModule module) async {
     await init();
     final index = _modules.indexWhere((m) => m.id == module.id);
-    if (index >= 0) {
-      _modules[index] = module;
-    } else {
+    if (index < 0) {
       _modules.add(module);
+    } else {
+      _modules[index] = _merge(_modules[index], module);
     }
     await commit();
   }
@@ -96,5 +98,52 @@ class ModuleStore extends ChangeNotifier {
     mutator(module);
     await commit();
     return module;
+  }
+
+  /// Merges a freshly (re-)discovered [fresh] module into the stored
+  /// [existing] copy. Module-level identity follows the fresh copy; channel
+  /// and input entries that already exist keep their user-defined
+  /// name/icon/label, while entries introduced by the fresh copy are appended
+  /// unchanged - so a re-add never resets names the user customized.
+  DeviceModule _merge(DeviceModule existing, DeviceModule fresh) {
+    existing.name = fresh.name;
+    existing.ipAddress = fresh.ipAddress;
+    existing.tcpPort = fresh.tcpPort;
+    existing.roomName = fresh.roomName;
+    existing.status = fresh.status;
+
+    final priorChannels = List.of(existing.channels);
+    final priorInputs = List.of(existing.inputs);
+
+    existing.channels
+      ..clear()
+      ..addAll([
+        for (var i = 0; i < fresh.channels.length; i++)
+          i < priorChannels.length
+              ? ChannelOutput(
+                  id: priorChannels[i].id,
+                  name: priorChannels[i].name,
+                  icon: priorChannels[i].icon,
+                  isOn: fresh.channels[i].isOn,
+                  brightness: fresh.channels[i].brightness,
+                )
+              : fresh.channels[i],
+      ]);
+
+    existing.inputs
+      ..clear()
+      ..addAll([
+        for (var i = 0; i < fresh.inputs.length; i++)
+          i < priorInputs.length
+              ? PhysicalInput(
+                  id: priorInputs[i].id,
+                  label: priorInputs[i].label,
+                  mode: priorInputs[i].mode,
+                  boundTo: priorInputs[i].boundTo,
+                )
+              : fresh.inputs[i],
+      ]);
+
+    return existing;
   }
 }

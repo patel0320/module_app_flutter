@@ -53,6 +53,51 @@ void main() {
       expect(store.byId('z1')!.name, 'Renamed');
     });
 
+    test('upsert preserves user-defined channel names when re-adding an id',
+        () async {
+      final store = ModuleStore.forTesting();
+      await store.init();
+
+      final seeded = DeviceModule(
+        id: 'u1',
+        name: 'Main Relay',
+        type: ModuleType.relay,
+        ipAddress: '192.168.1.20',
+        status: ConnectionStatus.offline,
+        roomName: 'Cabin',
+        internalTempC: 30,
+        channels: [
+          ChannelOutput(
+              id: 'u1c1', name: 'Cabin Light', icon: Icons.lightbulb),
+        ],
+      );
+      await store.upsert(seeded);
+
+      // A freshly re-discovered copy carries generic default names; merging it
+      // back in must not reset the user-defined channel name/icon.
+      final rediscovered = DeviceModule(
+        id: 'u1',
+        name: 'PDU-DUMMY',
+        type: ModuleType.relay,
+        ipAddress: '192.168.1.20',
+        status: ConnectionStatus.online,
+        roomName: 'Unassigned',
+        internalTempC: 25,
+        channels: [
+          ChannelOutput(
+              id: 'new-r0', name: 'Output 1', icon: Icons.power, isOn: true),
+        ],
+      );
+      await store.upsert(rediscovered);
+
+      final kept = store.byId('u1')!;
+      expect(kept.channels.single.name, 'Cabin Light');
+      expect(kept.channels.single.icon, Icons.lightbulb);
+      expect(kept.channels.single.id, 'u1c1');
+      expect(kept.channels.single.isOn, isTrue); // fresh state adopted
+      expect(kept.status, ConnectionStatus.online);
+    });
+
     test('update mutates an existing module and notifies', () async {
       final store = ModuleStore.forTesting();
       await store.init();

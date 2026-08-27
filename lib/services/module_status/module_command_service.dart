@@ -53,6 +53,8 @@ class ModuleCommandService {
   final Map<String, String> _kv = {};
   final Map<int, bool> _outputs = {};
   final Map<int, bool> _inputs = {};
+  final Map<int, String> _outputNames = {};
+  final Map<int, String> _inputNames = {};
 
   /// The current live module instance.
   DeviceModule get module => _module;
@@ -111,14 +113,15 @@ class ModuleCommandService {
     }
   }
 
-  /// Interprets a single `KEY:value` scalar or `OUT/IN:<pin>:<ON|OFF>`
-  /// triplet and folds it into the accumulated snapshot. Returns true when
-  /// something was parsed.
+  /// Interprets a single `KEY:value` scalar, `OUT/IN:<pin>:<ON|OFF>` triplet
+  /// or `CHNAME_<OUT|IN>:<pin>:<name>` triplet and folds it into the
+  /// accumulated snapshot. Returns true when something was parsed.
   bool _consumeLine(String line) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) return false;
 
     final triplet = RegExp(r'^(OUT|IN):(\d+):(ON|OFF)$');
+    final chname = RegExp(r'^CHNAME_(OUT|IN):(\d+):(.*)$');
     final scalar = RegExp(r'^([A-Z_]+):(.*)$');
 
     final t = triplet.firstMatch(trimmed);
@@ -129,6 +132,20 @@ class ModuleCommandService {
         _outputs[pin] = on;
       } else {
         _inputs[pin] = on;
+      }
+      return true;
+    }
+
+    final c = chname.firstMatch(trimmed);
+    if (c != null) {
+      final pin = int.parse(c.group(2)!);
+      final name = c.group(3)!.trim();
+      if (name.isNotEmpty) {
+        if (c.group(1) == 'OUT') {
+          _outputNames[pin] = name;
+        } else {
+          _inputNames[pin] = name;
+        }
       }
       return true;
     }
@@ -153,6 +170,8 @@ class ModuleCommandService {
       kv: Map.of(_kv),
       outputs: Map.of(_outputs),
       inputs: Map.of(_inputs),
+      outputNames: Map.of(_outputNames),
+      inputNames: Map.of(_inputNames),
     );
     _fetcher.apply(_module, [snapshot]);
     if (!_moduleController.isClosed) {

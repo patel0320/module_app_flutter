@@ -26,11 +26,15 @@ class RelayControlScreen extends StatefulWidget {
 
 class _RelayControlScreenState extends State<RelayControlScreen> {
   Future<void> _editChannel(ChannelOutput channel) async {
-    await Navigator.of(context).push(
+    final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
           builder: (_) => ChannelEditorScreen(
               channel: channel, moduleName: widget.module.name)),
     );
+    if (saved == true) {
+      // Persist the renamed output so the user-defined name survives restarts.
+      await ModuleStore.shared.update(widget.module.id, (_) {});
+    }
     setState(() {});
   }
 

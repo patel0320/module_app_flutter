@@ -22,5 +22,6 @@ class RelayModuleStatusFetcher extends BaseModuleStatusFetcher {
         PduAtCommands.temperature, // AT+TEMP      SYSTEMP
         PduAtCommands.allOutputStates, // AT+OUTSTAT  OUT:<pin>:<ON|OFF>
         PduAtCommands.allInputStates, // AT+INSTAT   IN:<pin>:<ON|OFF>
+        PduAtCommands.channelNames, // AT+CHNAMES  CHNAME_<IN|OUT>:<pin>:<name>
       ];
 }

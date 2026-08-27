@@ -7,6 +7,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'channel_editor_screen.dart';
@@ -22,11 +23,15 @@ class DimmerDcScreen extends StatefulWidget {
 
 class _DimmerDcScreenState extends State<DimmerDcScreen> {
   Future<void> _editChannel(ChannelOutput channel) async {
-    await Navigator.of(context).push(
+    final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
           builder: (_) => ChannelEditorScreen(
               channel: channel, moduleName: widget.module.name)),
     );
+    if (saved == true) {
+      // Persist the renamed output so the user-defined name survives restarts.
+      await ModuleStore.shared.update(widget.module.id, (_) {});
+    }
     setState(() {});
   }
 

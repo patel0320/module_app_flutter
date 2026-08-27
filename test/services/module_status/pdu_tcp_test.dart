@@ -30,6 +30,17 @@ void main() {
       expect(r.outputs.length, 3);
     });
 
+    test('extracts CHNAME_OUT/CHNAME_IN name triplets (not as scalars)', () {
+      const raw =
+          'CHNAME_IN:0:Front Door\r\nCHNAME_OUT:2:Kitchen Light\r\nCHNAME_OUT:7:Deck';
+      final r = PduResponse.parse(raw);
+      expect(r.outputNames[2], 'Kitchen Light');
+      expect(r.outputNames[7], 'Deck');
+      expect(r.inputNames[0], 'Front Door');
+      expect(r.kv.containsKey('CHNAME_OUT'), isFalse);
+      expect(r.kv.containsKey('CHNAME_IN'), isFalse);
+    });
+
     test('numeric() tolerates units and parenthesised values', () {
       expect(PduResponse.numeric('34'), 34);
       expect(PduResponse.numeric('34.5 C'), 34.5);
@@ -123,6 +134,57 @@ void main() {
       expect(module.channels[3].isOn, isTrue);
     });
 
+    test('new outputs adopt the device-reported channel names', () {
+      const fetcher = RelayModuleStatusFetcher();
+      final module = DeviceModule(
+        id: 'm1',
+        name: 'Relay',
+        type: ModuleType.relay,
+        ipAddress: '192.168.1.10',
+        status: ConnectionStatus.online,
+        roomName: 'Cabin',
+        internalTempC: 0,
+        channels: [
+          ChannelOutput(id: 'm1c1', name: 'Cabin Light', icon: Icons.power),
+        ],
+      );
+
+      fetcher.apply(module, [
+        PduResponse.parse('RELAY_COUNT:4'),
+        PduResponse.parse(
+            'CHNAME_OUT:1:Kitchen Light\r\nCHNAME_OUT:3:Deck Floodlight'),
+      ]);
+
+      expect(module.channels.length, 4);
+      // The user-defined name on channel 0 is never clobbered by the device.
+      expect(module.channels[0].name, 'Cabin Light');
+      // Newly appended channels fall back to the device name when available.
+      expect(module.channels[1].name, 'Kitchen Light');
+      expect(module.channels[2].name, 'Output 3'); // no device name
+      expect(module.channels[3].name, 'Deck Floodlight');
+    });
+
+    test('existing output names are never overwritten by the device', () {
+      const fetcher = RelayModuleStatusFetcher();
+      final module = DeviceModule(
+        id: 'm1',
+        name: 'Relay',
+        type: ModuleType.relay,
+        ipAddress: '192.168.1.10',
+        status: ConnectionStatus.online,
+        roomName: 'Cabin',
+        internalTempC: 0,
+        channels: [
+          ChannelOutput(id: 'm1c1', name: 'Cabin Light', icon: Icons.power),
+        ],
+      );
+
+      fetcher.apply(
+          module, [PduResponse.parse('RELAY_COUNT:1\r\nCHNAME_OUT:0:Pump')]);
+
+      expect(module.channels.single.name, 'Cabin Light');
+    });
+
     test('trims outputs beyond the reported count', () {
       const fetcher = RelayModuleStatusFetcher();
       final module = DeviceModule(
@@ -150,6 +212,18 @@ void main() {
       expect(module.inputs.length, 3);
       expect(module.inputs[0].label, 'Switch 1');
       expect(module.inputs[2].label, 'Switch 3');
+    });
+
+    test('new inputs adopt the device-reported names', () {
+      const fetcher = RelayModuleStatusFetcher();
+      final module = _relayModule();
+      fetcher.apply(module, [
+        PduResponse.parse(
+            'IN:0:ON\r\nIN:1:OFF\r\nCHNAME_IN:0:Front Door\r\nCHNAME_IN:1:Engine Room'),
+      ]);
+      expect(module.inputs.length, 2);
+      expect(module.inputs[0].label, 'Front Door');
+      expect(module.inputs[1].label, 'Engine Room');
     });
   });
 
