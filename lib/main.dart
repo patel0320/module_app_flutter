@@ -30,6 +30,8 @@ import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/module_status/background_status_worker.dart';
 import 'services/module_status/module_status_scheduler.dart';
+import 'services/notification_monitor.dart';
+import 'services/notification_service.dart';
 import 'services/scenario_store.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
@@ -49,6 +51,11 @@ void main() {
   // persistent sockets while foreground, timed polling while backgrounded.
   BackgroundStatusWorker.initialize().ignore();
   ModuleStatusScheduler.shared.start();
+  // Initialise local notifications and start watching the module store so
+  // offline/online, temperature and output-duration alerts fire while the app
+  // is open (the background worker raises them while it is suspended).
+  LocalNotificationService.shared.initialize().ignore();
+  NotificationMonitor.shared.start();
   runApp(const AutomationApp());
 }
 

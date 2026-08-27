@@ -25,6 +25,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../models/models.dart';
+import '../module_store.dart';
+import '../notification_service.dart';
+import '../settings_store.dart';
 import 'module_status_service.dart';
 
 /// Thin wrapper around the [Workmanager] plugin.
@@ -78,11 +82,31 @@ abstract final class BackgroundStatusWorker {
 
   /// Runs one background poll pass and reports success. Safe to call from the
   /// background isolate: `executeTask` initialises the registered plugins and
-  /// the store reads straight from persisted storage.
+  /// the store reads straight from persisted storage. Any module whose
+  /// connectivity flips during the poll is surfaced as a local notification
+  /// (respecting the notification preferences), so alerts work even while the
+  /// app is suspended.
   static Future<bool> runPoll() async {
     try {
       debugPrint('BackgroundStatusWorker: starting poll');
+      await SettingsStore.shared.init();
+      await LocalNotificationService.shared.initialize();
+
+      await ModuleStore.shared.init();
+      final before = <String, ConnectionStatus>{
+        for (final m in ModuleStore.shared.modules) m.id: m.status,
+      };
+
       await ModuleStatusService.shared.pollAll();
+
+      final notifier = LocalNotificationService.shared;
+      for (final entry in before.entries) {
+        final module = ModuleStore.shared.byId(entry.key);
+        final now = module?.status;
+        if (module == null || now == null || now == entry.value) continue;
+        await notifier
+            .showModuleStatusChanged(module, now == ConnectionStatus.online);
+      }
       debugPrint('BackgroundStatusWorker: poll complete');
       return true;
     } catch (e, st) {

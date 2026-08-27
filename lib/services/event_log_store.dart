@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/event_log_repository.dart';
 import '../models/models.dart';
+import 'notification_service.dart';
 import 'scenario_runner.dart';
 
 class EventLogStore extends ChangeNotifier {
@@ -150,13 +151,20 @@ class EventLogStore extends ChangeNotifier {
   }
 
   /// Records an automation rule firing on its trigger.
-  Future<void> recordAutomation({required String automationName}) => record(
-        EventLogEntry(
-          time: _nextTime(),
-          title: 'Automation triggered: $automationName',
-          subtitle: 'Automation',
-        ),
-      );
+  Future<void> recordAutomation({required String automationName}) {
+    // Surface the automation run as a local notification when the preference
+    // is enabled (NotificationSettingsScreen).
+    LocalNotificationService.shared
+        .showAutomationTriggered(automationName)
+        .ignore();
+    return record(
+      EventLogEntry(
+        time: _nextTime(),
+        title: 'Automation triggered: $automationName',
+        subtitle: 'Automation',
+      ),
+    );
+  }
 
   /// Clears the entire event history.
   Future<void> clear() async {
