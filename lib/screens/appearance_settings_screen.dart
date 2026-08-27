@@ -8,6 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_palettes.dart';
 import '../widgets/common_widgets.dart';
 
 class AppearanceSettingsScreen extends StatelessWidget {
@@ -58,8 +59,92 @@ class AppearanceSettingsScreen extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          SectionHeader(l10n.homeSectionTheme),
+          const SizedBox(height: 4),
+          Text(
+            l10n.homeChoosePalette,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ValueListenableBuilder<HomeThemeId>(
+            valueListenable: homeThemeIdNotifier,
+            builder: (context, selected, _) => Card(
+              child: Column(
+                children: [
+                  for (final palette in HomeThemePalettes.all)
+                    _ThemeTile(
+                      palette: palette,
+                      selected: palette.id == selected,
+                      isLast: palette == HomeThemePalettes.all.last,
+                    ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// One selectable row in the palette picker, with a live gradient swatch.
+/// Tapping a palette applies and persists the user's choice immediately.
+class _ThemeTile extends StatelessWidget {
+  const _ThemeTile({
+    required this.palette,
+    required this.selected,
+    required this.isLast,
+  });
+
+  final HomePalette palette;
+  final bool selected;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final List<Color> swatch = palette.backgroundGradient.colors;
+    return Column(
+      children: [
+        ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          tileColor: selected ? cs.primary.withOpacity(0.12) : null,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [swatch.first, swatch.last],
+              ),
+              border: Border.all(color: palette.panelBorder),
+            ),
+            child: Icon(palette.icon, color: palette.primary, size: 22),
+          ),
+          title: Text(
+            palette.name,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          trailing: selected
+              ? Icon(Icons.check_circle, color: cs.primary)
+              : Icon(Icons.circle_outlined,
+                  color: cs.onSurface.withOpacity(0.6)),
+          onTap: () => SettingsStore.shared.setHomeTheme(palette.id),
+        ),
+        if (!isLast) const Divider(height: 1),
+      ],
     );
   }
 }

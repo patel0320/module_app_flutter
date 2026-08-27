@@ -26,7 +26,6 @@ import '../services/module_store.dart';
 import '../services/room_store.dart';
 import '../services/scenario_store.dart';
 import '../theme/app_theme.dart';
-import '../theme/theme_palettes.dart';
 import '../widgets/common_widgets.dart';
 import 'configuration_screen.dart' show openModuleDetail;
 import 'manual_dimming_slider_screen.dart';
@@ -68,9 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _allScenarios.where((s) => s.showInHome).toList();
 
   int get _onlineCount => _onlineModules.length;
-
-  List<DeviceModule> get _offlineModules =>
-      _modules.where((m) => m.status == ConnectionStatus.offline).toList();
 
   List<DeviceModule> get _onlineModules =>
       _modules.where((m) => m.status == ConnectionStatus.online).toList();
@@ -202,7 +198,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     _StatusPill(officers: _onlineCount, total: _modules.length),
                     const SizedBox(width: 10),
-                    const _ThemeSwitcherButton(),
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(100),
+                        onTap: () => Navigator.of(context)
+                            .pushNamed('/system-status'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                          child: Icon(Icons.notifications_none,
+                              color: cs.primary, size: 20),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -883,138 +894,6 @@ class _TemperatureRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Header button that opens the multi-theme palette picker.
-class _ThemeSwitcherButton extends StatelessWidget {
-  const _ThemeSwitcherButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(100),
-        onTap: () => _openPicker(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Icon(Icons.palette_outlined, color: cs.primary, size: 20),
-        ),
-      ),
-    );
-  }
-
-  void _openPicker(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) =>
-          _ThemePickerSheet(selected: homeThemeIdNotifier.value),
-    );
-  }
-}
-
-/// Bottom sheet listing every theme from [HomeThemePalettes], letting the user
-/// swap palettes live on the Home screen.
-class _ThemePickerSheet extends StatelessWidget {
-  const _ThemePickerSheet({required this.selected});
-
-  final HomeThemeId selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Material(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(22),
-          clipBehavior: Clip.antiAlias,
-          elevation: 6,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionLabel(l10n.homeSectionTheme),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.homeChoosePalette,
-                  style: TextStyle(
-                      color: cs.onSurface.withOpacity(0.6), fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: HomeThemePalettes.all.length,
-                    itemBuilder: (context, index) {
-                      final palette = HomeThemePalettes.all[index];
-                      return _ThemeTile(
-                        palette: palette,
-                        selected: palette.id == selected,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One selectable row in the theme picker, with a live gradient swatch.
-class _ThemeTile extends StatelessWidget {
-  const _ThemeTile({required this.palette, required this.selected});
-
-  final HomePalette palette;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final List<Color> swatch = palette.backgroundGradient.colors;
-    return ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      tileColor: selected ? cs.primary.withOpacity(0.12) : null,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [swatch.first, swatch.last],
-          ),
-          border: Border.all(color: palette.panelBorder),
-        ),
-        child: Icon(palette.icon, color: palette.primary, size: 22),
-      ),
-      title: Text(
-        palette.name,
-        style: TextStyle(
-          color: cs.onSurface,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-      trailing: selected
-          ? Icon(Icons.check_circle, color: cs.primary)
-          : Icon(Icons.circle_outlined, color: cs.onSurface.withOpacity(0.6)),
-      onTap: () {
-        homeThemeIdNotifier.value = palette.id;
-        Navigator.pop(context);
-      },
     );
   }
 }
