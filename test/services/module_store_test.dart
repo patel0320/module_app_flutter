@@ -1,10 +1,10 @@
-// Tests for the app-wide module store (single source of truth + live updates).
+﻿// Tests for the app-wide module store (single source of truth + live updates).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:module_app_flutter/models/models.dart';
-import 'package:module_app_flutter/services/module_store.dart';
+import 'package:soleux_device_manager/models/models.dart';
+import 'package:soleux_device_manager/services/module_store.dart';
 
 DeviceModule _module(String id, {String name = 'Relay'}) => DeviceModule(
       id: id,

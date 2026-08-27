@@ -14,7 +14,7 @@
 # ANDROID_KEY_ALIAS          Key alias (e.g. "upload")
 # ANDROID_KEY_PASSWORD       Key password
 # ANDROID_SERVICE_ACCOUNT_JSON Base64 of the Google Play service-account JSON
-# PLAY_PACKAGE_NAME          Android applicationId (com.moduledistributie...)
+# PLAY_PACKAGE_NAME          Android applicationId (com.soleux.sdm)
 # FIREBASE_GOOGLE_SERVICES    (optional) Base64 of android google-services.json
 # IOS_MATCH_GIT_URL           Git URL of the match certificates repo
 # IOS_MATCH_PASSWORD          match encryption password
@@ -24,7 +24,7 @@
 # IOS_FASTLANE_USER           (optional) App Store Connect username
 # IOS_APPLE_APP_SPECIFIC_PASSWORD (optional)
 # IOS_APPLE_TEAM_ID           (optional) Your Developer Team ID
-# IOS_APPLE_BUNDLE_ID         iOS bundle identifier (com.moduledistributie...)
+# IOS_APPLE_BUNDLE_ID         iOS bundle identifier (com.soleux.sdm)
 # IOS_GOOGLE_SERVICE_PLIST    (optional) Base64 of iOS GoogleService-Info.plist
 # APPSPOT_APPLE_ID            (optional) when not using match (password auth)
 # GH_RELEASE_TOKEN            (optional) PAT for Release upload (default: GITHUB_TOKEN)

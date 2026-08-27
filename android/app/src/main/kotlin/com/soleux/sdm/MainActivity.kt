@@ -1,4 +1,4 @@
-package com.moduledistributie.module_app_flutter
+﻿package com.soleux.sdm
 
 import io.flutter.embedding.android.FlutterActivity
 

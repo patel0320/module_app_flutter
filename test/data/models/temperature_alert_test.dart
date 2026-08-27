@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
-import 'package:module_app_flutter/data/models/temperature_alert.dart';
+import 'package:soleux_device_manager/data/models/temperature_alert.dart';
 
 void main() {
   group('TemperatureAlert', () {

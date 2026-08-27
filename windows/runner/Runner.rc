@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.moduledistributie" "\0"
-            VALUE "FileDescription", "module_app_flutter" "\0"
+            VALUE "CompanyName", "com.soleux" "\0"
+            VALUE "FileDescription", "Soleux Device Manager" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "module_app_flutter" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.moduledistributie. All rights reserved." "\0"
-            VALUE "OriginalFilename", "module_app_flutter.exe" "\0"
-            VALUE "ProductName", "module_app_flutter" "\0"
+            VALUE "InternalName", "soleux_device_manager" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.soleux. All rights reserved." "\0"
+            VALUE "OriginalFilename", "soleux_device_manager.exe" "\0"
+            VALUE "ProductName", "Soleux Device Manager" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

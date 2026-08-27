@@ -31,8 +31,9 @@ class MockTransport implements Transport {
 
   @override
   Future<TransportResult> send(AppCommand command, {Duration? timeout}) async {
-    if (latencyMillis > 0)
+    if (latencyMillis > 0) {
       await Future<void>.delayed(Duration(milliseconds: latencyMillis));
+    }
     sent.add(command);
     if (succeed) {
       emit(jsonDecode(command.encode()) as Map<String, dynamic>);

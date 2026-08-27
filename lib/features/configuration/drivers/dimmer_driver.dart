@@ -1,5 +1,5 @@
-import 'package:module_app_flutter/core/drivers/module_driver_base.dart';
-import 'package:module_app_flutter/data/models/module.dart';
+﻿import 'package:soleux_device_manager/core/drivers/module_driver_base.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
 
 /// Base class for lighting dimming drivers (DC PWM and AC phase-cut). The
 /// generic brightness control lives in [BaseModuleDriver.setBrightness].

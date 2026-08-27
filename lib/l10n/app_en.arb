@@ -2,7 +2,7 @@
   "@@locale": "en",
   "@@last_modified": "2026-08-24T00:00:00Z",
 
-  "appTitle": "Relay & Dimming Control",
+  "appTitle": "Soleux Device Manager",
 
   "tabHome": "Home",
   "tabConfiguration": "Configuration",

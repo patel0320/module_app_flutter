@@ -1,6 +1,8 @@
-Mobile Application Functional Brief (Android & iOS)
+# Soleux Device Manager — Mobile Application Functional Brief (Android &amp; iOS)
 
-The project aims to develop a cross-platform mobile application (Android and iOS) intended for the simplified monitoring and control of automation relays and lighting dimming modules. The application will allow users to manage consumers individually and to configure essential automation scenarios, being adaptable for residential, commercial, and marine environments.
+**Relay, PDU, AC Dimmer and DC Dimmer configuration and monitoring.**
+
+The project aims to develop a cross-platform mobile application (Android and iOS) for the configuration and monitoring of relays, PDUs, and AC/DC dimmer modules. The application will allow users to manage consumers individually and to configure essential automation scenarios, being adaptable for residential, commercial, and marine environments.
 
 Application Structure (Main Navigation)
 

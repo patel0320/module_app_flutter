@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:module_app_flutter/app.dart';
+import 'package:soleux_device_manager/app.dart';
 
 void main() {
   testWidgets('App boots to Home with bottom navigation', (tester) async {

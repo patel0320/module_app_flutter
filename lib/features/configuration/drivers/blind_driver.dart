@@ -1,11 +1,11 @@
-import 'package:module_app_flutter/core/drivers/module_driver_base.dart';
-import 'package:module_app_flutter/core/transport/app_command.dart';
-import 'package:module_app_flutter/data/models/channel.dart';
-import 'package:module_app_flutter/data/models/module.dart';
+﻿import 'package:soleux_device_manager/core/drivers/module_driver_base.dart';
+import 'package:soleux_device_manager/core/transport/app_command.dart';
+import 'package:soleux_device_manager/data/models/channel.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
 
 /// DC blind motor control driver.
 ///
-/// Implements toggle-stop behaviour (brief §2.3): first press of UP starts the
+/// Implements toggle-stop behaviour (brief Â§2.3): first press of UP starts the
 /// motor up, second press of UP stops it; the same applies to DOWN.
 class BlindDriver extends BaseModuleDriver {
   final Map<int, BlindDirection?> _lastDirection = {};

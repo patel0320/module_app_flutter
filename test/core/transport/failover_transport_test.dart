@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
-import 'package:module_app_flutter/core/transport/app_command.dart';
-import 'package:module_app_flutter/core/transport/failover_transport.dart';
-import 'package:module_app_flutter/core/transport/mock_transport.dart';
+import 'package:soleux_device_manager/core/transport/app_command.dart';
+import 'package:soleux_device_manager/core/transport/failover_transport.dart';
+import 'package:soleux_device_manager/core/transport/mock_transport.dart';
 
 void main() {
   const ping = AppCommand(action: 'ping', moduleId: 'm1');

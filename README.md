@@ -1,6 +1,6 @@
-# module_app_flutter
+# Soleux Device Manager
 
-A new Flutter project.
+Relay, PDU, AC Dimmer and DC Dimmer configuration and monitoring.
 
 ## Getting Started
 

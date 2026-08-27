@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:module_app_flutter/data/module_repository.dart';
-import 'package:module_app_flutter/models/models.dart';
+import 'package:soleux_device_manager/data/module_repository.dart';
+import 'package:soleux_device_manager/models/models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

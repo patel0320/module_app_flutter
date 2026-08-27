@@ -1,8 +1,8 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
-import 'package:module_app_flutter/data/models/channel.dart';
+import 'package:soleux_device_manager/data/models/channel.dart';
 
-/// Command envelope shared by LAN TCP and MQTT paths (see setup.md §5.3).
+/// Command envelope shared by LAN TCP and MQTT paths (see setup.md Â§5.3).
 class AppCommand {
   final String action;
   final String moduleId;

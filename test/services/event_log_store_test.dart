@@ -1,10 +1,10 @@
-// Tests for the app-wide event-log store (tracing + 30-day retention).
+﻿// Tests for the app-wide event-log store (tracing + 30-day retention).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:module_app_flutter/models/models.dart';
-import 'package:module_app_flutter/services/event_log_store.dart';
-import 'package:module_app_flutter/services/scenario_runner.dart';
+import 'package:soleux_device_manager/models/models.dart';
+import 'package:soleux_device_manager/services/event_log_store.dart';
+import 'package:soleux_device_manager/services/scenario_runner.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

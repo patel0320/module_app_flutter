@@ -1,5 +1,5 @@
-name: module_app_flutter
-description: "Cross-platform app for monitoring and controlling automation relays and lighting dimming modules."
+name: soleux_device_manager
+description: "Relay, PDU, AC Dimmer and DC Dimmer configuration and monitoring."
 publish_to: 'none'
 
 version: 1.0.0+1

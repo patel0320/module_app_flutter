@@ -1,4 +1,4 @@
-import Flutter
+﻿import Flutter
 import UIKit
 import workmanager
 
@@ -8,7 +8,7 @@ import workmanager
   /// (`BackgroundStatusWorker.uniqueTaskName`) and the
   /// `BGTaskSchedulerPermittedIdentifiers` entry in Info.plist.
   private let statusPollTaskIdentifier =
-    "com.moduledistributie.module_app_flutter.statusPoll"
+    "com.soleux.sdm.statusPoll"
 
   override func application(
     _ application: UIApplication,

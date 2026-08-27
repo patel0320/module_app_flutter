@@ -1,10 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 
-import 'package:module_app_flutter/core/transport/transport.dart';
-import 'package:module_app_flutter/data/models/channel.dart';
-import 'package:module_app_flutter/data/models/channel_status.dart';
-import 'package:module_app_flutter/data/models/input.dart';
-import 'package:module_app_flutter/data/models/module.dart';
+import 'package:soleux_device_manager/core/transport/transport.dart';
+import 'package:soleux_device_manager/data/models/channel.dart';
+import 'package:soleux_device_manager/data/models/channel_status.dart';
+import 'package:soleux_device_manager/data/models/input.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
 
 /// Configuration patch applied to a module (naming, icons, behaviour).
 class ModuleConfig {

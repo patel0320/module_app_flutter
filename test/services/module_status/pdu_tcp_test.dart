@@ -1,13 +1,13 @@
-// Tests for the PROTOCOLS.md §1 TCP status layer:
+﻿// Tests for the PROTOCOLS.md Â§1 TCP status layer:
 //   - parsing an `AT+TEMP` / `AT+OUTSTAT` response body into a PduResponse
 //   - the standard relay fetcher applying those fields onto a DeviceModule
 //   - the registry being expandable to future module types
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:module_app_flutter/models/models.dart';
-import 'package:module_app_flutter/services/module_status/module_status_fetcher.dart';
-import 'package:module_app_flutter/services/module_status/pdu_protocol.dart';
-import 'package:module_app_flutter/services/module_status/relay_module_status_fetcher.dart';
+import 'package:soleux_device_manager/models/models.dart';
+import 'package:soleux_device_manager/services/module_status/module_status_fetcher.dart';
+import 'package:soleux_device_manager/services/module_status/pdu_protocol.dart';
+import 'package:soleux_device_manager/services/module_status/relay_module_status_fetcher.dart';
 
 void main() {
   group('PduResponse.parse', () {

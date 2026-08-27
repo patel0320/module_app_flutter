@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
-        android:label="module_app_flutter"
+        android:label="Soleux Device Manager"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

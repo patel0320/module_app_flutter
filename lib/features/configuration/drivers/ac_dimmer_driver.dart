@@ -1,8 +1,8 @@
-import 'package:module_app_flutter/data/models/module.dart';
+﻿import 'package:soleux_device_manager/data/models/module.dart';
 
 import 'dimmer_driver.dart';
 
-/// AC lighting dimming module (4 × 220V outputs, phase-cut).
+/// AC lighting dimming module (4 Ã— 220V outputs, phase-cut).
 class AcDimmerDriver extends DimmerDriver {
   AcDimmerDriver({
     required super.module,

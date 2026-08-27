@@ -48,7 +48,7 @@ class ModuleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Home Automation',
+      title: 'Soleux Device Manager',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       locale: const Locale('en'),

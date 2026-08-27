@@ -1,11 +1,11 @@
 {
-    "name": "module_app_flutter",
-    "short_name": "module_app_flutter",
+    "name": "Soleux Device Manager",
+    "short_name": "Soleux",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#E48623",
-    "description": "A new Flutter project.",
+    "description": "Relay, PDU, AC Dimmer and DC Dimmer configuration and monitoring.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

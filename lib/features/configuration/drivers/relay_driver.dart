@@ -1,5 +1,5 @@
-import 'package:module_app_flutter/core/drivers/module_driver_base.dart';
-import 'package:module_app_flutter/data/models/module.dart';
+﻿import 'package:soleux_device_manager/core/drivers/module_driver_base.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
 
 /// Standard relay module driver (on/off control of one or more outputs).
 class RelayDriver extends BaseModuleDriver {

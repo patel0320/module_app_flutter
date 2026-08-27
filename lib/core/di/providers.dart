@@ -1,19 +1,19 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:module_app_flutter/core/config/env.dart';
-import 'package:module_app_flutter/core/drivers/module_driver.dart';
-import 'package:module_app_flutter/core/transport/mock_transport.dart';
-import 'package:module_app_flutter/core/transport/transport.dart';
-import 'package:module_app_flutter/data/models/channel.dart';
-import 'package:module_app_flutter/data/models/module.dart';
-import 'package:module_app_flutter/features/configuration/drivers/driver_factory.dart';
+import 'package:soleux_device_manager/core/config/env.dart';
+import 'package:soleux_device_manager/core/drivers/module_driver.dart';
+import 'package:soleux_device_manager/core/transport/mock_transport.dart';
+import 'package:soleux_device_manager/core/transport/transport.dart';
+import 'package:soleux_device_manager/data/models/channel.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
+import 'package:soleux_device_manager/features/configuration/drivers/driver_factory.dart';
 
 /// App environment + config.
 final appConfigProvider = Provider((ref) => Env.config);
 
 /// In-memory registry of discovered modules + their drivers.
 /// Replace the MockTransport wire-up with the LAN/MQTT factories once the real
-/// protocol contracts are frozen (Stage 3/4) — see setup.md §5.
+/// protocol contracts are frozen (Stage 3/4) â€” see setup.md Â§5.
 final moduleRepositoryProvider =
     StateNotifierProvider<ModuleRepository, List<Module>>((ref) {
   return ModuleRepository(factory: const DriverFactory());

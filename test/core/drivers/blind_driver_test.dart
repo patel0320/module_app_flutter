@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
-import 'package:module_app_flutter/core/transport/mock_transport.dart';
-import 'package:module_app_flutter/data/models/channel.dart';
-import 'package:module_app_flutter/data/models/module.dart';
-import 'package:module_app_flutter/features/configuration/drivers/blind_driver.dart';
+import 'package:soleux_device_manager/core/transport/mock_transport.dart';
+import 'package:soleux_device_manager/data/models/channel.dart';
+import 'package:soleux_device_manager/data/models/module.dart';
+import 'package:soleux_device_manager/features/configuration/drivers/blind_driver.dart';
 
 void main() {
   const module = Module(
