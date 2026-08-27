@@ -16,7 +16,7 @@ class AppColors {
   static const Color controlOff = Color(0xFF333333);
   static const Color controlDim = Color(0xFF00701A);
 
-  // ---- Neo-Aurora "Command Deck" palette (Home screen) ----------------
+  // ---- Mint Frost "Command Deck" palette (Home screen) ----------------
   // Raw hex values copied from the reference stylesheet (styles.css).
 
   // Background gradient: linear-gradient(145deg, #02040a 0%, #07111f 52%, #050816 100%)

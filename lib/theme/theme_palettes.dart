@@ -2,7 +2,7 @@
 //
 // Multi-theme palette system ported from the reference dashboard
 // (E:\work\smart-home-dashboard\public\styles.css).  The token vocabulary is
-// identical to the flagship "Neo-Aurora Command Deck" (`:root` / `body.theme-aurora`):
+// identical to the flagship "Mint Frost Command Deck" (`:root` / `body.theme-aurora`):
 //
 //   --bg-color, --panel-bg, --panel-border, --text-main, --text-muted,
 //   --primary, --primary-glow, --accent-blue, --accent-violet
@@ -17,18 +17,18 @@ import 'package:flutter/material.dart';
 /// Themes available in the Home-screen theme switcher, matching the
 /// dashboard's theme selector.
 enum HomeThemeId {
-  aurora,
-  cyberpunk,
-  nordic,
-  retrowave,
-  terminal,
-  stealth,
+  mintFrost,
+  blaze,
+  dust,
+  magentaSurge,
+  lime,
+  noir,
 }
 
 /// Currently selected Home theme. Kept as a plain [ValueNotifier] so the
 /// theme switcher can flip palettes from anywhere without a new package.
 final ValueNotifier<HomeThemeId> homeThemeIdNotifier =
-    ValueNotifier<HomeThemeId>(HomeThemeId.aurora);
+    ValueNotifier<HomeThemeId>(HomeThemeId.mintFrost);
 
 @immutable
 class HomePalette {
@@ -75,7 +75,7 @@ class HomePalette {
   final IconData icon;
 
   /// Whether the theme uses frosted glass + soft shadows (`--blur`) or flat
-  /// panels (OLED stealth / terminal / nordic).
+  /// panels (noir / lime / dust).
   final bool glass;
   final double radiusLg;
   final double radiusMd;
@@ -118,22 +118,22 @@ class HomePalette {
 abstract final class HomeThemePalettes {
   static const List<HomePalette> all = _all;
   static const List<HomePalette> _all = [
-    _aurora,
-    _cyberpunk,
-    _nordic,
-    _retrowave,
-    _terminal,
-    _stealth,
+    _mintFrost,
+    _blaze,
+    _dust,
+    _magentaSurge,
+    _lime,
+    _noir,
   ];
 
   static HomePalette byId(HomeThemeId id) => all.firstWhere((p) => p.id == id);
 
   // ---------------------------------------------------------------------------
-  // 1. NEO-AURORA COMMAND DECK (flagship) — styles.css :root / theme-aurora
+  // 1. MINT FROST (flagship) — styles.css :root / theme-aurora
   // ---------------------------------------------------------------------------
-  static const HomePalette _aurora = HomePalette(
-    id: HomeThemeId.aurora,
-    name: 'Neo-Aurora',
+  static const HomePalette _mintFrost = HomePalette(
+    id: HomeThemeId.mintFrost,
+    name: 'Mint Frost',
     icon: Icons.blur_on,
     glass: true,
     radiusLg: 28,
@@ -194,11 +194,11 @@ abstract final class HomeThemePalettes {
   );
 
   // ---------------------------------------------------------------------------
-  // 2. CYBERPUNK TACTICAL HUD — styles.css theme-cyberpunk
+  // 2. BLAZE — styles.css theme-cyberpunk
   // ---------------------------------------------------------------------------
-  static const HomePalette _cyberpunk = HomePalette(
-    id: HomeThemeId.cyberpunk,
-    name: 'Cyberpunk',
+  static const HomePalette _blaze = HomePalette(
+    id: HomeThemeId.blaze,
+    name: 'Blaze',
     icon: Icons.emoji_objects_outlined,
     glass: false,
     radiusLg: 0,
@@ -252,11 +252,11 @@ abstract final class HomeThemePalettes {
   );
 
   // ---------------------------------------------------------------------------
-  // 3. COZY NORDIC DARK — styles.css theme-nordic
+  // 3. DUST — styles.css theme-nordic
   // ---------------------------------------------------------------------------
-  static const HomePalette _nordic = HomePalette(
-    id: HomeThemeId.nordic,
-    name: 'Nordic',
+  static const HomePalette _dust = HomePalette(
+    id: HomeThemeId.dust,
+    name: 'Dust',
     icon: Icons.ac_unit,
     glass: false,
     radiusLg: 20,
@@ -309,11 +309,11 @@ abstract final class HomeThemePalettes {
   );
 
   // ---------------------------------------------------------------------------
-  // 4. RETROWAVE LASER SYNTH — styles.css theme-retrowave
+  // 4. MAGENTA SURGE — styles.css theme-retrowave
   // ---------------------------------------------------------------------------
-  static const HomePalette _retrowave = HomePalette(
-    id: HomeThemeId.retrowave,
-    name: 'Retrowave',
+  static const HomePalette _magentaSurge = HomePalette(
+    id: HomeThemeId.magentaSurge,
+    name: 'Magenta Surge',
     icon: Icons.gradient,
     glass: true,
     radiusLg: 16,
@@ -367,11 +367,11 @@ abstract final class HomeThemePalettes {
   );
 
   // ---------------------------------------------------------------------------
-  // 5. TERMINAL CLASSIC — styles.css theme-terminal
+  // 5. LIME — styles.css theme-terminal
   // ---------------------------------------------------------------------------
-  static const HomePalette _terminal = HomePalette(
-    id: HomeThemeId.terminal,
-    name: 'Terminal',
+  static const HomePalette _lime = HomePalette(
+    id: HomeThemeId.lime,
+    name: 'Lime',
     icon: Icons.terminal,
     glass: false,
     radiusLg: 4,
@@ -425,11 +425,11 @@ abstract final class HomeThemePalettes {
   );
 
   // ---------------------------------------------------------------------------
-  // 6. OLED STEALTH — styles.css theme-stealth
+  // 6. NOIR — styles.css theme-stealth
   // ---------------------------------------------------------------------------
-  static const HomePalette _stealth = HomePalette(
-    id: HomeThemeId.stealth,
-    name: 'OLED Stealth',
+  static const HomePalette _noir = HomePalette(
+    id: HomeThemeId.noir,
+    name: 'Noir',
     icon: Icons.dark_mode_outlined,
     glass: false,
     radiusLg: 14,

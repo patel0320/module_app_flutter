@@ -2,7 +2,7 @@
 //
 // Centralized ThemeData for the whole app (Material 3), driven by the
 // SmartHome multi-theme palette system in theme_palettes.dart. The active
-// palette (aurora/cyberpunk/nordic/retrowave/terminal/stealth) picks the
+// palette (mintFrost/blaze/dust/magentaSurge/lime/noir) picks the
 // primary/secondary/tertiary/background/text tokens, so every screen
 // following Theme.of(context) re-skins when the theme switcher changes.
 //
