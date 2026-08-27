@@ -72,7 +72,8 @@ class AutomationApp extends StatelessWidget {
               valueListenable: appLocaleNotifier,
               builder: (context, locale, _) {
                 return MaterialApp(
-                  onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+                  onGenerateTitle: (context) =>
+                      AppLocalizations.of(context).appTitle,
                   debugShowCheckedModeBanner: false,
                   theme: AppTheme.lightFor(themeId),
                   darkTheme: AppTheme.darkFor(themeId),
@@ -87,23 +88,27 @@ class AutomationApp extends StatelessWidget {
                   ],
                   scrollBehavior: const AppScrollBehavior(),
                   initialRoute: '/',
-              routes: {
-                '/': (context) => const SplashScreen(),
-                '/login': (context) => const LoginScreen(),
-                '/register': (context) => const RegisterScreen(),
-                '/forgot-password': (context) => const ForgotPasswordScreen(),
-                '/root': (context) => const RootShell(),
-                '/system-status': (context) => const SystemStatusScreen(),
-                '/add-module': (context) => const AddModuleScreen(),
-                '/rooms': (context) => const RoomsScreen(),
-                '/automations': (context) => const AutomationsScreen(),
-                '/event-history': (context) => const EventHistoryScreen(),
-                '/settings/account': (context) => const AccountScreen(),
-                '/settings/notifications': (context) => const NotificationsSettingsScreen(),
-                '/settings/language': (context) => const LanguageSettingsScreen(),
-                '/settings/appearance': (context) => const AppearanceSettingsScreen(),
-              },
-            );
+                  routes: {
+                    '/': (context) => const SplashScreen(),
+                    '/login': (context) => const LoginScreen(),
+                    '/register': (context) => const RegisterScreen(),
+                    '/forgot-password': (context) =>
+                        const ForgotPasswordScreen(),
+                    '/root': (context) => const RootShell(),
+                    '/system-status': (context) => const SystemStatusScreen(),
+                    '/add-module': (context) => const AddModuleScreen(),
+                    '/rooms': (context) => const RoomsScreen(),
+                    '/automations': (context) => const AutomationsScreen(),
+                    '/event-history': (context) => const EventHistoryScreen(),
+                    '/settings/account': (context) => const AccountScreen(),
+                    '/settings/notifications': (context) =>
+                        const NotificationsSettingsScreen(),
+                    '/settings/language': (context) =>
+                        const LanguageSettingsScreen(),
+                    '/settings/appearance': (context) =>
+                        const AppearanceSettingsScreen(),
+                  },
+                );
               },
             );
           },

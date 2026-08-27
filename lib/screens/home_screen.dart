@@ -204,8 +204,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(100),
-                        onTap: () => Navigator.of(context)
-                            .pushNamed('/system-status'),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/system-status'),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 12),

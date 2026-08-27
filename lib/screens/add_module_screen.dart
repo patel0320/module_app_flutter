@@ -47,21 +47,31 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     super.dispose();
   }
 
-  List<ChannelOutput> _defaultChannelsFor(ModuleType type, AppLocalizations l10n) {
+  List<ChannelOutput> _defaultChannelsFor(
+      ModuleType type, AppLocalizations l10n) {
     switch (type) {
       case ModuleType.relay:
-        return List.generate(8,
+        return List.generate(
+            8,
             (i) => ChannelOutput(
-                id: 'new-r$i', name: l10n.addModuleOutput(i + 1), icon: Icons.power));
+                id: 'new-r$i',
+                name: l10n.addModuleOutput(i + 1),
+                icon: Icons.power));
       case ModuleType.blind:
-        return List.generate(2,
+        return List.generate(
+            2,
             (i) => ChannelOutput(
-                id: 'new-b$i', name: l10n.addModuleBlind(i + 1), icon: Icons.blinds));
+                id: 'new-b$i',
+                name: l10n.addModuleBlind(i + 1),
+                icon: Icons.blinds));
       case ModuleType.dimmerDc:
       case ModuleType.dimmerAc:
-        return List.generate(4,
+        return List.generate(
+            4,
             (i) => ChannelOutput(
-                id: 'new-d$i', name: l10n.addModuleChannel(i + 1), icon: Icons.tune));
+                id: 'new-d$i',
+                name: l10n.addModuleChannel(i + 1),
+                icon: Icons.tune));
       case ModuleType.temperature:
         return [];
     }
@@ -98,14 +108,17 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   DeviceModule _toDeviceModule(DiscoveredModule discovered) {
     return DeviceModule(
       id: 'discovered-${discovered.serial.isNotEmpty ? discovered.serial : discovered.guid}',
-      name: discovered.name.isNotEmpty ? discovered.name : AppLocalizations.of(context).addModuleUnnamedRelay,
+      name: discovered.name.isNotEmpty
+          ? discovered.name
+          : AppLocalizations.of(context).addModuleUnnamedRelay,
       type: ModuleType.relay,
       ipAddress: discovered.ip,
       tcpPort: discovered.tcpPort,
       status: ConnectionStatus.online,
       roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
-      channels: _defaultChannelsFor(ModuleType.relay, AppLocalizations.of(context)),
+      channels:
+          _defaultChannelsFor(ModuleType.relay, AppLocalizations.of(context)),
     );
   }
 
@@ -194,7 +207,9 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 2),
-                              Text(l10n.configModuleSummary(module.type.label, module.ipAddress),
+                              Text(
+                                  l10n.configModuleSummary(
+                                      module.type.label, module.ipAddress),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: onSurface.withOpacity(0.55))),

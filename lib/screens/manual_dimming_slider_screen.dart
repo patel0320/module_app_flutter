@@ -15,7 +15,8 @@ class ManualDimmingSliderScreen extends StatefulWidget {
   final Scenario scenario;
 
   @override
-  State<ManualDimmingSliderScreen> createState() => _ManualDimmingSliderScreenState();
+  State<ManualDimmingSliderScreen> createState() =>
+      _ManualDimmingSliderScreenState();
 }
 
 class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
@@ -45,10 +46,14 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
               color: _value == 0 ? onSurface.withOpacity(0.2) : onSurface,
             ),
             const SizedBox(height: 16),
-            Text('$_value%', style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w800)),
+            Text('$_value%',
+                style:
+                    const TextStyle(fontSize: 64, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
-              widget.scenario.sliderTargetName.isEmpty ? l10n.manualDimDefaultLabel : widget.scenario.sliderTargetName,
+              widget.scenario.sliderTargetName.isEmpty
+                  ? l10n.manualDimDefaultLabel
+                  : widget.scenario.sliderTargetName,
               style: TextStyle(color: onSurface.withOpacity(0.55)),
             ),
             const Spacer(),
@@ -70,9 +75,13 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
             ),
             Row(
               children: [
-                Expanded(child: OutlinedButton(onPressed: () => _update(0), child: Text(l10n.off))),
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => _update(0), child: Text(l10n.off))),
                 const SizedBox(width: 12),
-                Expanded(child: FilledButton(onPressed: () => _update(100), child: Text(l10n.on))),
+                Expanded(
+                    child: FilledButton(
+                        onPressed: () => _update(100), child: Text(l10n.on))),
               ],
             ),
             const SizedBox(height: 8),

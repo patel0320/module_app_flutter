@@ -24,13 +24,15 @@ class BlindControlScreen extends StatefulWidget {
 class _BlindControlScreenState extends State<BlindControlScreen> {
   final Map<String, _Motion> _motion = {};
 
-  _Motion _motionOf(ChannelOutput channel) => _motion[channel.id] ?? _Motion.idle;
+  _Motion _motionOf(ChannelOutput channel) =>
+      _motion[channel.id] ?? _Motion.idle;
 
   /// Pressing the active direction's button again stops the motor;
   /// pressing the other direction switches directly to it.
   void _press(ChannelOutput channel, _Motion direction) {
     setState(() {
-      _motion[channel.id] = _motionOf(channel) == direction ? _Motion.idle : direction;
+      _motion[channel.id] =
+          _motionOf(channel) == direction ? _Motion.idle : direction;
     });
   }
 
@@ -46,7 +48,10 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
-        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)],
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
@@ -71,7 +76,11 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
 }
 
 class _BlindCard extends StatelessWidget {
-  const _BlindCard({required this.channel, required this.motion, required this.onUp, required this.onDown});
+  const _BlindCard(
+      {required this.channel,
+      required this.motion,
+      required this.onUp,
+      required this.onDown});
 
   final ChannelOutput channel;
   final _Motion motion;
@@ -99,13 +108,17 @@ class _BlindCard extends StatelessWidget {
                 IconAvatar(icon: channel.icon),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  child: Text(channel.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
                 Text(
                   status,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: motion == _Motion.idle ? onSurface.withOpacity(0.55) : onSurface,
+                    color: motion == _Motion.idle
+                        ? onSurface.withOpacity(0.55)
+                        : onSurface,
                   ),
                 ),
               ],
@@ -162,7 +175,8 @@ class _DirectionButton extends StatelessWidget {
       children: [
         Icon(active ? Icons.stop_circle_outlined : icon),
         const SizedBox(width: 8),
-        Text(active ? l10n.blindStop : idleLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(active ? l10n.blindStop : idleLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     );
     return SizedBox(

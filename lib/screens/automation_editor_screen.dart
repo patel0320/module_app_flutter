@@ -24,12 +24,16 @@ class AutomationEditorScreen extends StatefulWidget {
 
 class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   late final bool _isNew = widget.automation == null;
-  late final TextEditingController _nameController = TextEditingController(text: widget.automation?.name ?? '');
-  late AutomationTriggerType _triggerType = widget.automation?.triggerType ?? AutomationTriggerType.time;
+  late final TextEditingController _nameController =
+      TextEditingController(text: widget.automation?.name ?? '');
+  late AutomationTriggerType _triggerType =
+      widget.automation?.triggerType ?? AutomationTriggerType.time;
   TimeOfDay _time = const TimeOfDay(hour: 20, minute: 0);
   bool _deviceTurnsOn = true;
-  late String _deviceChannelName = _channelNames.isNotEmpty ? _channelNames.first : '';
-  late final List<ScenarioAction> _actions = List.of(widget.automation?.actions ?? const []);
+  late String _deviceChannelName =
+      _channelNames.isNotEmpty ? _channelNames.first : '';
+  late final List<ScenarioAction> _actions =
+      List.of(widget.automation?.actions ?? const []);
 
   final List<DeviceModule> _modules = mockModules();
 
@@ -45,7 +49,8 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   }
 
   Future<void> _pickTime() async {
-    final TimeOfDay? picked = await showTimePicker(context: context, initialTime: _time);
+    final TimeOfDay? picked =
+        await showTimePicker(context: context, initialTime: _time);
     if (picked != null) setState(() => _time = picked);
   }
 
@@ -66,7 +71,9 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   }
 
   void _save() {
-    final String name = _nameController.text.trim().isEmpty ? AppLocalizations.of(context).automationUntitled : _nameController.text.trim();
+    final String name = _nameController.text.trim().isEmpty
+        ? AppLocalizations.of(context).automationUntitled
+        : _nameController.text.trim();
     if (widget.automation != null) {
       final a = widget.automation!;
       a.name = name;
@@ -93,20 +100,30 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
     final channelNames = _channelNames;
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? l10n.automationNewTitle : l10n.automationEditTitle)),
+      appBar: AppBar(
+          title: Text(
+              _isNew ? l10n.automationNewTitle : l10n.automationEditTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           TextField(
             controller: _nameController,
-            decoration: InputDecoration(labelText: l10n.automationNameLabel, prefixIcon: const Icon(Icons.label_outline)),
+            decoration: InputDecoration(
+                labelText: l10n.automationNameLabel,
+                prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 20),
           SectionHeader(l10n.automationSectionIf),
           SegmentedButton<AutomationTriggerType>(
             segments: [
-              ButtonSegment(value: AutomationTriggerType.time, label: Text(l10n.automationTriggerTime), icon: const Icon(Icons.schedule)),
-              ButtonSegment(value: AutomationTriggerType.deviceState, label: Text(l10n.automationTriggerDevice), icon: const Icon(Icons.sensors)),
+              ButtonSegment(
+                  value: AutomationTriggerType.time,
+                  label: Text(l10n.automationTriggerTime),
+                  icon: const Icon(Icons.schedule)),
+              ButtonSegment(
+                  value: AutomationTriggerType.deviceState,
+                  label: Text(l10n.automationTriggerDevice),
+                  icon: const Icon(Icons.sensors)),
             ],
             selected: {_triggerType},
             onSelectionChanged: (s) => setState(() => _triggerType = s.first),
@@ -124,28 +141,43 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
             )
           else ...[
             DropdownButtonFormField<String>(
-              value: channelNames.contains(_deviceChannelName) ? _deviceChannelName : null,
-              decoration: InputDecoration(labelText: l10n.automationWhenOutputLabel, prefixIcon: const Icon(Icons.sensors)),
-              items: [for (final c in channelNames) DropdownMenuItem(value: c, child: Text(c))],
-              onChanged: (v) => setState(() => _deviceChannelName = v ?? _deviceChannelName),
+              value: channelNames.contains(_deviceChannelName)
+                  ? _deviceChannelName
+                  : null,
+              decoration: InputDecoration(
+                  labelText: l10n.automationWhenOutputLabel,
+                  prefixIcon: const Icon(Icons.sensors)),
+              items: [
+                for (final c in channelNames)
+                  DropdownMenuItem(value: c, child: Text(c))
+              ],
+              onChanged: (v) =>
+                  setState(() => _deviceChannelName = v ?? _deviceChannelName),
             ),
             const SizedBox(height: 12),
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(value: true, label: Text(l10n.automationTurnsOn)),
-                ButtonSegment(value: false, label: Text(l10n.automationTurnsOff)),
+                ButtonSegment(
+                    value: false, label: Text(l10n.automationTurnsOff)),
               ],
               selected: {_deviceTurnsOn},
-              onSelectionChanged: (s) => setState(() => _deviceTurnsOn = s.first),
+              onSelectionChanged: (s) =>
+                  setState(() => _deviceTurnsOn = s.first),
             ),
           ],
           const SizedBox(height: 24),
           SectionHeader(
             l10n.automationSectionThen,
-            trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: Text(l10n.add)),
+            trailing: TextButton.icon(
+                onPressed: _addAction,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.add)),
           ),
           if (_actions.isEmpty)
-            EmptyState(icon: Icons.flash_on_outlined, message: l10n.automationActionsEmpty)
+            EmptyState(
+                icon: Icons.flash_on_outlined,
+                message: l10n.automationActionsEmpty)
           else
             for (int i = 0; i < _actions.length; i++)
               Padding(
@@ -153,8 +185,10 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
                 child: Card(
                   child: ListTile(
                     leading: IconAvatar(icon: _actions[i].icon),
-                    title: Text(_actions[i].channelName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.scenarioActionModuleSummary(_actions[i].moduleName, _actions[i].summary)),
+                    title: Text(_actions[i].channelName,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(l10n.scenarioActionModuleSummary(
+                        _actions[i].moduleName, _actions[i].summary)),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () => setState(() => _actions.removeAt(i)),

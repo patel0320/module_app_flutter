@@ -6,7 +6,8 @@ import '../../data/models/module.dart';
 class TemperatureCard extends StatelessWidget {
   final Module module;
   final double temperature;
-  const TemperatureCard({super.key, required this.module, required this.temperature});
+  const TemperatureCard(
+      {super.key, required this.module, required this.temperature});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +16,8 @@ class TemperatureCard extends StatelessWidget {
       color: exceeded ? AppColors.offline : AppColors.surface,
       borderRadius: BorderRadius.circular(12),
       child: ListTile(
-        leading: Icon(Icons.thermostat, color: exceeded ? Colors.white : AppColors.warning),
+        leading: Icon(Icons.thermostat,
+            color: exceeded ? Colors.white : AppColors.warning),
         title: Text(module.name),
         subtitle: Text('${temperature.toStringAsFixed(1)} °C'),
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),

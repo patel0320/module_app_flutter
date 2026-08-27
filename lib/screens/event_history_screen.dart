@@ -29,7 +29,9 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
   String _dateHeader(DateTime time) {
     final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
-    final int diff = DateTime(now.year, now.month, now.day).difference(DateTime(time.year, time.month, time.day)).inDays;
+    final int diff = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(time.year, time.month, time.day))
+        .inDays;
     if (diff == 0) return l10n.eventHistoryToday;
     if (diff == 1) return l10n.eventHistoryYesterday;
     return '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')}/${time.year}';
@@ -74,15 +76,18 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
               Container(
                 width: double.infinity,
                 color: onSurface.withOpacity(0.05),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.outerPadding, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.outerPadding, vertical: 10),
                 child: Text(
                   l10n.eventHistoryShowing,
-                  style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6)),
+                  style: TextStyle(
+                      fontSize: 12, color: onSurface.withOpacity(0.6)),
                 ),
               ),
               Expanded(
                 child: rows.isEmpty
-                    ? EmptyState(icon: Icons.history, message: l10n.eventHistoryEmpty)
+                    ? EmptyState(
+                        icon: Icons.history, message: l10n.eventHistoryEmpty)
                     : ListView.builder(
                         padding: const EdgeInsets.all(AppSpacing.outerPadding),
                         itemCount: rows.length,
@@ -90,24 +95,33 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                           final row = rows[index];
                           if (row is String) {
                             return Padding(
-                              padding: EdgeInsets.only(top: index == 0 ? 0 : 12, bottom: 8),
+                              padding: EdgeInsets.only(
+                                  top: index == 0 ? 0 : 12, bottom: 8),
                               child: Text(
                                 row,
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: onSurface.withOpacity(0.5)),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    color: onSurface.withOpacity(0.5)),
                               ),
                             );
                           }
                           final entry = row as EventLogEntry;
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                            padding: const EdgeInsets.only(
+                                bottom: AppSpacing.betweenCards),
                             child: Card(
                               child: ListTile(
                                 leading: const Icon(Icons.bolt_outlined),
-                                title: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                title: Text(entry.title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
                                 subtitle: Text(entry.subtitle),
                                 trailing: Text(
                                   _timeHHmmss(entry.time),
-                                  style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.5)),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: onSurface.withOpacity(0.5)),
                                 ),
                               ),
                             ),

@@ -60,9 +60,13 @@ class SettingsScreen extends StatelessWidget {
               leading: CircleAvatar(
                 radius: 26,
                 backgroundColor: onSurface,
-                child: Text('AP', style: TextStyle(color: Theme.of(context).colorScheme.surface, fontWeight: FontWeight.w800)),
+                child: Text('AP',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.surface,
+                        fontWeight: FontWeight.w800)),
               ),
-              title: const Text('Alex Popescu', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              title: const Text('Alex Popescu',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: const Text('alex.popescu@example.com'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).pushNamed('/settings/account'),
@@ -77,7 +81,8 @@ class SettingsScreen extends StatelessWidget {
                   leading: const Icon(Icons.notifications_outlined),
                   title: Text(l10n.settingsNotifications),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).pushNamed('/settings/notifications'),
+                  onTap: () => Navigator.of(context)
+                      .pushNamed('/settings/notifications'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -85,7 +90,8 @@ class SettingsScreen extends StatelessWidget {
                   title: Text(l10n.settingsLanguage),
                   subtitle: Text(l10n.settingsLanguageEn),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).pushNamed('/settings/language'),
+                  onTap: () =>
+                      Navigator.of(context).pushNamed('/settings/language'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -102,7 +108,8 @@ class SettingsScreen extends StatelessWidget {
                     title: Text(l10n.settingsAppearance),
                     subtitle: Text(appearanceLabel(mode, l10n)),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).pushNamed('/settings/appearance'),
+                    onTap: () =>
+                        Navigator.of(context).pushNamed('/settings/appearance'),
                   ),
                 ),
               ],
@@ -124,7 +131,8 @@ class SettingsScreen extends StatelessWidget {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.offlineAlert,
-                side: const BorderSide(color: AppColors.offlineAlert, width: 1.4),
+                side:
+                    const BorderSide(color: AppColors.offlineAlert, width: 1.4),
               ),
               onPressed: () => _signOut(context),
               icon: const Icon(Icons.logout),
@@ -133,7 +141,9 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
-            child: Text(l10n.appVersion, style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.4))),
+            child: Text(l10n.appVersion,
+                style:
+                    TextStyle(fontSize: 12, color: onSurface.withOpacity(0.4))),
           ),
         ],
       ),

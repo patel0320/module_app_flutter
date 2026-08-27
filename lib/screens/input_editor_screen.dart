@@ -12,7 +12,8 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class InputEditorScreen extends StatefulWidget {
-  const InputEditorScreen({super.key, required this.input, required this.module});
+  const InputEditorScreen(
+      {super.key, required this.input, required this.module});
 
   final PhysicalInput input;
   final DeviceModule module;
@@ -27,7 +28,9 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
     for (final c in widget.module.channels) c.name,
     for (final s in mockScenarios()) '${s.name} (scenario)',
   ];
-  late String _boundTo = _targets.contains(widget.input.boundTo) ? widget.input.boundTo : (_targets.isNotEmpty ? _targets.first : 'Not assigned');
+  late String _boundTo = _targets.contains(widget.input.boundTo)
+      ? widget.input.boundTo
+      : (_targets.isNotEmpty ? _targets.first : 'Not assigned');
 
   void _save() {
     widget.input.mode = _mode;
@@ -58,9 +61,11 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
                   RadioListTile<InputMode>(
                     value: InputMode.values[i],
                     groupValue: _mode,
-                    title: Text(InputMode.values[i].label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    title: Text(InputMode.values[i].label,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(InputMode.values[i].description),
-                    onChanged: (value) => setState(() => _mode = value ?? _mode),
+                    onChanged: (value) =>
+                        setState(() => _mode = value ?? _mode),
                   ),
                 ],
               ],
@@ -70,9 +75,12 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
           SectionHeader(l10n.inputEditorBoundTarget),
           DropdownButtonFormField<String>(
             value: _targets.contains(_boundTo) ? _boundTo : null,
-            decoration: InputDecoration(labelText: l10n.inputEditorOutputScenarioLabel, prefixIcon: const Icon(Icons.link)),
+            decoration: InputDecoration(
+                labelText: l10n.inputEditorOutputScenarioLabel,
+                prefixIcon: const Icon(Icons.link)),
             items: [
-              for (final target in _targets) DropdownMenuItem(value: target, child: Text(target)),
+              for (final target in _targets)
+                DropdownMenuItem(value: target, child: Text(target)),
             ],
             onChanged: (value) => setState(() => _boundTo = value ?? _boundTo),
           ),

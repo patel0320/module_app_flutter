@@ -25,8 +25,7 @@ class HomeScreen extends ConsumerWidget {
           else
             const SizedBox(height: 8),
           const SizedBox(height: 16),
-          Text('Quick access',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           for (final scenario in scenarios)
             Padding(
@@ -66,8 +65,11 @@ class OfflineAlertBanner extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  count == 1 ? 'A module is offline' : '$count modules are offline',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  count == 1
+                      ? 'A module is offline'
+                      : '$count modules are offline',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700),
                 ),
               ),
               const Icon(Icons.chevron_right, color: Colors.white),

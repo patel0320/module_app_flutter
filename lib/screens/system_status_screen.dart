@@ -22,12 +22,15 @@ class SystemStatusScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.systemStatusTitle)),
       body: entries.isEmpty
-          ? EmptyState(icon: Icons.verified_outlined, message: l10n.systemStatusNoIssues)
+          ? EmptyState(
+              icon: Icons.verified_outlined, message: l10n.systemStatusNoIssues)
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: entries.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.betweenCards),
-              itemBuilder: (context, index) => _StatusTile(entry: entries[index], onSurface: onSurface),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.betweenCards),
+              itemBuilder: (context, index) =>
+                  _StatusTile(entry: entries[index], onSurface: onSurface),
             ),
     );
   }
@@ -41,7 +44,8 @@ class _StatusTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = entry.isAlert ? AppColors.offlineAlert : AppColors.online;
+    final Color accent =
+        entry.isAlert ? AppColors.offlineAlert : AppColors.online;
     final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
@@ -58,9 +62,11 @@ class _StatusTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.moduleName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(entry.moduleName,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(entry.message, style: TextStyle(color: onSurface.withOpacity(0.7))),
+                  Text(entry.message,
+                      style: TextStyle(color: onSurface.withOpacity(0.7))),
                 ],
               ),
             ),

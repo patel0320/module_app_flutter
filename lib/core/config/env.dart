@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'app_config.dart';
 
 class Env {
-  static const String _envDefine = String.fromEnvironment('APP_ENV', defaultValue: 'dev');
+  static const String _envDefine =
+      String.fromEnvironment('APP_ENV', defaultValue: 'dev');
 
   static AppEnv get active {
     return switch (_envDefine) {

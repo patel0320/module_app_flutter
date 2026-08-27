@@ -57,24 +57,23 @@ class SettingsStore extends ChangeNotifier {
     try {
       _prefs = await SharedPreferences.getInstance();
 
-      themeModeNotifier.value = ThemeMode.values
-          .asNameMap()[_prefs!.getString(_kKeyThemeMode)] ??
-          themeModeNotifier.value;
+      themeModeNotifier.value =
+          ThemeMode.values.asNameMap()[_prefs!.getString(_kKeyThemeMode)] ??
+              themeModeNotifier.value;
 
       final code = _prefs!.getString(_kKeyLocale);
       if (code != null && code.isNotEmpty) {
         appLocaleNotifier.value = Locale(code);
       }
 
-      homeThemeIdNotifier.value = HomeThemeId.values
-          .asNameMap()[_prefs!.getString(_kKeyHomeTheme)] ??
-          homeThemeIdNotifier.value;
+      homeThemeIdNotifier.value =
+          HomeThemeId.values.asNameMap()[_prefs!.getString(_kKeyHomeTheme)] ??
+              homeThemeIdNotifier.value;
 
       _moduleStatus = _prefs!.getBool(_kKeyModuleStatus) ?? true;
       _outputLeftOn = _prefs!.getBool(_kKeyOutputLeftOn) ?? true;
       _temperature = _prefs!.getBool(_kKeyTemperature) ?? true;
-      _automationTriggered =
-          _prefs!.getBool(_kKeyAutomation) ?? false;
+      _automationTriggered = _prefs!.getBool(_kKeyAutomation) ?? false;
     } catch (_) {
       // Keep defaults if preferences are unavailable.
     }

@@ -12,13 +12,19 @@ import 'temperature_driver.dart';
 class DriverFactory {
   const DriverFactory();
 
-  ModuleDriver create(Module module, Transport transport, List<Channel> channels) {
+  ModuleDriver create(
+      Module module, Transport transport, List<Channel> channels) {
     return switch (module.type) {
-      ModuleType.relay => RelayDriver(module: module, transport: transport, channels: channels),
-      ModuleType.blind => BlindDriver(module: module, transport: transport, channels: channels),
-      ModuleType.dcDimmer => DcDimmerDriver(module: module, transport: transport, channels: channels),
-      ModuleType.acDimmer => AcDimmerDriver(module: module, transport: transport, channels: channels),
-      ModuleType.temperature => TemperatureDriver(module: module, transport: transport, channels: channels),
+      ModuleType.relay =>
+        RelayDriver(module: module, transport: transport, channels: channels),
+      ModuleType.blind =>
+        BlindDriver(module: module, transport: transport, channels: channels),
+      ModuleType.dcDimmer => DcDimmerDriver(
+          module: module, transport: transport, channels: channels),
+      ModuleType.acDimmer => AcDimmerDriver(
+          module: module, transport: transport, channels: channels),
+      ModuleType.temperature => TemperatureDriver(
+          module: module, transport: transport, channels: channels),
     };
   }
 }

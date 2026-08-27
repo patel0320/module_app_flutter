@@ -126,8 +126,7 @@ abstract final class HomeThemePalettes {
     _stealth,
   ];
 
-  static HomePalette byId(HomeThemeId id) =>
-      all.firstWhere((p) => p.id == id);
+  static HomePalette byId(HomeThemeId id) => all.firstWhere((p) => p.id == id);
 
   // ---------------------------------------------------------------------------
   // 1. NEO-AURORA COMMAND DECK (flagship) — styles.css :root / theme-aurora

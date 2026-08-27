@@ -23,8 +23,8 @@ class BlindDriver extends BaseModuleDriver {
   Future<void> blindMove(Channel channel, BlindDirection dir) async {
     if (dir == BlindDirection.stop) {
       _lastDirection[channel.index] = null;
-      await transport
-          .send(AppCommand.blind(module.id, channel.index, BlindDirection.stop));
+      await transport.send(
+          AppCommand.blind(module.id, channel.index, BlindDirection.stop));
       return;
     }
 
@@ -32,8 +32,8 @@ class BlindDriver extends BaseModuleDriver {
     final last = _lastDirection[channel.index];
     if (last == dir) {
       _lastDirection[channel.index] = null;
-      await transport
-          .send(AppCommand.blind(module.id, channel.index, BlindDirection.stop));
+      await transport.send(
+          AppCommand.blind(module.id, channel.index, BlindDirection.stop));
       return;
     }
 

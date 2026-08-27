@@ -54,18 +54,27 @@ class LanguageSettingsScreen extends StatelessWidget {
           Card(
             child: Column(
               children: [
-                for (final lang in const [('Español', 'es'), ('Français', 'fr'), ('Deutsch', 'de')])
+                for (final lang in const [
+                  ('Español', 'es'),
+                  ('Français', 'fr'),
+                  ('Deutsch', 'de')
+                ])
                   ListTile(
-                    title: Text(lang.$1, style: TextStyle(color: onSurface.withOpacity(0.4))),
+                    title: Text(lang.$1,
+                        style: TextStyle(color: onSurface.withOpacity(0.4))),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: onSurface.withOpacity(0.2)),
                       ),
                       child: Text(
                         l10n.soon,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: onSurface.withOpacity(0.5)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: onSurface.withOpacity(0.5)),
                       ),
                     ),
                     enabled: false,

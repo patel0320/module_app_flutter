@@ -18,7 +18,8 @@ class NotificationsSettingsScreen extends StatefulWidget {
       _NotificationsSettingsScreenState();
 }
 
-class _NotificationsSettingsScreenState extends State<NotificationsSettingsScreen> {
+class _NotificationsSettingsScreenState
+    extends State<NotificationsSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);

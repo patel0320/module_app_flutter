@@ -12,14 +12,16 @@ void main() {
     name: 'Blind',
     ip: '192.168.1.15',
   );
-  const channel = Channel(id: 'm1c0', moduleId: 'm1', index: 0, name: 'Bedroom blind');
+  const channel =
+      Channel(id: 'm1c0', moduleId: 'm1', index: 0, name: 'Bedroom blind');
 
   late MockTransport transport;
   late BlindDriver driver;
 
   setUp(() {
     transport = MockTransport();
-    driver = BlindDriver(module: module, transport: transport, channels: const [channel]);
+    driver = BlindDriver(
+        module: module, transport: transport, channels: const [channel]);
   });
 
   test('first UP press starts the motor', () async {

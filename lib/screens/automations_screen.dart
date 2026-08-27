@@ -32,7 +32,8 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
 
   Future<void> _edit(Automation automation) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AutomationEditorScreen(automation: automation)),
+      MaterialPageRoute(
+          builder: (_) => AutomationEditorScreen(automation: automation)),
     );
     setState(() {});
   }
@@ -41,7 +42,8 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
     final confirmed = await showConfirmDialog(
       context,
       title: AppLocalizations.of(context).automationsDeleteDialog,
-      message: AppLocalizations.of(context).automationsDeleteMsg(automation.name),
+      message:
+          AppLocalizations.of(context).automationsDeleteMsg(automation.name),
       confirmLabel: AppLocalizations.of(context).delete,
     );
     if (confirmed) setState(() => _automations.remove(automation));
@@ -53,11 +55,13 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.automationsTitle)),
       body: _automations.isEmpty
-          ? EmptyState(icon: Icons.rule_outlined, message: l10n.automationsEmpty)
+          ? EmptyState(
+              icon: Icons.rule_outlined, message: l10n.automationsEmpty)
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),
               itemCount: _automations.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.betweenCards),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.betweenCards),
               itemBuilder: (context, index) {
                 final automation = _automations[index];
                 return _AutomationCard(
@@ -110,18 +114,25 @@ class _AutomationCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              IconAvatar(icon: isTime ? Icons.schedule : Icons.sensors, filled: automation.enabled),
+              IconAvatar(
+                  icon: isTime ? Icons.schedule : Icons.sensors,
+                  filled: automation.enabled),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(automation.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    Text(automation.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 2),
-                    Text(automation.triggerSummary, style: TextStyle(fontSize: 13, color: onSurface.withOpacity(0.6))),
+                    Text(automation.triggerSummary,
+                        style: TextStyle(
+                            fontSize: 13, color: onSurface.withOpacity(0.6))),
                     const SizedBox(height: 2),
                     Text(l10n.homeActionsCount(automation.actions.length),
-                        style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.45))),
+                        style: TextStyle(
+                            fontSize: 12, color: onSurface.withOpacity(0.45))),
                   ],
                 ),
               ),

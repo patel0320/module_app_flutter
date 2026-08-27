@@ -46,8 +46,9 @@ class ScenarioRunResult {
 
   int get succeeded => actions.where((a) => a.success).length;
   int get failed => actions.length - succeeded;
-  String get summary =>
-      failed == 0 ? 'All ${actions.length} action(s) OK' : '$failed of ${actions.length} action(s) failed';
+  String get summary => failed == 0
+      ? 'All ${actions.length} action(s) OK'
+      : '$failed of ${actions.length} action(s) failed';
 }
 
 class ScenarioRunner {

@@ -38,7 +38,8 @@ void main() {
       await store.recordScenario(scenarioName: 'Departure');
       await store.recordAutomation(automationName: 'Sunset Deck Lights');
 
-      expect(store.entries.first.title, 'Automation triggered: Sunset Deck Lights');
+      expect(store.entries.first.title,
+          'Automation triggered: Sunset Deck Lights');
       expect(store.entries[1].title, 'Scenario ran: Departure');
     });
 

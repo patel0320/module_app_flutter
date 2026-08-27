@@ -181,8 +181,8 @@ class ModuleStatusService {
     Socket? socket;
     var reachable = false;
     try {
-      socket = await Socket.connect(live.ipAddress, live.tcpPort,
-          timeout: timeout);
+      socket =
+          await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
       socket.write('AT\r');
 

@@ -14,12 +14,16 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const _Section(label: 'Account', children: [
             ListTile(leading: Icon(Icons.person), title: Text('Sign in')),
-            ListTile(leading: Icon(Icons.person_add), title: Text('Create account')),
-            ListTile(leading: Icon(Icons.lock_reset), title: Text('Reset password')),
+            ListTile(
+                leading: Icon(Icons.person_add), title: Text('Create account')),
+            ListTile(
+                leading: Icon(Icons.lock_reset), title: Text('Reset password')),
           ]),
           const _Section(label: 'Backup & Sync', children: [
-            ListTile(leading: Icon(Icons.cloud_upload), title: Text('Back up now')),
-            ListTile(leading: Icon(Icons.cloud_download), title: Text('Restore')),
+            ListTile(
+                leading: Icon(Icons.cloud_upload), title: Text('Back up now')),
+            ListTile(
+                leading: Icon(Icons.cloud_download), title: Text('Restore')),
           ]),
           _Section(label: 'Notifications', children: [
             ListTile(

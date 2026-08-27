@@ -38,7 +38,8 @@ class ModuleStatusFetcherRegistry {
   }
 
   /// Registers (or replaces) the fetcher for its module type.
-  void register(ModuleStatusFetcher fetcher) => _fetchers[fetcher.type] = fetcher;
+  void register(ModuleStatusFetcher fetcher) =>
+      _fetchers[fetcher.type] = fetcher;
 
   /// Returns the fetcher for [type], or null if not yet implemented.
   ModuleStatusFetcher? forType(ModuleType type) => _fetchers[type];

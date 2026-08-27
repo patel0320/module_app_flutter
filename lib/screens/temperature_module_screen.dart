@@ -17,7 +17,8 @@ class TemperatureModuleScreen extends StatefulWidget {
   final DeviceModule module;
 
   @override
-  State<TemperatureModuleScreen> createState() => _TemperatureModuleScreenState();
+  State<TemperatureModuleScreen> createState() =>
+      _TemperatureModuleScreenState();
 }
 
 class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
@@ -36,12 +37,17 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
     final bool alert = module.isOverTemperature;
     final String statusLabel = !alert
         ? l10n.tempStatusNormal
-        : (module.internalTempC > module.tempMaxC ? l10n.tempStatusAboveMax : l10n.tempStatusBelowMin);
+        : (module.internalTempC > module.tempMaxC
+            ? l10n.tempStatusAboveMax
+            : l10n.tempStatusBelowMin);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
-        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)],
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
@@ -52,7 +58,8 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
             child: Column(
               children: [
                 Text(
-                  l10n.tempValueCelsius(module.internalTempC.toStringAsFixed(1)),
+                  l10n.tempValueCelsius(
+                      module.internalTempC.toStringAsFixed(1)),
                   style: TextStyle(
                     fontSize: 56,
                     fontWeight: FontWeight.w800,
@@ -62,7 +69,9 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
                 const SizedBox(height: 4),
                 Text(
                   statusLabel,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: alert ? AppColors.offlineAlert : AppColors.online),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: alert ? AppColors.offlineAlert : AppColors.online),
                 ),
               ],
             ),
@@ -110,12 +119,15 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
                   title: Text(l10n.tempFuncThermostat),
                   subtitle: Text(l10n.tempFuncThermostatDesc),
                   trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: onSurface.withOpacity(0.25)),
                     ),
-                    child: Text(l10n.comingSoon, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    child: Text(l10n.comingSoon,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                   enabled: false,
                 ),
@@ -129,7 +141,8 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
 }
 
 class _ThresholdSlider extends StatelessWidget {
-  const _ThresholdSlider({required this.label, required this.value, required this.onChanged});
+  const _ThresholdSlider(
+      {required this.label, required this.value, required this.onChanged});
 
   final String label;
   final double value;

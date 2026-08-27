@@ -54,15 +54,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(labelText: l10n.loginEmail, prefixIcon: const Icon(Icons.mail_outline)),
+                  decoration: InputDecoration(
+                      labelText: l10n.loginEmail,
+                      prefixIcon: const Icon(Icons.mail_outline)),
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: _sendResetLink, child: Text(l10n.forgotSend)),
+                FilledButton(
+                    onPressed: _sendResetLink, child: Text(l10n.forgotSend)),
               ] else ...[
                 const SizedBox(height: 24),
-                Icon(Icons.mark_email_read_outlined, size: 56, color: onSurface),
+                Icon(Icons.mark_email_read_outlined,
+                    size: 56, color: onSurface),
                 const SizedBox(height: 16),
-                Text(l10n.forgotCheckInbox, style: Theme.of(context).textTheme.titleLarge),
+                Text(l10n.forgotCheckInbox,
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
                   l10n.forgotSentMsg(_emailController.text.trim()),

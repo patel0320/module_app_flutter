@@ -28,7 +28,8 @@ class ScenariosScreen extends StatelessWidget {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).homeRunningScenario(scenario.name))));
+        content: Text(
+            AppLocalizations.of(context).homeRunningScenario(scenario.name))));
     final result = await ScenarioRunner.shared.run(scenario);
     await EventLogStore.shared.recordScenarioResult(result);
   }
@@ -48,8 +49,7 @@ class ScenariosScreen extends StatelessWidget {
     await _store.commit();
   }
 
-  Future<void> _deleteScenario(
-      BuildContext context, Scenario scenario) async {
+  Future<void> _deleteScenario(BuildContext context, Scenario scenario) async {
     final confirmed = await showConfirmDialog(
       context,
       title: AppLocalizations.of(context).scenariosDeleteDialog,
@@ -118,8 +118,7 @@ class ScenariosScreen extends StatelessWidget {
                         onRun: () => _runScenario(context, scenario),
                         onEdit: () => _editScenario(context, scenario),
                         onDelete: () => _deleteScenario(context, scenario),
-                        onShowInHomeChanged: (v) =>
-                            _setShowInHome(scenario, v),
+                        onShowInHomeChanged: (v) => _setShowInHome(scenario, v),
                       ),
                     );
                   },
@@ -195,7 +194,8 @@ class _ScenarioCard extends StatelessWidget {
                               child: Text(
                                 isSlider
                                     ? l10n.homeManualDimmingSlider
-                                    : l10n.homeActionsCount(scenario.actions.length),
+                                    : l10n.homeActionsCount(
+                                        scenario.actions.length),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontSize: 12,

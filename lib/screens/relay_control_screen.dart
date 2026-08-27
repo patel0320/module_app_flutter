@@ -186,8 +186,7 @@ class _OutputRow extends StatelessWidget {
               height: 48,
               child: channel.isOn
                   ? FilledButton(onPressed: onToggle, child: Text(l10n.on))
-                  : OutlinedButton(
-                      onPressed: onToggle, child: Text(l10n.off)),
+                  : OutlinedButton(onPressed: onToggle, child: Text(l10n.off)),
             ),
             IconButton(
                 icon: const Icon(Icons.edit_outlined), onPressed: onEdit),

@@ -140,7 +140,8 @@ class EventLogStore extends ChangeNotifier {
     for (final action in result.actions) {
       _entries.add(EventLogEntry(
         time: _nextTime(),
-        title: '${action.success ? 'Success' : 'Failed'}: ${action.description}',
+        title:
+            '${action.success ? 'Success' : 'Failed'}: ${action.description}',
         subtitle: 'Scenario: ${result.scenarioName} · ${action.detail}',
       ));
     }

@@ -23,7 +23,12 @@ class Channel {
     this.brightness,
   });
 
-  Channel copyWith({String? name, String? icon, bool? enabled, ChannelState? state, int? brightness}) {
+  Channel copyWith(
+      {String? name,
+      String? icon,
+      bool? enabled,
+      ChannelState? state,
+      int? brightness}) {
     return Channel(
       id: id,
       moduleId: moduleId,

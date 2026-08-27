@@ -34,19 +34,40 @@ List<DeviceModule> mockModules() => [
         tempMinC: 0,
         tempMaxC: 70,
         channels: [
-          ChannelOutput(id: 'm1c1', name: 'Cabin Light', icon: Icons.lightbulb, isOn: true),
-          ChannelOutput(id: 'm1c2', name: 'Navigation Lights', icon: Icons.explore),
-          ChannelOutput(id: 'm1c3', name: 'Reading Lamp', icon: Icons.menu_book),
-          ChannelOutput(id: 'm1c4', name: 'Kitchen Light', icon: Icons.light, isOn: true),
-          ChannelOutput(id: 'm1c5', name: 'Deck Floodlight', icon: Icons.wb_incandescent),
+          ChannelOutput(
+              id: 'm1c1',
+              name: 'Cabin Light',
+              icon: Icons.lightbulb,
+              isOn: true),
+          ChannelOutput(
+              id: 'm1c2', name: 'Navigation Lights', icon: Icons.explore),
+          ChannelOutput(
+              id: 'm1c3', name: 'Reading Lamp', icon: Icons.menu_book),
+          ChannelOutput(
+              id: 'm1c4', name: 'Kitchen Light', icon: Icons.light, isOn: true),
+          ChannelOutput(
+              id: 'm1c5', name: 'Deck Floodlight', icon: Icons.wb_incandescent),
           ChannelOutput(id: 'm1c6', name: 'Bilge Pump', icon: Icons.water_drop),
-          ChannelOutput(id: 'm1c7', name: 'Fridge', icon: Icons.kitchen, isOn: true),
+          ChannelOutput(
+              id: 'm1c7', name: 'Fridge', icon: Icons.kitchen, isOn: true),
           ChannelOutput(id: 'm1c8', name: 'Water Pump', icon: Icons.water),
         ],
         inputs: [
-          PhysicalInput(id: 'm1i1', label: 'Switch 1', mode: InputMode.toggle, boundTo: 'Cabin Light'),
-          PhysicalInput(id: 'm1i2', label: 'Switch 2', mode: InputMode.associated, boundTo: 'Departure (scenario)'),
-          PhysicalInput(id: 'm1i3', label: 'Switch 3', mode: InputMode.momentary, boundTo: 'Deck Floodlight'),
+          PhysicalInput(
+              id: 'm1i1',
+              label: 'Switch 1',
+              mode: InputMode.toggle,
+              boundTo: 'Cabin Light'),
+          PhysicalInput(
+              id: 'm1i2',
+              label: 'Switch 2',
+              mode: InputMode.associated,
+              boundTo: 'Departure (scenario)'),
+          PhysicalInput(
+              id: 'm1i3',
+              label: 'Switch 3',
+              mode: InputMode.momentary,
+              boundTo: 'Deck Floodlight'),
         ],
       ),
       DeviceModule(
@@ -64,7 +85,11 @@ List<DeviceModule> mockModules() => [
           ChannelOutput(id: 'm2c2', name: 'Cockpit Awning', icon: Icons.deck),
         ],
         inputs: [
-          PhysicalInput(id: 'm2i1', label: 'Switch 1', mode: InputMode.associated, boundTo: 'Salon Blind'),
+          PhysicalInput(
+              id: 'm2i1',
+              label: 'Switch 1',
+              mode: InputMode.associated,
+              boundTo: 'Salon Blind'),
         ],
       ),
       DeviceModule(
@@ -78,10 +103,26 @@ List<DeviceModule> mockModules() => [
         tempMinC: 0,
         tempMaxC: 60,
         channels: [
-          ChannelOutput(id: 'm3c1', name: 'Reading Light', icon: Icons.lightbulb_outline, brightness: 40),
-          ChannelOutput(id: 'm3c2', name: 'Mood Light', icon: Icons.nightlight_round, brightness: 70),
-          ChannelOutput(id: 'm3c3', name: 'Ceiling Light', icon: Icons.light, brightness: 0),
-          ChannelOutput(id: 'm3c4', name: 'Courtesy Light', icon: Icons.wb_sunny_outlined, brightness: 20),
+          ChannelOutput(
+              id: 'm3c1',
+              name: 'Reading Light',
+              icon: Icons.lightbulb_outline,
+              brightness: 40),
+          ChannelOutput(
+              id: 'm3c2',
+              name: 'Mood Light',
+              icon: Icons.nightlight_round,
+              brightness: 70),
+          ChannelOutput(
+              id: 'm3c3',
+              name: 'Ceiling Light',
+              icon: Icons.light,
+              brightness: 0),
+          ChannelOutput(
+              id: 'm3c4',
+              name: 'Courtesy Light',
+              icon: Icons.wb_sunny_outlined,
+              brightness: 20),
         ],
       ),
       DeviceModule(
@@ -95,10 +136,26 @@ List<DeviceModule> mockModules() => [
         tempMinC: 0,
         tempMaxC: 65,
         channels: [
-          ChannelOutput(id: 'm4c1', name: 'Chandelier', icon: Icons.lightbulb, brightness: 15),
-          ChannelOutput(id: 'm4c2', name: 'Wall Sconces', icon: Icons.light, brightness: 0),
-          ChannelOutput(id: 'm4c3', name: 'Table Lamp', icon: Icons.emoji_objects, brightness: 30),
-          ChannelOutput(id: 'm4c4', name: 'Accent Light', icon: Icons.highlight, brightness: 0),
+          ChannelOutput(
+              id: 'm4c1',
+              name: 'Chandelier',
+              icon: Icons.lightbulb,
+              brightness: 15),
+          ChannelOutput(
+              id: 'm4c2',
+              name: 'Wall Sconces',
+              icon: Icons.light,
+              brightness: 0),
+          ChannelOutput(
+              id: 'm4c3',
+              name: 'Table Lamp',
+              icon: Icons.emoji_objects,
+              brightness: 30),
+          ChannelOutput(
+              id: 'm4c4',
+              name: 'Accent Light',
+              icon: Icons.highlight,
+              brightness: 0),
         ],
       ),
       DeviceModule(
@@ -124,7 +181,8 @@ List<DeviceModule> mockModules() => [
         tempMaxC: 70,
         channels: [
           ChannelOutput(id: 'm6c1', name: 'Anchor Light', icon: Icons.anchor),
-          ChannelOutput(id: 'm6c2', name: 'Bow Floodlight', icon: Icons.wb_incandescent),
+          ChannelOutput(
+              id: 'm6c2', name: 'Bow Floodlight', icon: Icons.wb_incandescent),
         ],
       ),
     ];
@@ -139,8 +197,18 @@ List<Scenario> mockScenarios() => [
         roomName: 'Deck',
         showInHome: true,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Cabin Light', icon: Icons.lightbulb, isDimmerAction: false, turnOn: false),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Navigation Lights', icon: Icons.explore, isDimmerAction: false, turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Cabin Light',
+              icon: Icons.lightbulb,
+              isDimmerAction: false,
+              turnOn: false),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Navigation Lights',
+              icon: Icons.explore,
+              isDimmerAction: false,
+              turnOn: true),
         ],
       ),
       Scenario(
@@ -151,9 +219,24 @@ List<Scenario> mockScenarios() => [
         roomName: 'Bedroom',
         showInHome: true,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Reading Lamp', icon: Icons.menu_book, isDimmerAction: false, turnOn: true),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Kitchen Light', icon: Icons.light, isDimmerAction: false, turnOn: true),
-          ScenarioAction(moduleName: 'Cabin Dimmer 12V', channelName: 'Mood Light', icon: Icons.nightlight_round, isDimmerAction: true, brightnessPct: 50),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Reading Lamp',
+              icon: Icons.menu_book,
+              isDimmerAction: false,
+              turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Kitchen Light',
+              icon: Icons.light,
+              isDimmerAction: false,
+              turnOn: true),
+          ScenarioAction(
+              moduleName: 'Cabin Dimmer 12V',
+              channelName: 'Mood Light',
+              icon: Icons.nightlight_round,
+              isDimmerAction: true,
+              brightnessPct: 50),
         ],
       ),
       Scenario(
@@ -164,9 +247,24 @@ List<Scenario> mockScenarios() => [
         roomName: 'Living Room',
         showInHome: false,
         actions: [
-          ScenarioAction(moduleName: 'Salon Dimmer 220V', channelName: 'Chandelier', icon: Icons.lightbulb, isDimmerAction: true, brightnessPct: 15),
-          ScenarioAction(moduleName: 'Salon Dimmer 220V', channelName: 'Table Lamp', icon: Icons.emoji_objects, isDimmerAction: true, brightnessPct: 30),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Kitchen Light', icon: Icons.light, isDimmerAction: false, turnOn: false),
+          ScenarioAction(
+              moduleName: 'Salon Dimmer 220V',
+              channelName: 'Chandelier',
+              icon: Icons.lightbulb,
+              isDimmerAction: true,
+              brightnessPct: 15),
+          ScenarioAction(
+              moduleName: 'Salon Dimmer 220V',
+              channelName: 'Table Lamp',
+              icon: Icons.emoji_objects,
+              isDimmerAction: true,
+              brightnessPct: 30),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Kitchen Light',
+              icon: Icons.light,
+              isDimmerAction: false,
+              turnOn: false),
         ],
       ),
       Scenario(
@@ -177,10 +275,30 @@ List<Scenario> mockScenarios() => [
         roomName: 'No room',
         showInHome: true,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Cabin Light', icon: Icons.lightbulb, isDimmerAction: false, turnOn: false),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Kitchen Light', icon: Icons.light, isDimmerAction: false, turnOn: false),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Deck Floodlight', icon: Icons.wb_incandescent, isDimmerAction: false, turnOn: false),
-          ScenarioAction(moduleName: 'Cabin Dimmer 12V', channelName: 'Reading Light', icon: Icons.lightbulb_outline, isDimmerAction: true, brightnessPct: 0),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Cabin Light',
+              icon: Icons.lightbulb,
+              isDimmerAction: false,
+              turnOn: false),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Kitchen Light',
+              icon: Icons.light,
+              isDimmerAction: false,
+              turnOn: false),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Deck Floodlight',
+              icon: Icons.wb_incandescent,
+              isDimmerAction: false,
+              turnOn: false),
+          ScenarioAction(
+              moduleName: 'Cabin Dimmer 12V',
+              channelName: 'Reading Light',
+              icon: Icons.lightbulb_outline,
+              isDimmerAction: true,
+              brightnessPct: 0),
         ],
       ),
       Scenario(
@@ -191,8 +309,18 @@ List<Scenario> mockScenarios() => [
         roomName: 'Deck',
         showInHome: false,
         actions: [
-          ScenarioAction(moduleName: 'Bow Thruster Relay', channelName: 'Anchor Light', icon: Icons.anchor, isDimmerAction: false, turnOn: true),
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Deck Floodlight', icon: Icons.wb_incandescent, isDimmerAction: false, turnOn: true),
+          ScenarioAction(
+              moduleName: 'Bow Thruster Relay',
+              channelName: 'Anchor Light',
+              icon: Icons.anchor,
+              isDimmerAction: false,
+              turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Deck Floodlight',
+              icon: Icons.wb_incandescent,
+              isDimmerAction: false,
+              turnOn: true),
         ],
       ),
       Scenario(
@@ -216,8 +344,18 @@ List<Automation> mockAutomations() => [
         triggerSummary: 'Every day at 20:00',
         enabled: true,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Deck Floodlight', icon: Icons.wb_incandescent, isDimmerAction: false, turnOn: true),
-          ScenarioAction(moduleName: 'Bow Thruster Relay', channelName: 'Anchor Light', icon: Icons.anchor, isDimmerAction: false, turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Deck Floodlight',
+              icon: Icons.wb_incandescent,
+              isDimmerAction: false,
+              turnOn: true),
+          ScenarioAction(
+              moduleName: 'Bow Thruster Relay',
+              channelName: 'Anchor Light',
+              icon: Icons.anchor,
+              isDimmerAction: false,
+              turnOn: true),
         ],
       ),
       Automation(
@@ -227,7 +365,12 @@ List<Automation> mockAutomations() => [
         triggerSummary: 'When Bilge Pump turns ON',
         enabled: true,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Cabin Light', icon: Icons.lightbulb, isDimmerAction: false, turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Cabin Light',
+              icon: Icons.lightbulb,
+              isDimmerAction: false,
+              turnOn: true),
         ],
       ),
       Automation(
@@ -237,35 +380,100 @@ List<Automation> mockAutomations() => [
         triggerSummary: 'Every day at 22:30',
         enabled: false,
         actions: [
-          ScenarioAction(moduleName: 'Main Cabin Relay', channelName: 'Deck Floodlight', icon: Icons.wb_incandescent, isDimmerAction: false, turnOn: true),
+          ScenarioAction(
+              moduleName: 'Main Cabin Relay',
+              channelName: 'Deck Floodlight',
+              icon: Icons.wb_incandescent,
+              isDimmerAction: false,
+              turnOn: true),
         ],
       ),
     ];
 
 /// 30-day rolling event history - brief section 2.4.
 List<EventLogEntry> mockEventLog() => [
-      EventLogEntry(time: _ago(const Duration(minutes: 10)), title: 'Cabin Light turned ON', subtitle: 'Departure scenario'),
-      EventLogEntry(time: _ago(const Duration(minutes: 11)), title: 'Navigation Lights turned ON', subtitle: 'Departure scenario'),
-      EventLogEntry(time: _ago(const Duration(hours: 2)), title: 'Reading Lamp turned ON', subtitle: 'Good Morning scenario'),
-      EventLogEntry(time: _ago(const Duration(hours: 2, minutes: 5)), title: 'Kitchen Light turned ON', subtitle: 'Good Morning scenario'),
-      EventLogEntry(time: _ago(const Duration(days: 1)), title: 'Deck Floodlight turned OFF', subtitle: 'Manual control'),
-      EventLogEntry(time: _ago(const Duration(days: 1, hours: 2)), title: 'Mood Light set to 70%', subtitle: 'Manual control'),
-      EventLogEntry(time: _ago(const Duration(days: 2)), title: 'Anchor Light turned ON', subtitle: 'Anchor Watch scenario'),
-      EventLogEntry(time: _ago(const Duration(days: 3)), title: 'All outputs turned OFF', subtitle: 'All Off scenario'),
-      EventLogEntry(time: _ago(const Duration(days: 5)), title: 'Bilge Pump turned ON', subtitle: 'Physical input - Switch 3'),
-      EventLogEntry(time: _ago(const Duration(days: 6)), title: 'Cabin Light turned ON', subtitle: 'Bilge Pump Alert automation'),
-      EventLogEntry(time: _ago(const Duration(days: 10)), title: 'Salon Dimmer 220V went offline', subtitle: 'System'),
-      EventLogEntry(time: _ago(const Duration(days: 20)), title: 'Chandelier set to 15%', subtitle: 'Movie Night scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(minutes: 10)),
+          title: 'Cabin Light turned ON',
+          subtitle: 'Departure scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(minutes: 11)),
+          title: 'Navigation Lights turned ON',
+          subtitle: 'Departure scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(hours: 2)),
+          title: 'Reading Lamp turned ON',
+          subtitle: 'Good Morning scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(hours: 2, minutes: 5)),
+          title: 'Kitchen Light turned ON',
+          subtitle: 'Good Morning scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 1)),
+          title: 'Deck Floodlight turned OFF',
+          subtitle: 'Manual control'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 1, hours: 2)),
+          title: 'Mood Light set to 70%',
+          subtitle: 'Manual control'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 2)),
+          title: 'Anchor Light turned ON',
+          subtitle: 'Anchor Watch scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 3)),
+          title: 'All outputs turned OFF',
+          subtitle: 'All Off scenario'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 5)),
+          title: 'Bilge Pump turned ON',
+          subtitle: 'Physical input - Switch 3'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 6)),
+          title: 'Cabin Light turned ON',
+          subtitle: 'Bilge Pump Alert automation'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 10)),
+          title: 'Salon Dimmer 220V went offline',
+          subtitle: 'System'),
+      EventLogEntry(
+          time: _ago(const Duration(days: 20)),
+          title: 'Chandelier set to 15%',
+          subtitle: 'Movie Night scenario'),
     ];
 
 /// System Status error/event log - brief section I, point 2.
 List<StatusLogEntry> mockStatusLog() => [
-      StatusLogEntry(time: _ago(const Duration(minutes: 1)), moduleName: 'Engine Room Sensor', message: 'Internal temperature exceeded threshold (62.0°C)', isAlert: true),
-      StatusLogEntry(time: _ago(const Duration(minutes: 30)), moduleName: 'Salon Dimmer 220V', message: 'Module went offline', isAlert: true),
-      StatusLogEntry(time: _ago(const Duration(hours: 2)), moduleName: 'Bow Thruster Relay', message: 'Module went offline', isAlert: true),
-      StatusLogEntry(time: _ago(const Duration(days: 1)), moduleName: 'Salon Dimmer 220V', message: 'Module reconnected', isAlert: false),
-      StatusLogEntry(time: _ago(const Duration(days: 3)), moduleName: 'Bow Thruster Relay', message: 'Module reconnected', isAlert: false),
-      StatusLogEntry(time: _ago(const Duration(days: 4)), moduleName: 'Bow Thruster Relay', message: 'Module went offline', isAlert: true),
+      StatusLogEntry(
+          time: _ago(const Duration(minutes: 1)),
+          moduleName: 'Engine Room Sensor',
+          message: 'Internal temperature exceeded threshold (62.0°C)',
+          isAlert: true),
+      StatusLogEntry(
+          time: _ago(const Duration(minutes: 30)),
+          moduleName: 'Salon Dimmer 220V',
+          message: 'Module went offline',
+          isAlert: true),
+      StatusLogEntry(
+          time: _ago(const Duration(hours: 2)),
+          moduleName: 'Bow Thruster Relay',
+          message: 'Module went offline',
+          isAlert: true),
+      StatusLogEntry(
+          time: _ago(const Duration(days: 1)),
+          moduleName: 'Salon Dimmer 220V',
+          message: 'Module reconnected',
+          isAlert: false),
+      StatusLogEntry(
+          time: _ago(const Duration(days: 3)),
+          moduleName: 'Bow Thruster Relay',
+          message: 'Module reconnected',
+          isAlert: false),
+      StatusLogEntry(
+          time: _ago(const Duration(days: 4)),
+          moduleName: 'Bow Thruster Relay',
+          message: 'Module went offline',
+          isAlert: true),
     ];
 
 /// Icon palette offered when naming/customizing an output - brief 2.2.

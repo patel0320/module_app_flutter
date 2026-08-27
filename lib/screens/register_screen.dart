@@ -39,7 +39,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (_passwordController.text != _confirmController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).registerPassMismatch)),
+        SnackBar(
+            content: Text(AppLocalizations.of(context).registerPassMismatch)),
       );
       return;
     }
@@ -59,18 +60,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Text(
                 l10n.registerDesc,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6)),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: l10n.registerFullName, prefixIcon: const Icon(Icons.person_outline)),
+                decoration: InputDecoration(
+                    labelText: l10n.registerFullName,
+                    prefixIcon: const Icon(Icons.person_outline)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: l10n.loginEmail, prefixIcon: const Icon(Icons.mail_outline)),
+                decoration: InputDecoration(
+                    labelText: l10n.loginEmail,
+                    prefixIcon: const Icon(Icons.mail_outline)),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -80,8 +89,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: l10n.loginPassword,
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
               ),
@@ -89,10 +101,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextField(
                 controller: _confirmController,
                 obscureText: _obscurePassword,
-                decoration: InputDecoration(labelText: l10n.registerConfirmPassword, prefixIcon: const Icon(Icons.lock_outline)),
+                decoration: InputDecoration(
+                    labelText: l10n.registerConfirmPassword,
+                    prefixIcon: const Icon(Icons.lock_outline)),
               ),
               const SizedBox(height: 24),
-              FilledButton(onPressed: _submit, child: Text(l10n.registerSubmit)),
+              FilledButton(
+                  onPressed: _submit, child: Text(l10n.registerSubmit)),
             ],
           ),
         ),

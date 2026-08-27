@@ -42,7 +42,8 @@ class MqttTransport implements Transport {
 
   @override
   Future<void> connect() async {
-    final client = MqttServerClient.withPort(_config.mqttHost, _clientId, _config.mqttPort);
+    final client = MqttServerClient.withPort(
+        _config.mqttHost, _clientId, _config.mqttPort);
     client.secure = _config.mqttUseTls;
     client.keepAlivePeriod = 30;
     client.onDisconnected = () {};
@@ -76,7 +77,8 @@ class MqttTransport implements Transport {
   Future<TransportResult> send(AppCommand command, {Duration? timeout}) async {
     final client = _client;
     if (client == null) {
-      return const TransportResult(usedTransport: 'mqtt', success: false, error: 'not connected');
+      return const TransportResult(
+          usedTransport: 'mqtt', success: false, error: 'not connected');
     }
     final builder = MqttClientPayloadBuilder();
     builder.addString(command.encode());

@@ -89,7 +89,8 @@ class ModuleStore extends ChangeNotifier {
   }
 
   /// Applies [mutator] to the in-memory module with [id] then persists.
-  Future<DeviceModule?> update(String id, void Function(DeviceModule) mutator) async {
+  Future<DeviceModule?> update(
+      String id, void Function(DeviceModule) mutator) async {
     final module = byId(id);
     if (module == null) return null;
     mutator(module);

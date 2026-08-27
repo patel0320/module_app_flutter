@@ -18,7 +18,8 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   final _nameController = TextEditingController(text: 'Alex Popescu');
-  final _emailController = TextEditingController(text: 'alex.popescu@example.com');
+  final _emailController =
+      TextEditingController(text: 'alex.popescu@example.com');
   DateTime _lastBackup = DateTime.now().subtract(const Duration(hours: 6));
   bool _backingUp = false;
 
@@ -42,13 +43,16 @@ class _AccountScreenState extends State<AccountScreen> {
             TextField(
               controller: currentController,
               obscureText: true,
-              decoration: InputDecoration(labelText: AppLocalizations.of(context).accountCurrentPassword),
+              decoration: InputDecoration(
+                  labelText:
+                      AppLocalizations.of(context).accountCurrentPassword),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: newController,
               obscureText: true,
-              decoration: InputDecoration(labelText: AppLocalizations.of(context).accountNewPassword),
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).accountNewPassword),
             ),
           ],
         ),
@@ -65,8 +69,8 @@ class _AccountScreenState extends State<AccountScreen> {
     currentController.dispose();
     newController.dispose();
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).accountPasswordUpdated)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).accountPasswordUpdated)));
     }
   }
 
@@ -78,8 +82,8 @@ class _AccountScreenState extends State<AccountScreen> {
       _backingUp = false;
       _lastBackup = DateTime.now();
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).accountBackupCompleted)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).accountBackupCompleted)));
   }
 
   Future<void> _restoreBackup() async {
@@ -91,15 +95,15 @@ class _AccountScreenState extends State<AccountScreen> {
       destructive: false,
     );
     if (confirmed && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).accountConfigRestored)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).accountConfigRestored)));
     }
   }
 
   void _saveProfile() {
     FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).accountProfileUpdated)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).accountProfileUpdated)));
   }
 
   @override
@@ -114,16 +118,21 @@ class _AccountScreenState extends State<AccountScreen> {
           SectionHeader(l10n.accountProfileSection),
           TextField(
             controller: _nameController,
-            decoration: InputDecoration(labelText: l10n.accountFullName, prefixIcon: const Icon(Icons.person_outline)),
+            decoration: InputDecoration(
+                labelText: l10n.accountFullName,
+                prefixIcon: const Icon(Icons.person_outline)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _emailController,
             readOnly: true,
-            decoration: InputDecoration(labelText: l10n.accountEmail, prefixIcon: const Icon(Icons.mail_outline)),
+            decoration: InputDecoration(
+                labelText: l10n.accountEmail,
+                prefixIcon: const Icon(Icons.mail_outline)),
           ),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _saveProfile, child: Text(l10n.accountSaveChanges)),
+          FilledButton(
+              onPressed: _saveProfile, child: Text(l10n.accountSaveChanges)),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _changePassword,
@@ -150,13 +159,16 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 12),
                   Text(
                     l10n.accountBackupDesc,
-                    style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.6)),
+                    style: TextStyle(
+                        fontSize: 12, color: onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(onPressed: _restoreBackup, child: Text(l10n.restore)),
+                        child: OutlinedButton(
+                            onPressed: _restoreBackup,
+                            child: Text(l10n.restore)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -168,7 +180,8 @@ class _AccountScreenState extends State<AccountScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 )
                               : Text(l10n.accountBackUpNow),

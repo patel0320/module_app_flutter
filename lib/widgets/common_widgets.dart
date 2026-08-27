@@ -28,7 +28,8 @@ class StatusDot extends StatelessWidget {
         color: online ? AppColors.online : AppColors.offlineAlert,
         boxShadow: [
           BoxShadow(
-            color: (online ? AppColors.online : AppColors.offlineAlert).withOpacity(0.4),
+            color: (online ? AppColors.online : AppColors.offlineAlert)
+                .withOpacity(0.4),
             blurRadius: 4,
           ),
         ],
@@ -69,7 +70,10 @@ class AlertBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   message,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15),
                 ),
               ),
               const Icon(Icons.chevron_right, color: Colors.white),
@@ -99,7 +103,10 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           if (trailing != null) trailing!,
@@ -112,7 +119,8 @@ class SectionHeader extends StatelessWidget {
 /// Circular icon avatar used for channel/scenario icons, with a subtle
 /// outlined high-contrast style consistent across the app.
 class IconAvatar extends StatelessWidget {
-  const IconAvatar({super.key, required this.icon, this.size = 44, this.filled = false});
+  const IconAvatar(
+      {super.key, required this.icon, this.size = 44, this.filled = false});
 
   final IconData icon;
   final double size;
@@ -129,7 +137,9 @@ class IconAvatar extends StatelessWidget {
         color: filled ? fg : Colors.transparent,
         border: Border.all(color: fg.withOpacity(filled ? 0 : 0.25)),
       ),
-      child: Icon(icon, color: filled ? Theme.of(context).colorScheme.surface : fg, size: size * 0.5),
+      child: Icon(icon,
+          color: filled ? Theme.of(context).colorScheme.surface : fg,
+          size: size * 0.5),
     );
   }
 }
@@ -150,7 +160,8 @@ class EmptyState extends StatelessWidget {
         children: [
           Icon(icon, size: 40, color: fg),
           const SizedBox(height: 12),
-          Text(message, style: TextStyle(color: fg), textAlign: TextAlign.center),
+          Text(message,
+              style: TextStyle(color: fg), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -172,7 +183,11 @@ class RoomTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: fg.withOpacity(0.25)),
       ),
-      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg.withOpacity(0.75))),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg.withOpacity(0.75))),
     );
   }
 }
@@ -197,7 +212,9 @@ Future<bool> showConfirmDialog(
             child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
           style: destructive
-              ? FilledButton.styleFrom(backgroundColor: AppColors.offlineAlert, foregroundColor: Colors.white)
+              ? FilledButton.styleFrom(
+                  backgroundColor: AppColors.offlineAlert,
+                  foregroundColor: Colors.white)
               : null,
           onPressed: () => Navigator.pop(context, true),
           child: Text(confirmLabel),
@@ -242,7 +259,8 @@ Future<String?> showTextInputDialog(
 
 /// Dialog editing a module's identity (name, IP address, TCP port) in place.
 /// Returns true when the user saved; the passed [module] is updated directly.
-Future<bool> showEditModuleInfoDialog(BuildContext context, DeviceModule module) async {
+Future<bool> showEditModuleInfoDialog(
+    BuildContext context, DeviceModule module) async {
   final nameController = TextEditingController(text: module.name);
   final ipController = TextEditingController(text: module.ipAddress);
   final portController = TextEditingController(text: module.tcpPort.toString());
@@ -330,13 +348,19 @@ class ModuleStatusHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    online ? AppLocalizations.of(context).online : AppLocalizations.of(context).offline,
-                    style: TextStyle(fontWeight: FontWeight.w800, color: online ? AppColors.online : AppColors.offlineAlert),
+                    online
+                        ? AppLocalizations.of(context).online
+                        : AppLocalizations.of(context).offline,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color:
+                            online ? AppColors.online : AppColors.offlineAlert),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${module.ipAddress} · ${module.roomName}',
-                    style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55)),
+                    style: TextStyle(
+                        fontSize: 12, color: onSurface.withOpacity(0.55)),
                   ),
                 ],
               ),
@@ -344,10 +368,16 @@ class ModuleStatusHeader extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Icon(Icons.thermostat, size: 20, color: tempAlert ? AppColors.offlineAlert : onSurface.withOpacity(0.6)),
+                Icon(Icons.thermostat,
+                    size: 20,
+                    color: tempAlert
+                        ? AppColors.offlineAlert
+                        : onSurface.withOpacity(0.6)),
                 Text(
                   '${module.internalTempC.toStringAsFixed(1)}°C',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: tempAlert ? AppColors.offlineAlert : onSurface),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: tempAlert ? AppColors.offlineAlert : onSurface),
                 ),
               ],
             ),
@@ -391,10 +421,15 @@ class DimmerChannelCard extends StatelessWidget {
                 IconAvatar(icon: channel.icon, filled: isOn),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  child: Text(channel.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16)),
                 ),
-                Text('${channel.brightness}%', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
+                Text('${channel.brightness}%',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 16)),
+                IconButton(
+                    icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
               ],
             ),
             Row(

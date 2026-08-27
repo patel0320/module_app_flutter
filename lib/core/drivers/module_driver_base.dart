@@ -30,7 +30,8 @@ abstract class BaseModuleDriver implements ModuleDriver {
   Channel _channelFor(Object? index) {
     final i = index is int ? index : (index as num?)?.toInt();
     return channels.firstWhere((c) => c.index == i,
-        orElse: () => channels.isNotEmpty ? channels.first : throw StateError(''));
+        orElse: () =>
+            channels.isNotEmpty ? channels.first : throw StateError(''));
   }
 
   void _onInbound(Map<String, dynamic> message) {
@@ -85,8 +86,7 @@ abstract class BaseModuleDriver implements ModuleDriver {
 
   @override
   Future<void> blindMove(Channel channel, BlindDirection dir) async {
-    await transport
-        .send(AppCommand.blind(module.id, channel.index, dir));
+    await transport.send(AppCommand.blind(module.id, channel.index, dir));
   }
 
   @override

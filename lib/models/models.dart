@@ -138,7 +138,8 @@ Map<String, Object?> iconToJson(IconData icon) => {
 /// Rebuilds an [IconData] from the JSON produced by [iconToJson].
 IconData iconFromJson(Object? json) {
   if (json is! Map) return Icons.power;
-  final codePoint = (json['codePoint'] as num?)?.toInt() ?? Icons.power.codePoint;
+  final codePoint =
+      (json['codePoint'] as num?)?.toInt() ?? Icons.power.codePoint;
   final family = json['fontFamily'] as String?;
   return IconData(codePoint, fontFamily: family);
 }
@@ -278,8 +279,9 @@ class ScenarioAction {
   final bool turnOn;
   final int brightnessPct;
 
-  String get summary =>
-      isDimmerAction ? '$channelName -> $brightnessPct%' : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
+  String get summary => isDimmerAction
+      ? '$channelName -> $brightnessPct%'
+      : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
 
   Map<String, Object?> toJson() => {
         'moduleName': moduleName,
@@ -385,7 +387,8 @@ class Automation {
         id: json['id'] as String,
         name: json['name'] as String,
         enabled: json['enabled'] as bool? ?? true,
-        triggerType: AutomationTriggerType.values.byName(json['triggerType'] as String),
+        triggerType:
+            AutomationTriggerType.values.byName(json['triggerType'] as String),
         triggerSummary: json['triggerSummary'] as String? ?? '',
         actions: [
           for (final a in json['actions'] as List? ?? const [])
@@ -396,7 +399,8 @@ class Automation {
 
 /// A single row in the 30-day event history (brief section 2.4).
 class EventLogEntry {
-  EventLogEntry({required this.time, required this.title, required this.subtitle});
+  EventLogEntry(
+      {required this.time, required this.title, required this.subtitle});
 
   final DateTime time;
   final String title;

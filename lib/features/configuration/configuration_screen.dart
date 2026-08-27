@@ -51,7 +51,8 @@ class ConfigurationScreen extends ConsumerWidget {
             onPressed: () {
               // Wire to the self-discovery broadcast listener (Stage 4).
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Discovery not yet wired to transport')),
+                const SnackBar(
+                    content: Text('Discovery not yet wired to transport')),
               );
             },
           ),

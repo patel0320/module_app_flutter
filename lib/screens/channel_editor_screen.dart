@@ -11,7 +11,8 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class ChannelEditorScreen extends StatefulWidget {
-  const ChannelEditorScreen({super.key, required this.channel, required this.moduleName});
+  const ChannelEditorScreen(
+      {super.key, required this.channel, required this.moduleName});
 
   final ChannelOutput channel;
   final String moduleName;
@@ -21,7 +22,8 @@ class ChannelEditorScreen extends StatefulWidget {
 }
 
 class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
-  late final TextEditingController _nameController = TextEditingController(text: widget.channel.name);
+  late final TextEditingController _nameController =
+      TextEditingController(text: widget.channel.name);
   late IconData _selectedIcon = widget.channel.icon;
 
   @override
@@ -46,13 +48,17 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
-          Text(widget.moduleName, style: TextStyle(color: onSurface.withOpacity(0.55))),
+          Text(widget.moduleName,
+              style: TextStyle(color: onSurface.withOpacity(0.55))),
           const SizedBox(height: 16),
-          Center(child: IconAvatar(icon: _selectedIcon, size: 72, filled: true)),
+          Center(
+              child: IconAvatar(icon: _selectedIcon, size: 72, filled: true)),
           const SizedBox(height: 20),
           TextField(
             controller: _nameController,
-            decoration: InputDecoration(labelText: l10n.channelNameLabel, prefixIcon: const Icon(Icons.label_outline)),
+            decoration: InputDecoration(
+                labelText: l10n.channelNameLabel,
+                prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 24),
           SectionHeader(l10n.channelChooseIcon),
@@ -69,10 +75,17 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
                     height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: icon == _selectedIcon ? onSurface : Colors.transparent,
-                      border: Border.all(color: onSurface.withOpacity(icon == _selectedIcon ? 0 : 0.25)),
+                      color: icon == _selectedIcon
+                          ? onSurface
+                          : Colors.transparent,
+                      border: Border.all(
+                          color: onSurface
+                              .withOpacity(icon == _selectedIcon ? 0 : 0.25)),
                     ),
-                    child: Icon(icon, color: icon == _selectedIcon ? Theme.of(context).colorScheme.surface : onSurface),
+                    child: Icon(icon,
+                        color: icon == _selectedIcon
+                            ? Theme.of(context).colorScheme.surface
+                            : onSurface),
                   ),
                 ),
             ],

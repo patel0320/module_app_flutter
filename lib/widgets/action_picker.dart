@@ -20,7 +20,8 @@ Future<ScenarioAction?> showAddActionSheet(
   List<DeviceModule> modules, {
   ScenarioAction? initial,
 }) {
-  final List<DeviceModule> eligible = modules.where((m) => m.channels.isNotEmpty).toList();
+  final List<DeviceModule> eligible =
+      modules.where((m) => m.channels.isNotEmpty).toList();
 
   DeviceModule? selectedModule = eligible.isNotEmpty ? eligible.first : null;
   ChannelOutput? selectedChannel = selectedModule?.channels.first;
@@ -68,7 +69,10 @@ Future<ScenarioAction?> showAddActionSheet(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(isEditing ? l10n.actionPickerEditTitle : l10n.actionPickerAddTitle,
+                Text(
+                    isEditing
+                        ? l10n.actionPickerEditTitle
+                        : l10n.actionPickerAddTitle,
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 if (eligible.isEmpty)
@@ -76,9 +80,11 @@ Future<ScenarioAction?> showAddActionSheet(
                 else ...[
                   DropdownButtonFormField<DeviceModule>(
                     value: selectedModule,
-                    decoration: InputDecoration(labelText: l10n.actionPickerModuleLabel),
+                    decoration: InputDecoration(
+                        labelText: l10n.actionPickerModuleLabel),
                     items: [
-                      for (final m in eligible) DropdownMenuItem(value: m, child: Text(m.name)),
+                      for (final m in eligible)
+                        DropdownMenuItem(value: m, child: Text(m.name)),
                     ],
                     onChanged: (m) => setSheetState(() {
                       selectedModule = m;
@@ -88,26 +94,31 @@ Future<ScenarioAction?> showAddActionSheet(
                   const SizedBox(height: 12),
                   DropdownButtonFormField<ChannelOutput>(
                     value: selectedChannel,
-                    decoration: InputDecoration(labelText: l10n.actionPickerOutputLabel),
+                    decoration: InputDecoration(
+                        labelText: l10n.actionPickerOutputLabel),
                     items: [
-                      for (final c in selectedModule?.channels ?? const <ChannelOutput>[])
+                      for (final c in selectedModule?.channels ??
+                          const <ChannelOutput>[])
                         DropdownMenuItem(value: c, child: Text(c.name)),
                     ],
                     onChanged: (c) => setSheetState(() => selectedChannel = c),
                   ),
                   const SizedBox(height: 16),
                   if (isDimmer) ...[
-                    Text(l10n.actionPickerBrightness(brightness), style: Theme.of(context).textTheme.bodyLarge),
+                    Text(l10n.actionPickerBrightness(brightness),
+                        style: Theme.of(context).textTheme.bodyLarge),
                     Slider(
                       value: brightness.toDouble(),
                       min: 0,
                       max: 100,
                       divisions: 20,
                       label: '$brightness%',
-                      onChanged: (v) => setSheetState(() => brightness = v.round()),
+                      onChanged: (v) =>
+                          setSheetState(() => brightness = v.round()),
                     ),
                   ] else ...[
-                    Text(l10n.actionPickerState, style: Theme.of(context).textTheme.bodyLarge),
+                    Text(l10n.actionPickerState,
+                        style: Theme.of(context).textTheme.bodyLarge),
                     const SizedBox(height: 8),
                     SegmentedButton<bool>(
                       segments: [
@@ -115,7 +126,8 @@ Future<ScenarioAction?> showAddActionSheet(
                         ButtonSegment(value: false, label: Text(l10n.off)),
                       ],
                       selected: {turnOn},
-                      onSelectionChanged: (s) => setSheetState(() => turnOn = s.first),
+                      onSelectionChanged: (s) =>
+                          setSheetState(() => turnOn = s.first),
                     ),
                   ],
                   const SizedBox(height: 20),
@@ -133,7 +145,9 @@ Future<ScenarioAction?> showAddActionSheet(
                                 brightnessPct: brightness,
                               ),
                             ),
-                    child: Text(isEditing ? l10n.actionPickerSave : l10n.actionPickerAdd),
+                    child: Text(isEditing
+                        ? l10n.actionPickerSave
+                        : l10n.actionPickerAdd),
                   ),
                 ],
               ],

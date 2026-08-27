@@ -34,10 +34,14 @@ class _MainShellState extends State<MainShell> {
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.tune), label: 'Configuration'),
-          BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Scenarios'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.tune), label: 'Configuration'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.play_circle_outline), label: 'Scenarios'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
     );

@@ -31,12 +31,14 @@ class MockTransport implements Transport {
 
   @override
   Future<TransportResult> send(AppCommand command, {Duration? timeout}) async {
-    if (latencyMillis > 0) await Future<void>.delayed(Duration(milliseconds: latencyMillis));
+    if (latencyMillis > 0)
+      await Future<void>.delayed(Duration(milliseconds: latencyMillis));
     sent.add(command);
     if (succeed) {
       emit(jsonDecode(command.encode()) as Map<String, dynamic>);
       return const TransportResult(usedTransport: 'mock', success: true);
     }
-    return const TransportResult(usedTransport: 'mock', success: false, error: 'mock failure');
+    return const TransportResult(
+        usedTransport: 'mock', success: false, error: 'mock failure');
   }
 }

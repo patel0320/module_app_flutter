@@ -21,7 +21,8 @@ class ScenariosScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Event history (30 days)', style: Theme.of(context).textTheme.titleLarge),
+          Text('Event history (30 days)',
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Card(
             color: AppColors.surface,

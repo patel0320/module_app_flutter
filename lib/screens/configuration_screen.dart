@@ -173,7 +173,9 @@ class _ModuleCard extends StatelessWidget {
                     bottom: -2,
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(color: Theme.of(context).cardColor, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          shape: BoxShape.circle),
                       child: StatusDot(status: status),
                     ),
                   ),
@@ -184,21 +186,30 @@ class _ModuleCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(module.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    Text(module.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 2),
-                    Text(l10n.configModuleSummary(module.type.label, module.ipAddress),
-                        style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.55))),
+                    Text(
+                        l10n.configModuleSummary(
+                            module.type.label, module.ipAddress),
+                        style: TextStyle(
+                            fontSize: 12, color: onSurface.withOpacity(0.55))),
                     const SizedBox(height: 2),
                     Row(
                       children: [
                         RoomTag(label: module.roomName),
                         const SizedBox(width: 8),
                         Text(
-                          status == ConnectionStatus.online ? l10n.online : l10n.offline,
+                          status == ConnectionStatus.online
+                              ? l10n.online
+                              : l10n.offline,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: status == ConnectionStatus.online ? AppColors.online : AppColors.offlineAlert,
+                            color: status == ConnectionStatus.online
+                                ? AppColors.online
+                                : AppColors.offlineAlert,
                           ),
                         ),
                       ],
@@ -212,7 +223,8 @@ class _ModuleCard extends StatelessWidget {
                   if (value == 'remove') onRemove();
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(value: 'rename', child: Text(l10n.configRenameDialog)),
+                  PopupMenuItem(
+                      value: 'rename', child: Text(l10n.configRenameDialog)),
                   PopupMenuItem(value: 'remove', child: Text(l10n.remove)),
                 ],
               ),

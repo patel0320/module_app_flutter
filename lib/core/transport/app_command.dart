@@ -33,7 +33,8 @@ class AppCommand {
   static const actionDim = 'dim';
   static const actionBlindMove = 'blind_move';
 
-  factory AppCommand.relay(ChannelState channelState, String moduleId, int channel) {
+  factory AppCommand.relay(
+      ChannelState channelState, String moduleId, int channel) {
     return AppCommand(
       action: channelState == ChannelState.on ? actionRelayOn : actionRelayOff,
       moduleId: moduleId,

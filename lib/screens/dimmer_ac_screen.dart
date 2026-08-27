@@ -23,7 +23,9 @@ class DimmerAcScreen extends StatefulWidget {
 class _DimmerAcScreenState extends State<DimmerAcScreen> {
   Future<void> _editChannel(ChannelOutput channel) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ChannelEditorScreen(channel: channel, moduleName: widget.module.name)),
+      MaterialPageRoute(
+          builder: (_) => ChannelEditorScreen(
+              channel: channel, moduleName: widget.module.name)),
     );
     setState(() {});
   }
@@ -40,7 +42,10 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(module.name),
-        actions: [IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)],
+        actions: [
+          IconButton(
+              icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
@@ -49,7 +54,9 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
           const SizedBox(height: 8),
           Text(
             l10n.dimmerAcSubtitle,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55)),
+            style: TextStyle(
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.55)),
           ),
           const SizedBox(height: 16),
           SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),
@@ -58,7 +65,8 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
               padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
               child: DimmerChannelCard(
                 channel: channel,
-                onChanged: (value) => setState(() => channel.brightness = value),
+                onChanged: (value) =>
+                    setState(() => channel.brightness = value),
                 onChangeEnd: (value) => EventLogStore.shared.recordBrightness(
                   moduleName: module.name,
                   outputName: channel.name,

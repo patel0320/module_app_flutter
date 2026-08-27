@@ -25,12 +25,14 @@ class ScenarioEditorScreen extends StatefulWidget {
 
 class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   late final bool _isNew = widget.scenario == null;
-  late final TextEditingController _nameController = TextEditingController(text: widget.scenario?.name ?? '');
+  late final TextEditingController _nameController =
+      TextEditingController(text: widget.scenario?.name ?? '');
   late IconData _icon = widget.scenario?.icon ?? Icons.auto_awesome_outlined;
   late String _roomName = widget.scenario?.roomName ?? 'No room';
   late bool _showInHome = widget.scenario?.showInHome ?? false;
   late ScenarioType _type = widget.scenario?.type ?? ScenarioType.tapToRun;
-  late final List<ScenarioAction> _actions = List.of(widget.scenario?.actions ?? const []);
+  late final List<ScenarioAction> _actions =
+      List.of(widget.scenario?.actions ?? const []);
   late String _sliderTargetName = widget.scenario?.sliderTargetName ?? '';
   late int _sliderValue = widget.scenario?.sliderValue ?? 50;
 
@@ -38,7 +40,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   final List<Room> _rooms = mockRooms();
 
   List<String> get _dimmerTargets => [
-        for (final m in _modules.where((m) => m.type == ModuleType.dimmerDc || m.type == ModuleType.dimmerAc))
+        for (final m in _modules.where((m) =>
+            m.type == ModuleType.dimmerDc || m.type == ModuleType.dimmerAc))
           for (final c in m.channels) '${c.name} - ${m.name}',
       ];
 
@@ -78,12 +81,15 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   }
 
   Future<void> _editAction(int index) async {
-    final action = await showAddActionSheet(context, _modules, initial: _actions[index]);
+    final action =
+        await showAddActionSheet(context, _modules, initial: _actions[index]);
     if (action != null) setState(() => _actions[index] = action);
   }
 
   void _save() {
-    final String name = _nameController.text.trim().isEmpty ? AppLocalizations.of(context).scenarioUntitled : _nameController.text.trim();
+    final String name = _nameController.text.trim().isEmpty
+        ? AppLocalizations.of(context).scenarioUntitled
+        : _nameController.text.trim();
     if (widget.scenario != null) {
       final s = widget.scenario!;
       s.name = name;
@@ -121,7 +127,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     final dimmerTargets = _dimmerTargets;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? l10n.scenarioNewTitle : l10n.scenarioEditTitle)),
+      appBar: AppBar(
+          title: Text(_isNew ? l10n.scenarioNewTitle : l10n.scenarioEditTitle)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
@@ -137,7 +144,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     bottom: 0,
                     child: CircleAvatar(
                       radius: 14,
-                      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                      backgroundColor:
+                          Theme.of(context).scaffoldBackgroundColor,
                       child: Icon(Icons.edit, size: 14, color: onSurface),
                     ),
                   ),
@@ -148,24 +156,39 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           const SizedBox(height: 20),
           TextField(
             controller: _nameController,
-            decoration: InputDecoration(labelText: l10n.scenarioNameLabel, prefixIcon: const Icon(Icons.label_outline)),
+            decoration: InputDecoration(
+                labelText: l10n.scenarioNameLabel,
+                prefixIcon: const Icon(Icons.label_outline)),
           ),
           const SizedBox(height: 20),
           SectionHeader(l10n.scenarioTypeSection),
           SegmentedButton<ScenarioType>(
             segments: [
-              ButtonSegment(value: ScenarioType.tapToRun, label: Text(l10n.scenarioTypeTapToRun), icon: const Icon(Icons.touch_app_outlined)),
-              ButtonSegment(value: ScenarioType.manualSlider, label: Text(l10n.scenarioTypeManualSlider), icon: const Icon(Icons.tune)),
+              ButtonSegment(
+                  value: ScenarioType.tapToRun,
+                  label: Text(l10n.scenarioTypeTapToRun),
+                  icon: const Icon(Icons.touch_app_outlined)),
+              ButtonSegment(
+                  value: ScenarioType.manualSlider,
+                  label: Text(l10n.scenarioTypeManualSlider),
+                  icon: const Icon(Icons.tune)),
             ],
             selected: {_type},
             onSelectionChanged: (s) => setState(() => _type = s.first),
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<String>(
-            value: roomOptions.contains(_roomName) ? _roomName : roomOptions.first,
-            decoration: InputDecoration(labelText: l10n.scenarioRoomLabel, prefixIcon: const Icon(Icons.meeting_room_outlined)),
-            items: [for (final room in roomOptions) DropdownMenuItem(value: room, child: Text(room))],
-            onChanged: (value) => setState(() => _roomName = value ?? _roomName),
+            value:
+                roomOptions.contains(_roomName) ? _roomName : roomOptions.first,
+            decoration: InputDecoration(
+                labelText: l10n.scenarioRoomLabel,
+                prefixIcon: const Icon(Icons.meeting_room_outlined)),
+            items: [
+              for (final room in roomOptions)
+                DropdownMenuItem(value: room, child: Text(room))
+            ],
+            onChanged: (value) =>
+                setState(() => _roomName = value ?? _roomName),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -178,19 +201,27 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           if (_type == ScenarioType.tapToRun) ...[
             SectionHeader(
               l10n.scenarioActionsSection,
-              trailing: TextButton.icon(onPressed: _addAction, icon: const Icon(Icons.add), label: Text(l10n.add)),
+              trailing: TextButton.icon(
+                  onPressed: _addAction,
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.add)),
             ),
             if (_actions.isEmpty)
-              EmptyState(icon: Icons.flash_on_outlined, message: l10n.scenarioActionsEmpty)
+              EmptyState(
+                  icon: Icons.flash_on_outlined,
+                  message: l10n.scenarioActionsEmpty)
             else
               for (int i = 0; i < _actions.length; i++)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                  padding:
+                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
                   child: Card(
                     child: ListTile(
                       leading: IconAvatar(icon: _actions[i].icon),
-                      title: Text(_actions[i].channelName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text(l10n.scenarioActionModuleSummary(_actions[i].moduleName, _actions[i].summary)),
+                      title: Text(_actions[i].channelName,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(l10n.scenarioActionModuleSummary(
+                          _actions[i].moduleName, _actions[i].summary)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -202,7 +233,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                           IconButton(
                             tooltip: l10n.scenarioDeleteActionTooltip,
                             icon: const Icon(Icons.delete_outline),
-                            onPressed: () => setState(() => _actions.removeAt(i)),
+                            onPressed: () =>
+                                setState(() => _actions.removeAt(i)),
                           ),
                         ],
                       ),
@@ -212,13 +244,22 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           ] else ...[
             SectionHeader(l10n.scenarioSliderTargetSection),
             DropdownButtonFormField<String>(
-              value: dimmerTargets.contains(_sliderTargetName) ? _sliderTargetName : null,
-              decoration: InputDecoration(labelText: l10n.scenarioDimmerOutputLabel, prefixIcon: const Icon(Icons.lightbulb_outline)),
-              items: [for (final t in dimmerTargets) DropdownMenuItem(value: t, child: Text(t))],
-              onChanged: (value) => setState(() => _sliderTargetName = value ?? _sliderTargetName),
+              value: dimmerTargets.contains(_sliderTargetName)
+                  ? _sliderTargetName
+                  : null,
+              decoration: InputDecoration(
+                  labelText: l10n.scenarioDimmerOutputLabel,
+                  prefixIcon: const Icon(Icons.lightbulb_outline)),
+              items: [
+                for (final t in dimmerTargets)
+                  DropdownMenuItem(value: t, child: Text(t))
+              ],
+              onChanged: (value) => setState(
+                  () => _sliderTargetName = value ?? _sliderTargetName),
             ),
             const SizedBox(height: 16),
-            Text(l10n.scenarioDefaultBrightness(_sliderValue), style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(l10n.scenarioDefaultBrightness(_sliderValue),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             Slider(
               value: _sliderValue.toDouble(),
               min: 0,

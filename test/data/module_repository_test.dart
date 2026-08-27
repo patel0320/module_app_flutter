@@ -19,10 +19,12 @@ void main() {
         tempMinC: 0,
         tempMaxC: 70,
         channels: [
-          ChannelOutput(id: '$id-c1', name: 'Light', icon: Icons.lightbulb, isOn: true),
+          ChannelOutput(
+              id: '$id-c1', name: 'Light', icon: Icons.lightbulb, isOn: true),
         ],
         inputs: [
-          PhysicalInput(id: '$id-i1', label: 'Switch 1', mode: InputMode.toggle),
+          PhysicalInput(
+              id: '$id-i1', label: 'Switch 1', mode: InputMode.toggle),
         ],
       );
 
@@ -30,7 +32,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Future<ModuleRepository> repo() async => ModuleRepository(await SharedPreferences.getInstance());
+  Future<ModuleRepository> repo() async =>
+      ModuleRepository(await SharedPreferences.getInstance());
 
   test('fetch returns empty list when nothing persisted', () async {
     final r = await repo();

@@ -44,8 +44,13 @@ void main() {
       final registry = ModuleStatusFetcherRegistry();
       final fetcher = registry.forType(ModuleType.relay);
       expect(fetcher, isNotNull);
-      expect(fetcher!.fetchCommands,
-          containsAll([PduAtCommands.version, PduAtCommands.temperature, PduAtCommands.allOutputStates]));
+      expect(
+          fetcher!.fetchCommands,
+          containsAll([
+            PduAtCommands.version,
+            PduAtCommands.temperature,
+            PduAtCommands.allOutputStates
+          ]));
     });
 
     test('applies temperature + output states onto a module', () {
@@ -59,7 +64,11 @@ void main() {
         internalTempC: 0,
         channels: [
           for (var i = 0; i < 8; i++)
-            ChannelOutput(id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power, isOn: false),
+            ChannelOutput(
+                id: 'm1c${i + 1}',
+                name: 'Out ${i + 1}',
+                icon: Icons.power,
+                isOn: false),
         ],
       );
 
@@ -81,7 +90,8 @@ void main() {
     test('captures module info (firmware) from AT+VER', () {
       const fetcher = RelayModuleStatusFetcher();
       final module = _relayModule();
-      fetcher.apply(module, [PduResponse.parse('VER:2.1 Build :9\r\nRELAY_COUNT:8')]);
+      fetcher.apply(
+          module, [PduResponse.parse('VER:2.1 Build :9\r\nRELAY_COUNT:8')]);
       expect(module.firmware, '2.1 Build :9');
     });
 
@@ -125,7 +135,8 @@ void main() {
         internalTempC: 0,
         channels: [
           for (var i = 0; i < 8; i++)
-            ChannelOutput(id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power),
+            ChannelOutput(
+                id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power),
         ],
       );
       fetcher.apply(module, [PduResponse.parse('RELAY_COUNT:2')]);
@@ -169,7 +180,8 @@ DeviceModule _relayModule() => DeviceModule(
       internalTempC: 0,
       channels: [
         for (var i = 0; i < 8; i++)
-          ChannelOutput(id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power),
+          ChannelOutput(
+              id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power),
       ],
     );
 

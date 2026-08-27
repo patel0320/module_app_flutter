@@ -14,7 +14,8 @@ final appConfigProvider = Provider((ref) => Env.config);
 /// In-memory registry of discovered modules + their drivers.
 /// Replace the MockTransport wire-up with the LAN/MQTT factories once the real
 /// protocol contracts are frozen (Stage 3/4) — see setup.md §5.
-final moduleRepositoryProvider = StateNotifierProvider<ModuleRepository, List<Module>>((ref) {
+final moduleRepositoryProvider =
+    StateNotifierProvider<ModuleRepository, List<Module>>((ref) {
   return ModuleRepository(factory: const DriverFactory());
 });
 
@@ -57,11 +58,20 @@ class ModuleRepository extends StateNotifier<List<Module>> {
     );
 
     final relayChannels = List<Channel>.generate(
-        8, (i) => Channel(id: 'm1c$i', moduleId: 'm1', index: i, name: 'Output ${i + 1}'));
+        8,
+        (i) => Channel(
+            id: 'm1c$i', moduleId: 'm1', index: i, name: 'Output ${i + 1}'));
     final dimmerChannels = List<Channel>.generate(
-        4, (i) => Channel(id: 'm2c$i', moduleId: 'm2', index: i, name: 'Light ${i + 1}', brightness: 0));
+        4,
+        (i) => Channel(
+            id: 'm2c$i',
+            moduleId: 'm2',
+            index: i,
+            name: 'Light ${i + 1}',
+            brightness: 0));
     final tempChannels = [
-      const Channel(id: 'm3c0', moduleId: 'm3', index: 0, name: 'Internal Temperature'),
+      const Channel(
+          id: 'm3c0', moduleId: 'm3', index: 0, name: 'Internal Temperature'),
     ];
 
     channelsByModule['m1'] = relayChannels;
@@ -76,9 +86,11 @@ class ModuleRepository extends StateNotifier<List<Module>> {
     state = [relay, dimmer, temp];
   }
 
-  List<Channel> channelsOf(String moduleId) => channelsByModule[moduleId] ?? const [];
+  List<Channel> channelsOf(String moduleId) =>
+      channelsByModule[moduleId] ?? const [];
 
-  void addDiscoveredModule(Module module, List<Channel> channels, Transport transport) {
+  void addDiscoveredModule(
+      Module module, List<Channel> channels, Transport transport) {
     channelsByModule[module.id] = channels;
     drivers[module.id] = factory.create(module, transport, channels);
     state = [...state, module];

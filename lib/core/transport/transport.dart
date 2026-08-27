@@ -9,7 +9,8 @@ class TransportResult {
   final bool success;
   final Object? error;
 
-  const TransportResult({required this.usedTransport, required this.success, this.error});
+  const TransportResult(
+      {required this.usedTransport, required this.success, this.error});
 }
 
 /// Contract for a communication transport. Drivers depend on this abstraction.
