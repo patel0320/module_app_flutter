@@ -4,7 +4,7 @@
 // standard password reset functionality via email is implemented"). The
 // "send" action only flips local UI state - no email is actually sent.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});

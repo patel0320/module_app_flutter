@@ -3,7 +3,7 @@
 // Brief section 2.3 "Lighting Dimming Modules (AC)": intensity control for
 // the 4 outputs of 220V AC lighting.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';

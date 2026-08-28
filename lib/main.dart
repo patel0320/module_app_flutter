@@ -7,7 +7,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import 'screens/account_screen.dart';
 import 'screens/add_module_screen.dart';

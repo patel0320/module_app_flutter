@@ -5,7 +5,7 @@
 // outputs, regardless of whether they belong to relay modules (ON/OFF) or
 // dimmer modules (intensity control)" (brief section 2.4).
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 

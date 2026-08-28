@@ -16,7 +16,7 @@
 // screen matches every other screen in the app. Offline/temperature semantics
 // stay green/red for consistency.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';

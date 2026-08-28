@@ -111,7 +111,9 @@ jobs:
         run: flutter gen-l10n
 
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: |
+          dart format lib/l10n/gen
+          dart format --output=none --set-exit-if-changed lib test
 
       - name: Static analysis (fatal on issues)
         run: flutter analyze --fatal-infos --fatal-warnings

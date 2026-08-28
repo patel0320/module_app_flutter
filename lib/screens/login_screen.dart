@@ -3,7 +3,7 @@
 // Mandatory sign-in screen (brief section 3.1). Authentication is only
 // simulated: any non-empty email/password navigates into the app.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';

@@ -4,7 +4,7 @@
 // every added module with an online/offline indicator, and lets the user
 // add new ones (via the self-discovery / manual-IP flow on AddModuleScreen).
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/module_status/module_status_service.dart';

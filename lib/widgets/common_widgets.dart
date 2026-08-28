@@ -3,7 +3,7 @@
 // Small reusable UI building blocks shared by several screens, kept in one
 // file to avoid duplicating the same layout code across the prototype.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';

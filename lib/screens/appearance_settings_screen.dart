@@ -4,7 +4,7 @@
 // Language) so the compact Light / Dark / System theme picker fits without
 // overflowing the row on narrow screens.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';

@@ -3,7 +3,7 @@
 // "System Status" page reached by tapping the offline/temperature alert
 // banners on Home (brief section I, point 2: "a log of error messages").
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';

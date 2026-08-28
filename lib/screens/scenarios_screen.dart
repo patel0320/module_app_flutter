@@ -4,7 +4,7 @@
 // tap-to-run scenarios (and the manual dimming slider), with quick access
 // to Automations, Rooms and the Event History.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';

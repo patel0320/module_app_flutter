@@ -4,7 +4,7 @@
 // profile details, password change, and cloud backup/restore - the
 // mechanism that lets a user move to a new phone without reconfiguring.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';

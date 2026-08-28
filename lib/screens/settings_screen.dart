@@ -4,7 +4,7 @@
 // and appearance, plus a reminder that the architecture is multi-location
 // ready even though v1 manages a single location (brief section 4.2).
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/event_log_store.dart';
 import '../theme/app_theme.dart';

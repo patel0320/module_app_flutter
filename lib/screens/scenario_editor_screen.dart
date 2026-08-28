@@ -5,7 +5,7 @@
 // dedicated "Manual dimming Slider" scenario controlling a single dimmer
 // output.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';

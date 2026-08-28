@@ -3,7 +3,7 @@
 // Brief section 2.5 "Organization by Rooms (Zones)": create, rename,
 // reorder and delete the rooms/zones used to group scenarios and modules.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/room_store.dart';

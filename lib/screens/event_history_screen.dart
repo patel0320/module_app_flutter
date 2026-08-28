@@ -3,7 +3,7 @@
 // Brief section 2.4 "Event Log (History)": a detailed, date-grouped log of
 // every ON/OFF action, retained (in the real product) for 30 days.
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
 import '../services/event_log_store.dart';
