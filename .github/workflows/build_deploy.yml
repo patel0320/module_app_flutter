@@ -263,7 +263,7 @@ jobs:
 
   # --------------------------------------------------------------------------
   # 4. iOS build: signed IPA via fastlane + match, deploy to TestFlight
-  #    (requires a macOS runner; Xcode 15 via actions setup)
+  #    (requires a macOS runner; uses the runner's default selected Xcode)
   # --------------------------------------------------------------------------
   ios:
     name: iOS Build & Deploy
@@ -274,9 +274,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Select Xcode 15
-        run: sudo xcode-select -s /Applications/Xcode_15.app
 
       - name: Setup Flutter (stable)
         uses: subosito/flutter-action@v2
