@@ -42,8 +42,10 @@ class LocalNotificationService {
   static const String channelAutomation = 'automation';
 
   /// How long an output must remain ON before the "left ON too long" alert
-  /// fires (an output that turns OFF resets the timer).
-  static const Duration outputLeftOnThreshold = Duration(hours: 4);
+  /// fires (an output that turns OFF resets the timer). Default matches the
+  /// threshold configured in Settings -> Notifications; this constant is the
+  /// fallback used when no setting is provided.
+  static const Duration outputLeftOnThreshold = Duration(hours: 12);
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();

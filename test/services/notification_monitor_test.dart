@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soleux_device_manager/models/models.dart';
 import 'package:soleux_device_manager/services/module_store.dart';
 import 'package:soleux_device_manager/services/notification_monitor.dart';
+import 'package:soleux_device_manager/services/settings_store.dart';
 
 DeviceModule _module(String id,
         {ConnectionStatus status = ConnectionStatus.online,
@@ -146,6 +147,34 @@ void main() {
       await store.update('o2', (m) => m.channels.first.isOn = true);
       expect(monitor.notificationCount, 2);
       monitor.dispose();
+    });
+  });
+
+  group('NotificationMonitor output threshold from SettingsStore', () {
+    test('defaults to 12 hours when no override is provided', () async {
+      await SettingsStore.shared.init();
+      await SettingsStore.shared.setOutputOnThresholdHours(12);
+      final store = await storeWith([_module('d1', status: ConnectionStatus.online)]);
+      final monitor = NotificationMonitor.forTesting(store);
+      expect(monitor.outputThreshold, const Duration(hours: 12));
+      monitor.dispose();
+    });
+
+    test('reflects the user-configured threshold', () async {
+      await SettingsStore.shared.init();
+      await SettingsStore.shared.setOutputOnThresholdHours(6);
+      final store = await storeWith([_module('d2', status: ConnectionStatus.online)]);
+      final monitor = NotificationMonitor.forTesting(store);
+      expect(monitor.outputThreshold, const Duration(hours: 6));
+      monitor.dispose();
+    });
+
+    test('clamps threshold input to 1..168 hours', () async {
+      await SettingsStore.shared.init();
+      await SettingsStore.shared.setOutputOnThresholdHours(0);
+      expect(SettingsStore.shared.outputOnThresholdHours, 1);
+      await SettingsStore.shared.setOutputOnThresholdHours(500);
+      expect(SettingsStore.shared.outputOnThresholdHours, 168);
     });
   });
 }

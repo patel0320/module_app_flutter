@@ -38,6 +38,10 @@ class SettingsStore extends ChangeNotifier {
   /// modules. Configured on the Settings -> Notifications screen.
   double _defaultTempThreshold = 65;
 
+  /// Number of hours an output must remain ON before the "Output left ON too
+  /// long" alert fires. Configured on the Settings -> Notifications screen.
+  int _outputOnThresholdHours = 12;
+
   /// True once [init] has completed (successfully or not).
   bool get loaded => _loaded;
 
@@ -49,6 +53,10 @@ class SettingsStore extends ChangeNotifier {
   /// The default temperature alert threshold (°C) for new modules.
   double get defaultTemperatureThreshold => _defaultTempThreshold;
 
+  /// Number of hours an output must stay ON before the "Output left ON too
+  /// long" alert fires.
+  int get outputOnThresholdHours => _outputOnThresholdHours;
+
   static const String _kKeyThemeMode = 'settings_theme_mode';
   static const String _kKeyLocale = 'settings_locale';
   static const String _kKeyHomeTheme = 'settings_home_theme';
@@ -58,6 +66,8 @@ class SettingsStore extends ChangeNotifier {
   static const String _kKeyAutomation = 'settings_notify_automation';
   static const String _kKeyDefaultTempThreshold =
       'settings_default_temp_threshold';
+  static const String _kKeyOutputOnThresholdHours =
+      'settings_output_on_threshold_hours';
 
   /// Loads all saved preferences once and applies them to the global
   /// notifiers. Safe to call repeatedly.
@@ -85,6 +95,8 @@ class SettingsStore extends ChangeNotifier {
       _automationTriggered = _prefs!.getBool(_kKeyAutomation) ?? false;
       _defaultTempThreshold =
           _prefs!.getDouble(_kKeyDefaultTempThreshold) ?? 65;
+      _outputOnThresholdHours =
+          _prefs!.getInt(_kKeyOutputOnThresholdHours) ?? 12;
     } catch (_) {
       // Keep defaults if preferences are unavailable.
     }
@@ -142,6 +154,14 @@ class SettingsStore extends ChangeNotifier {
     return _persistAndNotify();
   }
 
+  /// Sets the number of hours an output must stay ON before the "Output
+  /// left ON too long" alert fires, clamped to 1-168 (one week), and
+  /// persists it.
+  Future<void> setOutputOnThresholdHours(int value) {
+    _outputOnThresholdHours = value.clamp(1, 168);
+    return _persistAndNotify();
+  }
+
   Future<void> _persistAndNotify() async {
     await _prefs?.setBool(_kKeyModuleStatus, _moduleStatus);
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
@@ -149,6 +169,8 @@ class SettingsStore extends ChangeNotifier {
     await _prefs?.setBool(_kKeyAutomation, _automationTriggered);
     await _prefs?.setDouble(
         _kKeyDefaultTempThreshold, _defaultTempThreshold);
+    await _prefs?.setInt(
+        _kKeyOutputOnThresholdHours, _outputOnThresholdHours);
     notifyListeners();
   }
 }

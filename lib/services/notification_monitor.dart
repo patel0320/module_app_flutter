@@ -12,8 +12,8 @@
 //      [DeviceModule.tempMinC..tempMaxC] range and again when it re-enters
 //      it (each over-threshold episode produces one alert).
 //   3. Output left ON too long - tracks when each output turned ON and fires
-//      after [LocalNotificationService.outputLeftOnThreshold]; turning the
-//      output OFF resets the timer.
+//      after the threshold configured in Settings -> Notifications (default
+//      12 hours); turning the output OFF resets the timer.
 //
 // An instance runs in every isolate that touches module state (the app
 // foreground isolate via main() and the background status worker isolate),
@@ -25,6 +25,7 @@ import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import 'module_store.dart';
 import 'notification_service.dart';
+import 'settings_store.dart';
 
 /// Observes [ModuleStore.shared] and emits local notifications for status,
 /// temperature and output-duration events.
@@ -32,8 +33,9 @@ class NotificationMonitor {
   NotificationMonitor._({
     ModuleStore? store,
     this.settleDuration = NotificationMonitor.settleDurationDefault,
-    this.outputThreshold = LocalNotificationService.outputLeftOnThreshold,
-  }) : store = store ?? ModuleStore.shared;
+    Duration? outputThreshold,
+  })  : store = store ?? ModuleStore.shared,
+        _outputThresholdOverride = outputThreshold;
 
   /// App-wide shared instance used by the launch path and the background
   /// worker. Each isolate gets its own instance.
@@ -49,7 +51,7 @@ class NotificationMonitor {
       NotificationMonitor._(
         store: store,
         settleDuration: settleDuration ?? settleDurationDefault,
-        outputThreshold: outputThreshold ?? LocalNotificationService.outputLeftOnThreshold,
+        outputThreshold: outputThreshold,
       );
 
   /// How long a status change must hold before it is notified, so a quick
@@ -59,13 +61,25 @@ class NotificationMonitor {
   /// How often the output-duration check runs even when no state changed.
   static const Duration outputCheckPeriod = Duration(minutes: 1);
 
+  /// Fallback threshold used when no [SettingsStore] override is available
+  /// (tests without a configured store).
+  static const Duration defaultOutputThreshold = Duration(hours: 12);
+
   /// How long a status change hold is required before notifying (tests can
   /// shorten it).
   final Duration settleDuration;
 
-  /// How long an output must remain ON before the alert fires (tests can
-  /// shorten it).
-  final Duration outputThreshold;
+  /// Optional explicit override of the output threshold (used by tests).
+  /// When null the monitor reads the live value from [SettingsStore].
+  final Duration? _outputThresholdOverride;
+
+  /// Active output-left-ON threshold the monitor evaluates against.
+  Duration get outputThreshold {
+    final override = _outputThresholdOverride;
+    if (override != null) return override;
+    final hours = SettingsStore.shared.outputOnThresholdHours;
+    return Duration(hours: hours);
+  }
 
   final ModuleStore store;
 
@@ -220,8 +234,10 @@ class NotificationMonitor {
   }
 
   /// Tracks when outputs turned ON and alerts after they remained ON longer
-  /// than [LocalNotificationService.outputLeftOnThreshold].
+  /// than the configured threshold (Settings -> Notifications -> Output On
+  /// Threshold Duration, default 12 hours).
   void _evaluateOutputs() {
+    final threshold = outputThreshold;
     for (final module in store.modules) {
       if (module.status != ConnectionStatus.online) {
         // Do not chase outputs of modules that are offline.
@@ -237,11 +253,11 @@ class NotificationMonitor {
         }
         final since = _outputOnSince.putIfAbsent(key, DateTime.now);
         if (_outputNotified.contains(key)) continue;
-        if (DateTime.now().difference(since) >= outputThreshold) {
+        if (DateTime.now().difference(since) >= threshold) {
           _outputNotified.add(key);
           notificationCount++;
           LocalNotificationService.shared
-              .showOutputLeftOn(module, channel, duration: outputThreshold)
+              .showOutputLeftOn(module, channel, duration: threshold)
               .ignore();
         }
       }

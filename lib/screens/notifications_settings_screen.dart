@@ -49,6 +49,16 @@ class _NotificationsSettingsScreenState
                     onChanged: (v) => store.setOutputLeftOn(v),
                   ),
                   const Divider(height: 1),
+                  ListTile(
+                    title: Text(l10n.notificationsOutputOnThreshold),
+                    subtitle: Text(l10n.notificationsOutputOnThresholdDesc),
+                    trailing: Text(
+                      l10n.notificationsHours(store.outputOnThresholdHours),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    onTap: () => _editOutputOnThreshold(context, store),
+                  ),
+                  const Divider(height: 1),
                   SwitchListTile(
                     title: Text(l10n.notificationsTempExceeded),
                     subtitle: Text(l10n.notificationsTempExceededDesc),
@@ -106,5 +116,44 @@ class _NotificationsSettingsScreenState
         ),
       ),
     );
+  }
+
+  Future<void> _editOutputOnThreshold(
+      BuildContext context, SettingsStore store) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController(
+        text: store.outputOnThresholdHours.toString());
+    final value = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.notificationsOutputOnThreshold),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: l10n.notificationsOutputOnThreshold,
+            suffixText: 'h',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed == null) return;
+              Navigator.of(ctx).pop(parsed.clamp(1, 168));
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+    if (value != null) {
+      await store.setOutputOnThresholdHours(value);
+    }
   }
 }
