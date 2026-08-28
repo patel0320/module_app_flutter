@@ -343,6 +343,8 @@ List<Automation> mockAutomations() => [
         triggerType: AutomationTriggerType.time,
         triggerSummary: 'Every day at 20:00',
         enabled: true,
+        scheduleHour: 20,
+        scheduleMinute: 0,
         actions: [
           ScenarioAction(
               moduleName: 'Main Cabin Relay',
@@ -364,6 +366,8 @@ List<Automation> mockAutomations() => [
         triggerType: AutomationTriggerType.deviceState,
         triggerSummary: 'When Bilge Pump turns ON',
         enabled: true,
+        watchChannelName: 'Bilge Pump',
+        watchState: true,
         actions: [
           ScenarioAction(
               moduleName: 'Main Cabin Relay',
@@ -379,6 +383,8 @@ List<Automation> mockAutomations() => [
         triggerType: AutomationTriggerType.time,
         triggerSummary: 'Every day at 22:30',
         enabled: false,
+        scheduleHour: 22,
+        scheduleMinute: 30,
         actions: [
           ScenarioAction(
               moduleName: 'Main Cabin Relay',

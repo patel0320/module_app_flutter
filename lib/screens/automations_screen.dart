@@ -2,13 +2,15 @@
 //
 // Brief section 2.4 "Smart Automations (Based on IF... THEN... rules)":
 // list of automatic rules triggered by time of day or another device's
-// state, with an enable/disable switch for each.
+// state, with an enable/disable switch for each. The list is backed by the
+// app-wide [AutomationStore] so edits and toggle state persist across
+// restarts and are picked up by the [AutomationScheduler] runtime.
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-import '../data/mock_data.dart';
 import '../models/models.dart';
-import '../services/event_log_store.dart';
+import '../services/automation_scheduler.dart';
+import '../services/automation_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'automation_editor_screen.dart';
@@ -21,13 +23,13 @@ class AutomationsScreen extends StatefulWidget {
 }
 
 class _AutomationsScreenState extends State<AutomationsScreen> {
-  final List<Automation> _automations = mockAutomations();
+  final AutomationStore _store = AutomationStore.shared;
 
   Future<void> _create() async {
     final Automation? created = await Navigator.of(context).push<Automation>(
       MaterialPageRoute(builder: (_) => const AutomationEditorScreen()),
     );
-    if (created != null) setState(() => _automations.add(created));
+    if (created != null) await _store.upsert(created);
   }
 
   Future<void> _edit(Automation automation) async {
@@ -36,6 +38,7 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
           builder: (_) => AutomationEditorScreen(automation: automation)),
     );
     setState(() {});
+    await _store.commit();
   }
 
   Future<void> _delete(Automation automation) async {
@@ -46,44 +49,51 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
           AppLocalizations.of(context).automationsDeleteMsg(automation.name),
       confirmLabel: AppLocalizations.of(context).delete,
     );
-    if (confirmed) setState(() => _automations.remove(automation));
+    if (confirmed) await _store.remove(automation.id);
+  }
+
+  Future<void> _setEnabled(Automation automation, bool value) async {
+    automation.enabled = value;
+    await _store.commit();
+    // The runtime reacts to the store change and (de)registers the rule.
+    AutomationScheduler.shared.reconcile();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.automationsTitle)),
-      body: _automations.isEmpty
-          ? EmptyState(
-              icon: Icons.rule_outlined, message: l10n.automationsEmpty)
-          : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.outerPadding),
-              itemCount: _automations.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.betweenCards),
-              itemBuilder: (context, index) {
-                final automation = _automations[index];
-                return _AutomationCard(
-                  automation: automation,
-                  onTap: () => _edit(automation),
-                  onDelete: () => _delete(automation),
-                  onEnabledChanged: (v) {
-                    setState(() => automation.enabled = v);
-                    if (v) {
-                      EventLogStore.shared
-                          .recordAutomation(automationName: automation.name);
-                    }
+    return ListenableBuilder(
+      listenable: _store,
+      builder: (context, _) {
+        final automations = _store.automations;
+        return Scaffold(
+          appBar: AppBar(title: Text(l10n.automationsTitle)),
+          body: automations.isEmpty
+              ? EmptyState(
+                  icon: Icons.rule_outlined, message: l10n.automationsEmpty)
+              : ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.outerPadding),
+                  itemCount: automations.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.betweenCards),
+                  itemBuilder: (context, index) {
+                    final automation = automations[index];
+                    return _AutomationCard(
+                      automation: automation,
+                      onTap: () => _edit(automation),
+                      onDelete: () => _delete(automation),
+                      onEnabledChanged: (v) => _setEnabled(automation, v),
+                    );
                   },
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: _create,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.automationsNew, style: AppTheme.fabLabelStyle),
-      ),
+                ),
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: null,
+            onPressed: _create,
+            icon: const Icon(Icons.add),
+            label: Text(l10n.automationsNew, style: AppTheme.fabLabelStyle),
+          ),
+        );
+      },
     );
   }
 }

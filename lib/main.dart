@@ -26,6 +26,7 @@ import 'screens/scenarios_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/system_status_screen.dart';
+import 'services/automation_scheduler.dart';
 import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/module_status/background_status_worker.dart';
@@ -39,13 +40,17 @@ import 'theme/theme_palettes.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Kick off loading the persisted room, scenario and automation lists before
-  // the first frame so the Rooms / Scenarios / Automations / Home screens
-  // reflect storage immediately.
+  // Kick off loading the persisted room, scenario, automation and module
+  // lists before the first frame so the Rooms / Scenarios / Automations /
+  // Home screens reflect storage immediately.
   RoomStore.shared.init();
   ScenarioStore.shared.init();
   AutomationStore.shared.init();
   SettingsStore.shared.init();
+  // Start the automation runtime: it arms daily timers for time-of-day rules
+  // and watches the module fleet for device-state rules, firing them through
+  // the scenario engine into the event history (see AutomationScheduler).
+  AutomationScheduler.shared.start();
   // Register the OS background worker that polls module online/offline status
   // after the app is suspended, then start the lifecycle-aware scheduler:
   // persistent sockets while foreground, timed polling while backgrounded.

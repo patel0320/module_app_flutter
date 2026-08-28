@@ -28,10 +28,13 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
       TextEditingController(text: widget.automation?.name ?? '');
   late AutomationTriggerType _triggerType =
       widget.automation?.triggerType ?? AutomationTriggerType.time;
-  TimeOfDay _time = const TimeOfDay(hour: 20, minute: 0);
-  bool _deviceTurnsOn = true;
-  late String _deviceChannelName =
-      _channelNames.isNotEmpty ? _channelNames.first : '';
+  late TimeOfDay _time = TimeOfDay(
+    hour: widget.automation?.effectiveScheduleHour ?? 20,
+    minute: widget.automation?.effectiveScheduleMinute ?? 0,
+  );
+  late bool _deviceTurnsOn = widget.automation?.watchState ?? true;
+  late String _deviceChannelName = widget.automation?.watchChannelName ??
+      (_channelNames.isNotEmpty ? _channelNames.first : '');
   late final List<ScenarioAction> _actions =
       List.of(widget.automation?.actions ?? const []);
 
@@ -79,6 +82,15 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
       a.name = name;
       a.triggerType = _triggerType;
       a.triggerSummary = _triggerSummary;
+      a.scheduleHour =
+          _triggerType == AutomationTriggerType.time ? _time.hour : null;
+      a.scheduleMinute =
+          _triggerType == AutomationTriggerType.time ? _time.minute : null;
+      a.watchChannelName = _triggerType == AutomationTriggerType.deviceState
+          ? _deviceChannelName
+          : null;
+      a.watchState =
+          _triggerType == AutomationTriggerType.deviceState && _deviceTurnsOn;
       a.actions
         ..clear()
         ..addAll(_actions);
@@ -89,6 +101,17 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
         name: name,
         triggerType: _triggerType,
         triggerSummary: _triggerSummary,
+        scheduleHour: _triggerType == AutomationTriggerType.time
+            ? _time.hour
+            : null,
+        scheduleMinute: _triggerType == AutomationTriggerType.time
+            ? _time.minute
+            : null,
+        watchChannelName: _triggerType == AutomationTriggerType.deviceState
+            ? _deviceChannelName
+            : null,
+        watchState:
+            _triggerType == AutomationTriggerType.deviceState && _deviceTurnsOn,
         actions: _actions,
       );
       Navigator.of(context).pop(a);

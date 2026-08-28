@@ -364,6 +364,10 @@ class Automation {
     required this.triggerType,
     required this.triggerSummary,
     this.enabled = true,
+    this.scheduleHour,
+    this.scheduleMinute,
+    this.watchChannelName,
+    this.watchState = true,
     List<ScenarioAction>? actions,
   }) : actions = actions ?? <ScenarioAction>[];
 
@@ -374,12 +378,38 @@ class Automation {
   String triggerSummary;
   final List<ScenarioAction> actions;
 
+  /// Hour of the daily time trigger (0-23). Only meaningful when
+  /// [triggerType] == AutomationTriggerType.time; null falls back to 20:00.
+  int? scheduleHour;
+
+  /// Minute of the daily time trigger (0-59). Only meaningful when
+  /// [triggerType] == AutomationTriggerType.time.
+  int? scheduleMinute;
+
+  /// Output name watched by a device-state trigger. Only meaningful when
+  /// [triggerType] == AutomationTriggerType.deviceState.
+  String? watchChannelName;
+
+  /// The state change that fires the rule: true = fires when the watched
+  /// output turns ON, false = fires when it turns OFF.
+  bool watchState;
+
+  /// Falls back to a sensible default (20:00) for time-triggered rules that
+  /// predate structured scheduling data.
+  int get effectiveScheduleHour => scheduleHour ?? 20;
+
+  int get effectiveScheduleMinute => scheduleMinute ?? 0;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'name': name,
         'enabled': enabled,
         'triggerType': triggerType.name,
         'triggerSummary': triggerSummary,
+        'scheduleHour': scheduleHour,
+        'scheduleMinute': scheduleMinute,
+        'watchChannelName': watchChannelName,
+        'watchState': watchState,
         'actions': actions.map((a) => a.toJson()).toList(),
       };
 
@@ -390,6 +420,10 @@ class Automation {
         triggerType:
             AutomationTriggerType.values.byName(json['triggerType'] as String),
         triggerSummary: json['triggerSummary'] as String? ?? '',
+        scheduleHour: (json['scheduleHour'] as num?)?.toInt(),
+        scheduleMinute: (json['scheduleMinute'] as num?)?.toInt(),
+        watchChannelName: json['watchChannelName'] as String?,
+        watchState: json['watchState'] as bool? ?? true,
         actions: [
           for (final a in json['actions'] as List? ?? const [])
             ScenarioAction.fromJson((a as Map).cast<String, Object?>()),
