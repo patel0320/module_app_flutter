@@ -116,8 +116,7 @@ class NotificationMonitor {
     if (_started) return;
     _started = true;
     store.addListener(_onStoreChanged);
-    _outputTimer =
-        Timer.periodic(outputCheckPeriod, (_) => _evaluateOutputs());
+    _outputTimer = Timer.periodic(outputCheckPeriod, (_) => _evaluateOutputs());
   }
 
   /// Cancels timers and detaches from the store. No-op when never started.

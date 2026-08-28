@@ -75,9 +75,8 @@ class LocalNotificationService {
     );
     await _plugin.initialize(settings);
 
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
       await android.requestNotificationsPermission();
       for (final channel in _androidChannels) {
@@ -85,9 +84,8 @@ class LocalNotificationService {
       }
     }
 
-    final ios = _plugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
     await ios?.requestPermissions(alert: true, badge: true, sound: true);
 
     _initialized = true;

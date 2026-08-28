@@ -167,10 +167,8 @@ class SettingsStore extends ChangeNotifier {
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
     await _prefs?.setBool(_kKeyTemperature, _temperature);
     await _prefs?.setBool(_kKeyAutomation, _automationTriggered);
-    await _prefs?.setDouble(
-        _kKeyDefaultTempThreshold, _defaultTempThreshold);
-    await _prefs?.setInt(
-        _kKeyOutputOnThresholdHours, _outputOnThresholdHours);
+    await _prefs?.setDouble(_kKeyDefaultTempThreshold, _defaultTempThreshold);
+    await _prefs?.setInt(_kKeyOutputOnThresholdHours, _outputOnThresholdHours);
     notifyListeners();
   }
 }

@@ -86,8 +86,7 @@ class _NotificationsSettingsScreenState
                           child: Text(
                             '${store.defaultTemperatureThreshold.toInt()}\u00b0C',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                         IconButton(
@@ -121,8 +120,8 @@ class _NotificationsSettingsScreenState
   Future<void> _editOutputOnThreshold(
       BuildContext context, SettingsStore store) async {
     final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(
-        text: store.outputOnThresholdHours.toString());
+    final controller =
+        TextEditingController(text: store.outputOnThresholdHours.toString());
     final value = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(

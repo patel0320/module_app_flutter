@@ -1,4 +1,4 @@
-﻿// Tests for the app-wide module store (single source of truth + live updates).
+// Tests for the app-wide module store (single source of truth + live updates).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,8 +67,7 @@ void main() {
         roomName: 'Cabin',
         internalTempC: 30,
         channels: [
-          ChannelOutput(
-              id: 'u1c1', name: 'Cabin Light', icon: Icons.lightbulb),
+          ChannelOutput(id: 'u1c1', name: 'Cabin Light', icon: Icons.lightbulb),
         ],
       );
       await store.upsert(seeded);

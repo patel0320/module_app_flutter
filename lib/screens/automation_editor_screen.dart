@@ -101,12 +101,10 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
         name: name,
         triggerType: _triggerType,
         triggerSummary: _triggerSummary,
-        scheduleHour: _triggerType == AutomationTriggerType.time
-            ? _time.hour
-            : null,
-        scheduleMinute: _triggerType == AutomationTriggerType.time
-            ? _time.minute
-            : null,
+        scheduleHour:
+            _triggerType == AutomationTriggerType.time ? _time.hour : null,
+        scheduleMinute:
+            _triggerType == AutomationTriggerType.time ? _time.minute : null,
         watchChannelName: _triggerType == AutomationTriggerType.deviceState
             ? _deviceChannelName
             : null,

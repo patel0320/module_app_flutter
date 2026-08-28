@@ -158,7 +158,9 @@ class AutomationScheduler {
     final minute = automation.effectiveScheduleMinute;
 
     final existing = _timeRules[automation.id];
-    if (existing != null && existing.hour == hour && existing.minute == minute) {
+    if (existing != null &&
+        existing.hour == hour &&
+        existing.minute == minute) {
       return;
     }
     existing?.timer.cancel();

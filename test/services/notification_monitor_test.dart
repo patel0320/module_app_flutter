@@ -43,7 +43,8 @@ void main() {
 
   group('NotificationMonitor baseline', () {
     test('does not alert for the initial (seed) state', () async {
-      final store = await storeWith([_module('m1', status: ConnectionStatus.offline)]);
+      final store =
+          await storeWith([_module('m1', status: ConnectionStatus.offline)]);
       final monitor = NotificationMonitor.forTesting(store,
           settleDuration: const Duration(milliseconds: 20));
       monitor.start();
@@ -56,7 +57,8 @@ void main() {
 
   group('NotificationMonitor module status', () {
     test('alerts once when a module goes offline (change settles)', () async {
-      final store = await storeWith([_module('m1', status: ConnectionStatus.online)]);
+      final store =
+          await storeWith([_module('m1', status: ConnectionStatus.online)]);
       final monitor = NotificationMonitor.forTesting(store,
           settleDuration: const Duration(milliseconds: 20));
       monitor.start();
@@ -74,7 +76,8 @@ void main() {
     });
 
     test('drops a transition that reverts before the settle window', () async {
-      final store = await storeWith([_module('m2', status: ConnectionStatus.online)]);
+      final store =
+          await storeWith([_module('m2', status: ConnectionStatus.online)]);
       final monitor = NotificationMonitor.forTesting(store,
           settleDuration: const Duration(milliseconds: 30));
       monitor.start();
@@ -90,8 +93,8 @@ void main() {
 
   group('NotificationMonitor temperature', () {
     test('alerts once when the module leaves its temperature range', () async {
-      final store =
-          await storeWith([_module('t1', status: ConnectionStatus.online, tempC: 30)]);
+      final store = await storeWith(
+          [_module('t1', status: ConnectionStatus.online, tempC: 30)]);
       final monitor = NotificationMonitor.forTesting(store);
       monitor.start();
       await store.commit();
@@ -103,8 +106,8 @@ void main() {
     });
 
     test('does not alert while the module is offline', () async {
-      final store =
-          await storeWith([_module('t2', status: ConnectionStatus.offline, tempC: 30)]);
+      final store = await storeWith(
+          [_module('t2', status: ConnectionStatus.offline, tempC: 30)]);
       final monitor = NotificationMonitor.forTesting(store);
       monitor.start();
       await store.commit();
@@ -117,9 +120,10 @@ void main() {
 
   group('NotificationMonitor output left ON', () {
     test('alerts when an output stays ON past the threshold', () async {
-      final store = await storeWith([_module('o1', status: ConnectionStatus.online)]);
-      final monitor = NotificationMonitor.forTesting(store,
-          outputThreshold: Duration.zero);
+      final store =
+          await storeWith([_module('o1', status: ConnectionStatus.online)]);
+      final monitor =
+          NotificationMonitor.forTesting(store, outputThreshold: Duration.zero);
       monitor.start();
       await store.commit();
       expect(monitor.notificationCount, 0);
@@ -134,9 +138,10 @@ void main() {
     });
 
     test('resets when the output is turned off', () async {
-      final store = await storeWith([_module('o2', status: ConnectionStatus.online)]);
-      final monitor = NotificationMonitor.forTesting(store,
-          outputThreshold: Duration.zero);
+      final store =
+          await storeWith([_module('o2', status: ConnectionStatus.online)]);
+      final monitor =
+          NotificationMonitor.forTesting(store, outputThreshold: Duration.zero);
       monitor.start();
       await store.commit();
 
@@ -154,7 +159,8 @@ void main() {
     test('defaults to 12 hours when no override is provided', () async {
       await SettingsStore.shared.init();
       await SettingsStore.shared.setOutputOnThresholdHours(12);
-      final store = await storeWith([_module('d1', status: ConnectionStatus.online)]);
+      final store =
+          await storeWith([_module('d1', status: ConnectionStatus.online)]);
       final monitor = NotificationMonitor.forTesting(store);
       expect(monitor.outputThreshold, const Duration(hours: 12));
       monitor.dispose();
@@ -163,7 +169,8 @@ void main() {
     test('reflects the user-configured threshold', () async {
       await SettingsStore.shared.init();
       await SettingsStore.shared.setOutputOnThresholdHours(6);
-      final store = await storeWith([_module('d2', status: ConnectionStatus.online)]);
+      final store =
+          await storeWith([_module('d2', status: ConnectionStatus.online)]);
       final monitor = NotificationMonitor.forTesting(store);
       expect(monitor.outputThreshold, const Duration(hours: 6));
       monitor.dispose();

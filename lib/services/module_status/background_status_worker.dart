@@ -35,8 +35,7 @@ import 'module_status_service.dart';
 abstract final class BackgroundStatusWorker {
   /// Unique name of the periodic task (also the identifier used on iOS for the
   /// BGAppRefreshTask; it must match Info.plist `BGTaskSchedulerPermittedIdentifiers`).
-  static const String uniqueTaskName =
-      'com.soleux.sdm.statusPoll';
+  static const String uniqueTaskName = 'com.soleux.sdm.statusPoll';
 
   /// How often the OS is asked to run the background poll. Android enforces a
   /// 15-minute floor; iOS schedules opportunistically and does not guarantee it.
@@ -104,8 +103,8 @@ abstract final class BackgroundStatusWorker {
         final module = ModuleStore.shared.byId(entry.key);
         final now = module?.status;
         if (module == null || now == null || now == entry.value) continue;
-        await notifier
-            .showModuleStatusChanged(module, now == ConnectionStatus.online);
+        await notifier.showModuleStatusChanged(
+            module, now == ConnectionStatus.online);
       }
       debugPrint('BackgroundStatusWorker: poll complete');
       return true;
