@@ -11,6 +11,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../core/discovery/module_discovery.dart';
 import '../models/models.dart';
+import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -30,12 +31,17 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   final _nameController = TextEditingController();
   final _ipController = TextEditingController();
   final _tcpPortController = TextEditingController(text: '5005');
+  late final TextEditingController _tempThresholdController;
   ModuleType _manualType = ModuleType.relay;
 
   @override
   void initState() {
     super.initState();
     _discovered = [];
+    _tempThresholdController = TextEditingController(
+        text: SettingsStore.shared.defaultTemperatureThreshold
+            .toInt()
+            .toString());
     _scan();
   }
 
@@ -44,6 +50,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     _nameController.dispose();
     _ipController.dispose();
     _tcpPortController.dispose();
+    _tempThresholdController.dispose();
     super.dispose();
   }
 
@@ -101,6 +108,16 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     _scan();
   }
 
+  /// Parses the temperature threshold field, falling back to the app-wide
+  /// default configured on Settings -> Notifications.
+  double _temperatureThreshold() {
+    final parsed = double.tryParse(_tempThresholdController.text.trim());
+    if (parsed == null || parsed <= 0) {
+      return SettingsStore.shared.defaultTemperatureThreshold;
+    }
+    return parsed.clamp(0, 100);
+  }
+
   /// Builds a configurable [DeviceModule] from a discovery reply. The UDP
   /// identity response does not advertise a module type or channel count, so
   /// discovered units are presented as standard relay PDUs (they can be
@@ -117,6 +134,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       status: ConnectionStatus.online,
       roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
+      tempMaxC: SettingsStore.shared.defaultTemperatureThreshold,
       channels:
           _defaultChannelsFor(ModuleType.relay, AppLocalizations.of(context)),
     );
@@ -144,6 +162,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       status: ConnectionStatus.online,
       roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
+      tempMaxC: _temperatureThreshold(),
       channels: _defaultChannelsFor(_manualType, AppLocalizations.of(context)),
     );
     Navigator.of(context).pop(module);
@@ -261,6 +280,16 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
             ],
             onChanged: (value) =>
                 setState(() => _manualType = value ?? _manualType),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _tempThresholdController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+                labelText: l10n.tempThresholdLabel,
+                helperText: l10n.addModuleTempThresholdDefault(
+                    SettingsStore.shared.defaultTemperatureThreshold.toInt()),
+                prefixIcon: const Icon(Icons.thermostat_outlined)),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(

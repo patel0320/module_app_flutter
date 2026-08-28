@@ -56,6 +56,43 @@ class _NotificationsSettingsScreenState
                     onChanged: (v) => store.setTemperature(v),
                   ),
                   const Divider(height: 1),
+                  ListTile(
+                    title: Text(l10n.notificationsTempThreshold),
+                    subtitle: Text(l10n.notificationsTempThresholdDesc),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: () {
+                            if (store.defaultTemperatureThreshold > 0) {
+                              store.setDefaultTemperatureThreshold(
+                                  store.defaultTemperatureThreshold - 1);
+                            }
+                          },
+                        ),
+                        SizedBox(
+                          width: 48,
+                          child: Text(
+                            '${store.defaultTemperatureThreshold.toInt()}\u00b0C',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          onPressed: () {
+                            if (store.defaultTemperatureThreshold < 100) {
+                              store.setDefaultTemperatureThreshold(
+                                  store.defaultTemperatureThreshold + 1);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
                   SwitchListTile(
                     title: Text(l10n.notificationsAutomation),
                     subtitle: Text(l10n.notificationsAutomationDesc),

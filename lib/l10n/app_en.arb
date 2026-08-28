@@ -62,6 +62,8 @@
   "notificationsOutputLongOnDesc": "Alert when an output stays on for an extended period",
   "notificationsTempExceeded": "Temperature threshold exceeded",
   "notificationsTempExceededDesc": "Alert when a module's internal temperature is out of range",
+  "notificationsTempThreshold": "Default temperature threshold",
+  "notificationsTempThresholdDesc": "Default maximum internal temperature alert for newly added modules",
   "notificationsAutomation": "Automation triggered",
   "notificationsAutomationDesc": "Notify when a smart automation runs",
   "notificationsTitle": "Notifications",
@@ -202,7 +204,10 @@
   "addModuleBlind": "Blind {number}",
   "@addModuleBlind": {"placeholders": {"number": {"type": "int"}}},
   "addModuleChannel": "Channel {number}",
-  "@addModuleChannel": {"placeholders": {"number": {"type": "int"}}}
+  "@addModuleChannel": {"placeholders": {"number": {"type": "int"}}},
+  "addModuleTempThresholdDefault": "Default: {value}\u00b0C",
+  "@addModuleTempThresholdDefault": {"placeholders": {"value": {"type": "int"}}},
+  "tempThresholdLabel": "Temperature threshold (\u00b0C)"
 
   ,"roomsTitle": "Rooms",
   "roomsNew": "New room",

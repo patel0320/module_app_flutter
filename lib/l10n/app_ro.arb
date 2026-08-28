@@ -62,6 +62,8 @@
   "notificationsOutputLongOnDesc": "Alerte când o ieșire rămâne activă o perioadă lungă",
   "notificationsTempExceeded": "Prag de temperatură depășit",
   "notificationsTempExceededDesc": "Alerte când temperatura internă a unui modul este în afara intervalului",
+  "notificationsTempThreshold": "Prag de temperatură implicit",
+  "notificationsTempThresholdDesc": "Pragul maxim implicit pentru alertele de temperatură ale modulelor nou adăugate",
   "notificationsAutomation": "Automatizare declanșată",
   "notificationsAutomationDesc": "Notifică atunci când rulează o automatizare inteligentă",
   "notificationsTitle": "Notificări",
@@ -183,6 +185,8 @@
   "addModuleOutput": "Ieșire {number}",
   "addModuleBlind": "Oblon {number}",
   "addModuleChannel": "Canal {number}",
+  "addModuleTempThresholdDefault": "Implicit: {value}°C",
+  "tempThresholdLabel": "Prag de temperatură (°C)",
 
   "roomsTitle": "Camere",
   "roomsNew": "Cameră nouă",

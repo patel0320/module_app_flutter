@@ -34,6 +34,10 @@ class SettingsStore extends ChangeNotifier {
   bool _temperature = true;
   bool _automationTriggered = false;
 
+  /// Default temperature alert threshold (°C) applied to newly added
+  /// modules. Configured on the Settings -> Notifications screen.
+  double _defaultTempThreshold = 65;
+
   /// True once [init] has completed (successfully or not).
   bool get loaded => _loaded;
 
@@ -42,6 +46,9 @@ class SettingsStore extends ChangeNotifier {
   bool get temperature => _temperature;
   bool get automationTriggered => _automationTriggered;
 
+  /// The default temperature alert threshold (°C) for new modules.
+  double get defaultTemperatureThreshold => _defaultTempThreshold;
+
   static const String _kKeyThemeMode = 'settings_theme_mode';
   static const String _kKeyLocale = 'settings_locale';
   static const String _kKeyHomeTheme = 'settings_home_theme';
@@ -49,6 +56,8 @@ class SettingsStore extends ChangeNotifier {
   static const String _kKeyOutputLeftOn = 'settings_notify_output_left_on';
   static const String _kKeyTemperature = 'settings_notify_temperature';
   static const String _kKeyAutomation = 'settings_notify_automation';
+  static const String _kKeyDefaultTempThreshold =
+      'settings_default_temp_threshold';
 
   /// Loads all saved preferences once and applies them to the global
   /// notifiers. Safe to call repeatedly.
@@ -74,6 +83,8 @@ class SettingsStore extends ChangeNotifier {
       _outputLeftOn = _prefs!.getBool(_kKeyOutputLeftOn) ?? true;
       _temperature = _prefs!.getBool(_kKeyTemperature) ?? true;
       _automationTriggered = _prefs!.getBool(_kKeyAutomation) ?? false;
+      _defaultTempThreshold =
+          _prefs!.getDouble(_kKeyDefaultTempThreshold) ?? 65;
     } catch (_) {
       // Keep defaults if preferences are unavailable.
     }
@@ -124,11 +135,20 @@ class SettingsStore extends ChangeNotifier {
     return _persistAndNotify();
   }
 
+  /// Sets the default temperature alert threshold (°C) for new modules,
+  /// clamped to a sensible 0-100 range, and persists it.
+  Future<void> setDefaultTemperatureThreshold(double value) {
+    _defaultTempThreshold = value.clamp(0, 100).toDouble();
+    return _persistAndNotify();
+  }
+
   Future<void> _persistAndNotify() async {
     await _prefs?.setBool(_kKeyModuleStatus, _moduleStatus);
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
     await _prefs?.setBool(_kKeyTemperature, _temperature);
     await _prefs?.setBool(_kKeyAutomation, _automationTriggered);
+    await _prefs?.setDouble(
+        _kKeyDefaultTempThreshold, _defaultTempThreshold);
     notifyListeners();
   }
 }

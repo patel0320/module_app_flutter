@@ -264,6 +264,8 @@ Future<bool> showEditModuleInfoDialog(
   final nameController = TextEditingController(text: module.name);
   final ipController = TextEditingController(text: module.ipAddress);
   final portController = TextEditingController(text: module.tcpPort.toString());
+  final tempController =
+      TextEditingController(text: module.tempMaxC.toStringAsFixed(0));
 
   final bool? saved = await showDialog<bool>(
     context: context,
@@ -294,6 +296,14 @@ Future<bool> showEditModuleInfoDialog(
                 labelText: AppLocalizations.of(context).tcpPort,
                 prefixIcon: const Icon(Icons.router_outlined)),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: tempController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).tempThresholdLabel,
+                prefixIcon: const Icon(Icons.thermostat_outlined)),
+          ),
         ],
       ),
       actions: [
@@ -311,14 +321,19 @@ Future<bool> showEditModuleInfoDialog(
   final String name = nameController.text.trim();
   final String ip = ipController.text.trim();
   final int? port = int.tryParse(portController.text.trim());
+  final double? tempThreshold = double.tryParse(tempController.text.trim());
   nameController.dispose();
   ipController.dispose();
   portController.dispose();
+  tempController.dispose();
 
   if (saved == true) {
     if (name.isNotEmpty) module.name = name;
     if (ip.isNotEmpty) module.ipAddress = ip;
     if (port != null) module.tcpPort = port;
+    if (tempThreshold != null && tempThreshold > 0) {
+      module.tempMaxC = tempThreshold.clamp(0, 100);
+    }
   }
   return saved == true;
 }
