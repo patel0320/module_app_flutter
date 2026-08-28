@@ -194,7 +194,8 @@ class _ModuleCard extends StatelessWidget {
                         l10n.configModuleSummary(
                             module.type.label, module.ipAddress),
                         style: TextStyle(
-                            fontSize: 12, color: onSurface.withOpacity(0.55))),
+                            fontSize: 12,
+                            color: onSurface.withValues(alpha: 0.55))),
                     const SizedBox(height: 2),
                     Row(
                       children: [

@@ -77,11 +77,10 @@ class RoomStore extends ChangeNotifier {
   }
 
   /// Moves the item at [oldIndex] to [newIndex] (ReorderableListView
-  /// semantics, where newIndex is the target "before" slot) and persists the
-  /// new order.
+  /// [onReorderItem] semantics, where newIndex is the drop slot after the
+  /// item has been removed from [oldIndex]) and persists the new order.
   Future<void> reorder(int oldIndex, int newIndex) async {
     await init();
-    if (newIndex > oldIndex) newIndex -= 1;
     final room = _rooms.removeAt(oldIndex);
     _rooms.insert(newIndex, room);
     await _commit();

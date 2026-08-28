@@ -66,14 +66,16 @@ class _StatusTile extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(entry.message,
-                      style: TextStyle(color: onSurface.withOpacity(0.7))),
+                      style:
+                          TextStyle(color: onSurface.withValues(alpha: 0.7))),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             Text(
               formatLogTimestamp(entry.time, l10n),
-              style: TextStyle(fontSize: 12, color: onSurface.withOpacity(0.5)),
+              style: TextStyle(
+                  fontSize: 12, color: onSurface.withValues(alpha: 0.5)),
             ),
           ],
         ),

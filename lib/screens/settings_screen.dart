@@ -142,8 +142,8 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Center(
             child: Text(l10n.appVersion,
-                style:
-                    TextStyle(fontSize: 12, color: onSurface.withOpacity(0.4))),
+                style: TextStyle(
+                    fontSize: 12, color: onSurface.withValues(alpha: 0.4))),
           ),
         ],
       ),

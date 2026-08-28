@@ -48,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               if (!_sent) ...[
                 Text(
                   l10n.forgotDesc,
-                  style: TextStyle(color: onSurface.withOpacity(0.6)),
+                  style: TextStyle(color: onSurface.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 24),
                 TextField(
@@ -71,7 +71,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const SizedBox(height: 8),
                 Text(
                   l10n.forgotSentMsg(_emailController.text.trim()),
-                  style: TextStyle(color: onSurface.withOpacity(0.6)),
+                  style: TextStyle(color: onSurface.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton(

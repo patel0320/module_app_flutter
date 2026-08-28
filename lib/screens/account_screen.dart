@@ -160,7 +160,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   Text(
                     l10n.accountBackupDesc,
                     style: TextStyle(
-                        fontSize: 12, color: onSurface.withOpacity(0.6)),
+                        fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
                   ),
                   const SizedBox(height: 16),
                   Row(

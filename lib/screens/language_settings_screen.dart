@@ -31,22 +31,22 @@ class LanguageSettingsScreen extends StatelessWidget {
         children: [
           SectionHeader(l10n.languageAvailable),
           Card(
-            child: Column(
-              children: [
-                RadioListTile<String>(
-                  value: 'en',
-                  groupValue: appLocaleNotifier.value.languageCode,
-                  title: const Text('English'),
-                  onChanged: (v) => _select(context, v!),
-                ),
-                const Divider(height: 1),
-                RadioListTile<String>(
-                  value: 'ro',
-                  groupValue: appLocaleNotifier.value.languageCode,
-                  title: const Text('Română'),
-                  onChanged: (v) => _select(context, v!),
-                ),
-              ],
+            child: RadioGroup<String>(
+              groupValue: appLocaleNotifier.value.languageCode,
+              onChanged: (v) => _select(context, v!),
+              child: const Column(
+                children: [
+                  RadioListTile<String>(
+                    value: 'en',
+                    title: Text('English'),
+                  ),
+                  Divider(height: 1),
+                  RadioListTile<String>(
+                    value: 'ro',
+                    title: Text('Română'),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -61,20 +61,22 @@ class LanguageSettingsScreen extends StatelessWidget {
                 ])
                   ListTile(
                     title: Text(lang.$1,
-                        style: TextStyle(color: onSurface.withOpacity(0.4))),
+                        style:
+                            TextStyle(color: onSurface.withValues(alpha: 0.4))),
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: onSurface.withOpacity(0.2)),
+                        border:
+                            Border.all(color: onSurface.withValues(alpha: 0.2)),
                       ),
                       child: Text(
                         l10n.soon,
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: onSurface.withOpacity(0.5)),
+                            color: onSurface.withValues(alpha: 0.5)),
                       ),
                     ),
                     enabled: false,

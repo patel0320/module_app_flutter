@@ -60,8 +60,10 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
           Text(
             l10n.dimmerAcSubtitle,
             style: TextStyle(
-                color:
-                    Theme.of(context).colorScheme.onSurface.withOpacity(0.55)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.55)),
           ),
           const SizedBox(height: 16),
           SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),

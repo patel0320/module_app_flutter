@@ -231,7 +231,8 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                       module.type.label, module.ipAddress),
                                   style: TextStyle(
                                       fontSize: 12,
-                                      color: onSurface.withOpacity(0.55))),
+                                      color:
+                                          onSurface.withValues(alpha: 0.55))),
                             ],
                           ),
                         ),
@@ -270,7 +271,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ModuleType>(
-            value: _manualType,
+            initialValue: _manualType,
             decoration: InputDecoration(
                 labelText: l10n.addModuleType,
                 prefixIcon: const Icon(Icons.category_outlined)),

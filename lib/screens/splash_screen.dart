@@ -62,14 +62,14 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 8),
             Text(
               l10n.splashTagline,
-              style: TextStyle(color: onSurface.withOpacity(0.6)),
+              style: TextStyle(color: onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(height: 40),
             SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
-                  strokeWidth: 2.6, color: onSurface.withOpacity(0.4)),
+                  strokeWidth: 2.6, color: onSurface.withValues(alpha: 0.4)),
             ),
           ],
         ),

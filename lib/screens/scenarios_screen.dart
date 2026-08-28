@@ -105,7 +105,7 @@ class ScenariosScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.outerPadding),
                   itemCount: scenarios.length,
                   buildDefaultDragHandles: false,
-                  onReorder: _store.reorder,
+                  onReorderItem: _store.reorder,
                   itemBuilder: (context, index) {
                     final scenario = scenarios[index];
                     return Padding(
@@ -173,7 +173,7 @@ class _ScenarioCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: Icon(Icons.drag_indicator,
-                          color: onSurface.withOpacity(0.6), size: 22),
+                          color: onSurface.withValues(alpha: 0.6), size: 22),
                     ),
                   ),
                   IconAvatar(icon: scenario.icon),
@@ -199,7 +199,7 @@ class _ScenarioCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    color: onSurface.withOpacity(0.55)),
+                                    color: onSurface.withValues(alpha: 0.55)),
                               ),
                             ),
                           ],

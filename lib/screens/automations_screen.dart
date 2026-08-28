@@ -138,11 +138,13 @@ class _AutomationCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(automation.triggerSummary,
                         style: TextStyle(
-                            fontSize: 13, color: onSurface.withOpacity(0.6))),
+                            fontSize: 13,
+                            color: onSurface.withValues(alpha: 0.6))),
                     const SizedBox(height: 2),
                     Text(l10n.homeActionsCount(automation.actions.length),
                         style: TextStyle(
-                            fontSize: 12, color: onSurface.withOpacity(0.45))),
+                            fontSize: 12,
+                            color: onSurface.withValues(alpha: 0.45))),
                   ],
                 ),
               ),

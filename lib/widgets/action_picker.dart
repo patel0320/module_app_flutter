@@ -79,7 +79,7 @@ Future<ScenarioAction?> showAddActionSheet(
                   Text(l10n.actionPickerNoOutputs)
                 else ...[
                   DropdownButtonFormField<DeviceModule>(
-                    value: selectedModule,
+                    initialValue: selectedModule,
                     decoration: InputDecoration(
                         labelText: l10n.actionPickerModuleLabel),
                     items: [
@@ -93,7 +93,7 @@ Future<ScenarioAction?> showAddActionSheet(
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<ChannelOutput>(
-                    value: selectedChannel,
+                    initialValue: selectedChannel,
                     decoration: InputDecoration(
                         labelText: l10n.actionPickerOutputLabel),
                     items: [

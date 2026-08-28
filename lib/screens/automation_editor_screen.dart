@@ -162,7 +162,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
             )
           else ...[
             DropdownButtonFormField<String>(
-              value: channelNames.contains(_deviceChannelName)
+              initialValue: channelNames.contains(_deviceChannelName)
                   ? _deviceChannelName
                   : null,
               decoration: InputDecoration(

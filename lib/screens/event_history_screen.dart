@@ -75,13 +75,13 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
             children: [
               Container(
                 width: double.infinity,
-                color: onSurface.withOpacity(0.05),
+                color: onSurface.withValues(alpha: 0.05),
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.outerPadding, vertical: 10),
                 child: Text(
                   l10n.eventHistoryShowing,
                   style: TextStyle(
-                      fontSize: 12, color: onSurface.withOpacity(0.6)),
+                      fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
                 ),
               ),
               Expanded(
@@ -102,7 +102,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 12,
-                                    color: onSurface.withOpacity(0.5)),
+                                    color: onSurface.withValues(alpha: 0.5)),
                               ),
                             );
                           }
@@ -121,7 +121,7 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                                   _timeHHmmss(entry.time),
                                   style: TextStyle(
                                       fontSize: 12,
-                                      color: onSurface.withOpacity(0.5)),
+                                      color: onSurface.withValues(alpha: 0.5)),
                                 ),
                               ),
                             ),

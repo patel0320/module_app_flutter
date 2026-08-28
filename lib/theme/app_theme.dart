@@ -74,16 +74,16 @@ abstract class AppTheme {
       onSurface: onSurface,
       error: p.danger,
       onError: isLight ? Colors.white : Colors.black,
-      outline: onSurface.withOpacity(0.24),
+      outline: onSurface.withValues(alpha: 0.24),
     );
     final Color surfaceAlt = isLight
-        ? Colors.black.withOpacity(0.05)
-        : Colors.white.withOpacity(0.06);
+        ? Colors.black.withValues(alpha: 0.05)
+        : Colors.white.withValues(alpha: 0.06);
     // Frosted "glass" fill for cards, translucent over the palette base so
     // panels read as subtle glass surfaces.
     final Color glass = isLight
-        ? Colors.white.withOpacity(0.62)
-        : Colors.white.withOpacity(0.07);
+        ? Colors.white.withValues(alpha: 0.62)
+        : Colors.white.withValues(alpha: 0.07);
     final Color accent = colorScheme.primary;
     final Color onAccent = colorScheme.onPrimary;
 
@@ -112,7 +112,7 @@ abstract class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceAlt,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: onSurface.withOpacity(0.1),
+        indicatorColor: onSurface.withValues(alpha: 0.1),
         height: 64,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
@@ -125,23 +125,23 @@ abstract class AppTheme {
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
-            color: onSurface
-                .withOpacity(states.contains(WidgetState.selected) ? 1 : 0.5),
+            color: onSurface.withValues(
+                alpha: states.contains(WidgetState.selected) ? 1 : 0.5),
           ),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         // Glass panel (matches Home): translucent over the backdrop, soft
         // outer shadow, hairline border, generous radius.
         color: glass,
         elevation: 3,
-        shadowColor: Colors.black.withOpacity(0.20),
+        shadowColor: Colors.black.withValues(alpha: 0.20),
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: onSurface.withOpacity(0.10)),
+          side: BorderSide(color: onSurface.withValues(alpha: 0.10)),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -150,12 +150,12 @@ abstract class AppTheme {
         minVerticalPadding: 12,
       ),
       dividerTheme:
-          DividerThemeData(color: onSurface.withOpacity(0.1), space: 1),
+          DividerThemeData(color: onSurface.withValues(alpha: 0.1), space: 1),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: accent,
           foregroundColor: onAccent,
-          disabledBackgroundColor: accent.withOpacity(0.3),
+          disabledBackgroundColor: accent.withValues(alpha: 0.3),
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape:
@@ -191,20 +191,20 @@ abstract class AppTheme {
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? AppColors.online
-              : onSurface.withOpacity(0.6),
+              : onSurface.withValues(alpha: 0.6),
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.online.withOpacity(0.4)
-              : onSurface.withOpacity(0.15),
+              ? AppColors.online.withValues(alpha: 0.4)
+              : onSurface.withValues(alpha: 0.15),
         ),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: accent,
-        inactiveTrackColor: onSurface.withOpacity(0.15),
+        inactiveTrackColor: onSurface.withValues(alpha: 0.15),
         thumbColor: accent,
-        overlayColor: accent.withOpacity(0.12),
+        overlayColor: accent.withValues(alpha: 0.12),
         valueIndicatorColor: accent,
         valueIndicatorTextStyle:
             TextStyle(color: onAccent, fontWeight: FontWeight.w700),
@@ -222,7 +222,7 @@ abstract class AppTheme {
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? accent
-              : onSurface.withOpacity(0.5),
+              : onSurface.withValues(alpha: 0.5),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -231,7 +231,7 @@ abstract class AppTheme {
         labelStyle: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
         secondaryLabelStyle:
             TextStyle(color: onAccent, fontWeight: FontWeight.w600),
-        side: BorderSide(color: accent.withOpacity(0.3)),
+        side: BorderSide(color: accent.withValues(alpha: 0.3)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
@@ -258,18 +258,18 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: onSurface, width: 1.6),
         ),
-        labelStyle: TextStyle(color: onSurface.withOpacity(0.7)),
-        hintStyle: TextStyle(color: onSurface.withOpacity(0.4)),
+        labelStyle: TextStyle(color: onSurface.withValues(alpha: 0.7)),
+        hintStyle: TextStyle(color: onSurface.withValues(alpha: 0.4)),
       ),
-      dialogTheme: DialogTheme(
-        backgroundColor: isLight ? glass.withOpacity(0.96) : glass,
+      dialogTheme: DialogThemeData(
+        backgroundColor: isLight ? glass.withValues(alpha: 0.96) : glass,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: isLight
-            ? Colors.white.withOpacity(0.9)
-            : Colors.black.withOpacity(0.9), //glass,
+            ? Colors.white.withValues(alpha: 0.9)
+            : Colors.black.withValues(alpha: 0.9), //glass,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),

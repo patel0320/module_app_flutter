@@ -30,32 +30,30 @@ class AppearanceSettingsScreen extends StatelessWidget {
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeModeNotifier,
             builder: (context, mode, _) => Card(
-              child: Column(
-                children: [
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.light,
-                    groupValue: mode,
-                    title: Text(l10n.settingsLight),
-                    secondary: const Icon(Icons.light_mode_outlined),
-                    onChanged: (v) => _select(v!),
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.dark,
-                    groupValue: mode,
-                    title: Text(l10n.settingsDark),
-                    secondary: const Icon(Icons.dark_mode_outlined),
-                    onChanged: (v) => _select(v!),
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<ThemeMode>(
-                    value: ThemeMode.system,
-                    groupValue: mode,
-                    title: Text(l10n.settingsAuto),
-                    secondary: const Icon(Icons.settings_suggest_outlined),
-                    onChanged: (v) => _select(v!),
-                  ),
-                ],
+              child: RadioGroup<ThemeMode>(
+                groupValue: mode,
+                onChanged: (v) => _select(v!),
+                child: Column(
+                  children: [
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.light,
+                      title: Text(l10n.settingsLight),
+                      secondary: const Icon(Icons.light_mode_outlined),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.dark,
+                      title: Text(l10n.settingsDark),
+                      secondary: const Icon(Icons.dark_mode_outlined),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<ThemeMode>(
+                      value: ThemeMode.system,
+                      title: Text(l10n.settingsAuto),
+                      secondary: const Icon(Icons.settings_suggest_outlined),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -65,7 +63,10 @@ class AppearanceSettingsScreen extends StatelessWidget {
           Text(
             l10n.homeChoosePalette,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
               fontSize: 13,
             ),
           ),
@@ -114,7 +115,7 @@ class _ThemeTile extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          tileColor: selected ? cs.primary.withOpacity(0.12) : null,
+          tileColor: selected ? cs.primary.withValues(alpha: 0.12) : null,
           leading: Container(
             width: 40,
             height: 40,
@@ -140,7 +141,7 @@ class _ThemeTile extends StatelessWidget {
           trailing: selected
               ? Icon(Icons.check_circle, color: cs.primary)
               : Icon(Icons.circle_outlined,
-                  color: cs.onSurface.withOpacity(0.6)),
+                  color: cs.onSurface.withValues(alpha: 0.6)),
           onTap: () => SettingsStore.shared.setHomeTheme(palette.id),
         ),
         if (!isLast) const Divider(height: 1),

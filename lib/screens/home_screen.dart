@@ -76,14 +76,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Translates a reorder within the Home (show-in-home) filtered subset into
   /// a move in the global persisted scenario list.
+  ///
+  /// `newIndex` follows [ReorderableListView.onReorderItem] semantics: it is
+  /// the slot (after the dragged item is removed) where it should land.
   void _onReorderHomeScenarios(int oldIndex, int newIndex) {
     final home = _homeScenarios;
     if (oldIndex >= home.length) return;
     final dragged = home[oldIndex];
+    final remaining = [...home]..removeAt(oldIndex);
     final all = ScenarioStore.shared.scenarios;
     int target = all.length;
-    if (newIndex < home.length) {
-      target = all.indexOf(home[newIndex]);
+    if (newIndex < remaining.length) {
+      target = all.indexOf(remaining[newIndex]);
       if (target < 0) target = all.length;
     }
     ScenarioStore.shared.move(dragged.id, target);
@@ -115,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: cs.surfaceContainerHigh,
-      barrierColor: Colors.black.withOpacity(0.4),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
@@ -154,10 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? l10n.homeManualDimmingSlider
                           : l10n.homeActionsCount(s.actions.length),
                       style: TextStyle(
-                          color: cs.onSurface.withOpacity(0.6), fontSize: 13),
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                          fontSize: 13),
                     ),
                     trailing: Icon(Icons.chevron_right,
-                        color: cs.onSurface.withOpacity(0.6)),
+                        color: cs.onSurface.withValues(alpha: 0.6)),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _runScenario(s);
@@ -286,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           l10n.homeHoldDragReorder,
                           style: TextStyle(
                               fontSize: 12,
-                              color: cs.onSurface.withOpacity(0.6)),
+                              color: cs.onSurface.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -301,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         buildDefaultDragHandles: false,
-                        onReorder: _onReorderHomeScenarios,
+                        onReorderItem: _onReorderHomeScenarios,
                         children: [
                           for (int i = 0; i < _homeScenarios.length; i++)
                             Padding(
@@ -368,7 +373,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.5,
-        color: cs.onSurface.withOpacity(0.65),
+        color: cs.onSurface.withValues(alpha: 0.65),
       ),
     );
   }
@@ -394,15 +399,15 @@ class _Greeting extends StatelessWidget {
             fontSize: 13,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.5,
-            color: cs.onSurface.withOpacity(0.92),
+            color: cs.onSurface.withValues(alpha: 0.92),
           ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style:
-                TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+            style: TextStyle(
+                fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ],
@@ -422,12 +427,13 @@ class _StatusPill extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final bool allOk = officers == total;
     return Card(
-      color: cs.primary.withOpacity(0.12),
+      color: cs.primary.withValues(alpha: 0.12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(100),
         side: BorderSide(
-          color:
-              allOk ? cs.primary.withOpacity(0.4) : cs.error.withOpacity(0.45),
+          color: allOk
+              ? cs.primary.withValues(alpha: 0.4)
+              : cs.error.withValues(alpha: 0.45),
         ),
       ),
       child: Padding(
@@ -469,7 +475,9 @@ class _GlowDot extends StatelessWidget {
         color: color,
         boxShadow: [
           BoxShadow(
-              color: color.withOpacity(0.6), blurRadius: 6, spreadRadius: 1)
+              color: color.withValues(alpha: 0.6),
+              blurRadius: 6,
+              spreadRadius: 1)
         ],
       ),
     );
@@ -490,10 +498,10 @@ class _AlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Card(
-      color: cs.error.withOpacity(0.12),
+      color: cs.error.withValues(alpha: 0.12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: cs.error.withOpacity(0.5)),
+        side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -554,7 +562,7 @@ class _RoomChip extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Icon(Icons.chevron_right,
-                  color: cs.onSurface.withOpacity(0.6), size: 20),
+                  color: cs.onSurface.withValues(alpha: 0.6), size: 20),
             ],
           ),
         ),
@@ -603,7 +611,7 @@ class _QuickScenarioCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Icon(Icons.drag_indicator,
-                          color: cs.onSurface.withOpacity(0.6), size: 22),
+                          color: cs.onSurface.withValues(alpha: 0.6), size: 22),
                     ),
                   ),
                   _ScenarioAvatar(
@@ -633,7 +641,7 @@ class _QuickScenarioCard extends StatelessWidget {
                                       scenario.actions.length),
                               style: TextStyle(
                                   fontSize: 12,
-                                  color: cs.onSurface.withOpacity(0.6)),
+                                  color: cs.onSurface.withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
@@ -658,14 +666,15 @@ class _QuickScenarioCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.brightness_low,
-                          size: 18, color: cs.onSurface.withOpacity(0.6)),
+                          size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: cs.primary,
-                            inactiveTrackColor: cs.onSurface.withOpacity(0.14),
+                            inactiveTrackColor:
+                                cs.onSurface.withValues(alpha: 0.14),
                             thumbColor: cs.primary,
-                            overlayColor: cs.primary.withOpacity(0.15),
+                            overlayColor: cs.primary.withValues(alpha: 0.15),
                             valueIndicatorColor: cs.primary,
                             valueIndicatorTextStyle: TextStyle(
                                 color: cs.onPrimary,
@@ -682,7 +691,7 @@ class _QuickScenarioCard extends StatelessWidget {
                         ),
                       ),
                       Icon(Icons.brightness_high,
-                          size: 18, color: cs.onSurface.withOpacity(0.6)),
+                          size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
                       SizedBox(
                         width: 40,
                         child: Text(
@@ -721,9 +730,11 @@ class _ScenarioAvatar extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: tint.withOpacity(0.12),
-        border: Border.all(color: tint.withOpacity(0.4)),
-        boxShadow: [BoxShadow(color: tint.withOpacity(0.18), blurRadius: 12)],
+        color: tint.withValues(alpha: 0.12),
+        border: Border.all(color: tint.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(color: tint.withValues(alpha: 0.18), blurRadius: 12)
+        ],
       ),
       child: Icon(icon, color: tint, size: 22),
     );
@@ -743,15 +754,15 @@ class _RoomTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: cs.onSurface.withOpacity(0.06),
-        border: Border.all(color: cs.onSurface.withOpacity(0.18)),
+        color: cs.onSurface.withValues(alpha: 0.06),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.18)),
       ),
       child: Text(
         label,
         style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: cs.onSurface.withOpacity(0.6)),
+            color: cs.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -774,7 +785,7 @@ class _RunButton extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: LinearGradient(colors: [cs.primary, cs.primary]),
           boxShadow: [
-            BoxShadow(color: cs.primary.withOpacity(0.4), blurRadius: 14),
+            BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 14),
           ],
         ),
         width: 52,
@@ -807,9 +818,9 @@ class _IconActionButton extends StatelessWidget {
       child: Ink(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: outlined ? cs.onSurface.withOpacity(0.08) : null,
+          color: outlined ? cs.onSurface.withValues(alpha: 0.08) : null,
           border: outlined
-              ? Border.all(color: cs.onSurface.withOpacity(0.25))
+              ? Border.all(color: cs.onSurface.withValues(alpha: 0.25))
               : null,
           gradient: outlined
               ? null
@@ -855,8 +866,8 @@ class _TemperatureRow extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: valueColor.withOpacity(0.12),
-                  border: Border.all(color: valueColor.withOpacity(0.4)),
+                  color: valueColor.withValues(alpha: 0.12),
+                  border: Border.all(color: valueColor.withValues(alpha: 0.4)),
                 ),
                 child: Icon(Icons.thermostat, color: valueColor, size: 22),
               ),
@@ -877,7 +888,8 @@ class _TemperatureRow extends StatelessWidget {
                           module.tempMinC.toStringAsFixed(0),
                           module.tempMaxC.toStringAsFixed(0)),
                       style: TextStyle(
-                          fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),

@@ -117,7 +117,7 @@ class _BlindCard extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: motion == _Motion.idle
-                        ? onSurface.withOpacity(0.55)
+                        ? onSurface.withValues(alpha: 0.55)
                         : onSurface,
                   ),
                 ),

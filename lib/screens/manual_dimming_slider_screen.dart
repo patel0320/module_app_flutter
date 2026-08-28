@@ -43,7 +43,7 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
             Icon(
               Icons.lightbulb,
               size: 96,
-              color: _value == 0 ? onSurface.withOpacity(0.2) : onSurface,
+              color: _value == 0 ? onSurface.withValues(alpha: 0.2) : onSurface,
             ),
             const SizedBox(height: 16),
             Text('$_value%',
@@ -54,7 +54,7 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
               widget.scenario.sliderTargetName.isEmpty
                   ? l10n.manualDimDefaultLabel
                   : widget.scenario.sliderTargetName,
-              style: TextStyle(color: onSurface.withOpacity(0.55)),
+              style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
             ),
             const Spacer(),
             Row(

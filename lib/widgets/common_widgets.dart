@@ -29,7 +29,7 @@ class StatusDot extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: (online ? AppColors.online : AppColors.offlineAlert)
-                .withOpacity(0.4),
+                .withValues(alpha: 0.4),
             blurRadius: 4,
           ),
         ],
@@ -135,7 +135,7 @@ class IconAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: filled ? fg : Colors.transparent,
-        border: Border.all(color: fg.withOpacity(filled ? 0 : 0.25)),
+        border: Border.all(color: fg.withValues(alpha: filled ? 0 : 0.25)),
       ),
       child: Icon(icon,
           color: filled ? Theme.of(context).colorScheme.surface : fg,
@@ -153,7 +153,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = Theme.of(context).colorScheme.onSurface.withOpacity(0.4);
+    final Color fg =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
@@ -181,13 +182,13 @@ class RoomTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withOpacity(0.25)),
+        border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Text(label,
           style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: fg.withOpacity(0.75))),
+              color: fg.withValues(alpha: 0.75))),
     );
   }
 }
@@ -375,7 +376,7 @@ class ModuleStatusHeader extends StatelessWidget {
                   Text(
                     '${module.ipAddress} · ${module.roomName}',
                     style: TextStyle(
-                        fontSize: 12, color: onSurface.withOpacity(0.55)),
+                        fontSize: 12, color: onSurface.withValues(alpha: 0.55)),
                   ),
                 ],
               ),
@@ -387,7 +388,7 @@ class ModuleStatusHeader extends StatelessWidget {
                     size: 20,
                     color: tempAlert
                         ? AppColors.offlineAlert
-                        : onSurface.withOpacity(0.6)),
+                        : onSurface.withValues(alpha: 0.6)),
                 Text(
                   '${module.internalTempC.toStringAsFixed(1)}°C',
                   style: TextStyle(

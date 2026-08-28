@@ -72,10 +72,10 @@ class ScenarioStore extends ChangeNotifier {
   }
 
   /// Moves the item at [oldIndex] to [newIndex] using ReorderableListView
-  /// semantics (newIndex is the target "before" slot), then persists.
+  /// [onReorderItem] semantics (newIndex is the drop slot after the item has
+  /// been removed from [oldIndex]), then persists.
   Future<void> reorder(int oldIndex, int newIndex) async {
     await init();
-    if (newIndex > oldIndex) newIndex -= 1;
     await _move(oldIndex, newIndex);
   }
 

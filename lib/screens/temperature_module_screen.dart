@@ -123,7 +123,8 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: onSurface.withOpacity(0.25)),
+                      border:
+                          Border.all(color: onSurface.withValues(alpha: 0.25)),
                     ),
                     child: Text(l10n.comingSoon,
                         style: const TextStyle(

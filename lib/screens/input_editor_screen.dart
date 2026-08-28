@@ -49,32 +49,33 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
         children: [
           Text(
             l10n.inputEditorOnModule(widget.module.name),
-            style: TextStyle(color: onSurface.withOpacity(0.55)),
+            style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
           ),
           const SizedBox(height: 20),
           SectionHeader(l10n.inputEditorBehavior),
           Card(
-            child: Column(
-              children: [
-                for (int i = 0; i < InputMode.values.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
-                  RadioListTile<InputMode>(
-                    value: InputMode.values[i],
-                    groupValue: _mode,
-                    title: Text(InputMode.values[i].label,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(InputMode.values[i].description),
-                    onChanged: (value) =>
-                        setState(() => _mode = value ?? _mode),
-                  ),
+            child: RadioGroup<InputMode>(
+              groupValue: _mode,
+              onChanged: (value) => setState(() => _mode = value ?? _mode),
+              child: Column(
+                children: [
+                  for (int i = 0; i < InputMode.values.length; i++) ...[
+                    if (i > 0) const Divider(height: 1),
+                    RadioListTile<InputMode>(
+                      value: InputMode.values[i],
+                      title: Text(InputMode.values[i].label,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(InputMode.values[i].description),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
           SectionHeader(l10n.inputEditorBoundTarget),
           DropdownButtonFormField<String>(
-            value: _targets.contains(_boundTo) ? _boundTo : null,
+            initialValue: _targets.contains(_boundTo) ? _boundTo : null,
             decoration: InputDecoration(
                 labelText: l10n.inputEditorOutputScenarioLabel,
                 prefixIcon: const Icon(Icons.link)),

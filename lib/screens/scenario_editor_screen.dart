@@ -178,7 +178,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<String>(
-            value:
+            initialValue:
                 roomOptions.contains(_roomName) ? _roomName : roomOptions.first,
             decoration: InputDecoration(
                 labelText: l10n.scenarioRoomLabel,
@@ -244,7 +244,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           ] else ...[
             SectionHeader(l10n.scenarioSliderTargetSection),
             DropdownButtonFormField<String>(
-              value: dimmerTargets.contains(_sliderTargetName)
+              initialValue: dimmerTargets.contains(_sliderTargetName)
                   ? _sliderTargetName
                   : null,
               decoration: InputDecoration(

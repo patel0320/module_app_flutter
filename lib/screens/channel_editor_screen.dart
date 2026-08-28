@@ -49,7 +49,7 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
           Text(widget.moduleName,
-              style: TextStyle(color: onSurface.withOpacity(0.55))),
+              style: TextStyle(color: onSurface.withValues(alpha: 0.55))),
           const SizedBox(height: 16),
           Center(
               child: IconAvatar(icon: _selectedIcon, size: 72, filled: true)),
@@ -79,8 +79,8 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
                           ? onSurface
                           : Colors.transparent,
                       border: Border.all(
-                          color: onSurface
-                              .withOpacity(icon == _selectedIcon ? 0 : 0.25)),
+                          color: onSurface.withValues(
+                              alpha: icon == _selectedIcon ? 0 : 0.25)),
                     ),
                     child: Icon(icon,
                         color: icon == _selectedIcon

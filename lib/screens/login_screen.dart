@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 4),
               Text(
                 l10n.loginSubtitle,
-                style: TextStyle(color: onSurface.withOpacity(0.6)),
+                style: TextStyle(color: onSurface.withValues(alpha: 0.6)),
               ),
               const SizedBox(height: 32),
               TextField(

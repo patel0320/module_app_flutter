@@ -141,6 +141,9 @@ IconData iconFromJson(Object? json) {
   final codePoint =
       (json['codePoint'] as num?)?.toInt() ?? Icons.power.codePoint;
   final family = json['fontFamily'] as String?;
+  // IconData requires const glyph args (for the icon tree-shaker); icons
+  // rebuilt here come from persisted JSON at runtime, so ignore the rule.
+  // ignore: non_const_argument_for_const_parameter
   return IconData(codePoint, fontFamily: family);
 }
 

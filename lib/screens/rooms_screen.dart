@@ -59,7 +59,7 @@ class RoomsScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.outerPadding),
                   itemCount: rooms.length,
                   buildDefaultDragHandles: false,
-                  onReorder: _store.reorder,
+                  onReorderItem: _store.reorder,
                   itemBuilder: (context, index) {
                     final room = rooms[index];
                     return Padding(
@@ -77,7 +77,7 @@ class RoomsScreen extends StatelessWidget {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
-                                    .withOpacity(0.6),
+                                    .withValues(alpha: 0.6),
                                 size: 22,
                               ),
                             ),

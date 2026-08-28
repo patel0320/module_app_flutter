@@ -181,7 +181,8 @@ class _OutputRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(l10n.relayOutput(index + 1),
                       style: TextStyle(
-                          fontSize: 12, color: onSurface.withOpacity(0.5))),
+                          fontSize: 12,
+                          color: onSurface.withValues(alpha: 0.5))),
                 ],
               ),
             ),
@@ -231,7 +232,8 @@ class _InputRow extends StatelessWidget {
                     Text(
                       l10n.relayInputSummary(input.mode.label, input.boundTo),
                       style: TextStyle(
-                          fontSize: 12, color: onSurface.withOpacity(0.55)),
+                          fontSize: 12,
+                          color: onSurface.withValues(alpha: 0.55)),
                     ),
                   ],
                 ),
