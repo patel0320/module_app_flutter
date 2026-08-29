@@ -129,22 +129,69 @@ class ChannelOutput {
       );
 }
 
-/// Encodes an [IconData] for JSON storage (glyph codepoint + optional font).
-Map<String, Object?> iconToJson(IconData icon) => {
-      'fontFamily': icon.fontFamily,
-      'codePoint': icon.codePoint,
+/// Const icons that can be persisted to JSON and rebuilt at runtime.
+///
+/// [IconData] must only be constructed from const glyph arguments for the
+/// release build's icon tree-shaker to work; a runtime `IconData(...)` call
+/// fails AOT compilation. Persisted JSON therefore references entries of this
+/// registry (by name) instead of raw glyph codepoints. Keep in sync with
+/// `kChannelIconChoices` in lib/data/mock_data.dart plus module default icons.
+const Map<String, IconData> kPersistableIcons = {
+  'lightbulb': Icons.lightbulb,
+  'lightbulb_outline': Icons.lightbulb_outline,
+  'light': Icons.light,
+  'nightlight_round': Icons.nightlight_round,
+  'wb_incandescent': Icons.wb_incandescent,
+  'wb_sunny_outlined': Icons.wb_sunny_outlined,
+  'tv': Icons.tv,
+  'kitchen': Icons.kitchen,
+  'water_drop': Icons.water_drop,
+  'water': Icons.water,
+  'ac_unit': Icons.ac_unit,
+  'blinds': Icons.blinds,
+  'deck': Icons.deck,
+  'anchor': Icons.anchor,
+  'directions_boat': Icons.directions_boat,
+  'power': Icons.power,
+  'electrical_services': Icons.electrical_services,
+  'outdoor_grill': Icons.outdoor_grill,
+  'garage': Icons.garage,
+  'emoji_objects': Icons.emoji_objects,
+  'tune': Icons.tune,
+  'thermostat': Icons.thermostat,
+};
+
+Map<int, IconData>? _iconByCodePoint;
+
+Map<int, IconData> get _iconByCodePointMap =>
+    _iconByCodePoint ??= {
+      for (final icon in kPersistableIcons.values) icon.codePoint: icon,
     };
 
+/// Encodes an [IconData] for JSON storage (stable name + glyph codepoint).
+Map<String, Object?> iconToJson(IconData icon) {
+  String? name;
+  for (final entry in kPersistableIcons.entries) {
+    if (entry.value.codePoint == icon.codePoint &&
+        entry.value.fontFamily == icon.fontFamily) {
+      name = entry.key;
+      break;
+    }
+  }
+  return {'name': name, 'fontFamily': icon.fontFamily, 'codePoint': icon.codePoint};
+}
+
 /// Rebuilds an [IconData] from the JSON produced by [iconToJson].
+///
+/// Looks icons up from const [kPersistableIcons] so no runtime
+/// `IconData(...)` constructor is emitted (required by the icon tree-shaker).
 IconData iconFromJson(Object? json) {
   if (json is! Map) return Icons.power;
-  final codePoint =
-      (json['codePoint'] as num?)?.toInt() ?? Icons.power.codePoint;
-  final family = json['fontFamily'] as String?;
-  // IconData requires const glyph args (for the icon tree-shaker); icons
-  // rebuilt here come from persisted JSON at runtime, so ignore the rule.
-  // ignore: non_const_argument_for_const_parameter
-  return IconData(codePoint, fontFamily: family);
+  final byName = kPersistableIcons[json['name'] as String?];
+  if (byName != null) return byName;
+  final codePoint = (json['codePoint'] as num?)?.toInt();
+  if (codePoint != null) return _iconByCodePointMap[codePoint] ?? Icons.power;
+  return Icons.power;
 }
 
 /// A physical switch wired to a module (brief section 2.2).
