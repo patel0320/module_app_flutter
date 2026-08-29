@@ -10,6 +10,10 @@ set(BINARY_NAME "soleux_device_manager")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# The bundled Firebase C++ SDK still declares a pre-3.5 cmake_minimum_required.
+# Modern CMake (>= 3.27) rejects that, so tolerate older minimum versions.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)

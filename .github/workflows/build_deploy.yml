@@ -285,35 +285,21 @@ jobs:
       - name: Restore pub dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods
-        run: |
-          gem install cocoapods
-          pod setup
-
       - name: Generate codegen + l10n
         run: |
           dart run build_runner build --delete-conflicting-outputs
           flutter gen-l10n
-
-      - name: Pod install
-        run: |
-          cd ios
-          pod install
 
       - name: Recreate GoogleService-Info.plist
         if: ${{ env.IOS_GOOGLE_SERVICE_PLIST != '' }}
         run: |
           echo "${{ env.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
 
-      - name: Setup fastlane
-        run: |
-          cd ios
-          gem install fastlane
-
       # fastlane match pulls signing certs + provisioning profiles from the
-      # certs repo. Provide MATCH_PASSWORD to decrypt. Pull before building.
-      - name: Sync signing certs & profiles via match (development only)
-        if: ${{ github.ref != 'refs/tags/v' }}
+      # certs repo. Provide MATCH_PASSWORD to decrypt. Only needed for signed
+      # deploys (TestFlight / App Store) — unsigned builds need no certificates.
+      - name: Sync signing certs & profiles via match
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
         run: |
           cd ios
           bundle exec fastlane match development --readonly true \
