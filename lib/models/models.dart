@@ -163,8 +163,7 @@ const Map<String, IconData> kPersistableIcons = {
 
 Map<int, IconData>? _iconByCodePoint;
 
-Map<int, IconData> get _iconByCodePointMap =>
-    _iconByCodePoint ??= {
+Map<int, IconData> get _iconByCodePointMap => _iconByCodePoint ??= {
       for (final icon in kPersistableIcons.values) icon.codePoint: icon,
     };
 
@@ -178,7 +177,11 @@ Map<String, Object?> iconToJson(IconData icon) {
       break;
     }
   }
-  return {'name': name, 'fontFamily': icon.fontFamily, 'codePoint': icon.codePoint};
+  return {
+    'name': name,
+    'fontFamily': icon.fontFamily,
+    'codePoint': icon.codePoint
+  };
 }
 
 /// Rebuilds an [IconData] from the JSON produced by [iconToJson].
