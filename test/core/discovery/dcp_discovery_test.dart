@@ -18,7 +18,8 @@ void main() {
     });
 
     test('macToBytes produces 6 network-order bytes', () {
-      expect(macToBytes('02:81:F9:30:81:F9'), [0x02, 0x81, 0xF9, 0x30, 0x81, 0xF9]);
+      expect(macToBytes('02:81:F9:30:81:F9'),
+          [0x02, 0x81, 0xF9, 0x30, 0x81, 0xF9]);
       expect(macToBytes('FF:FF:FF:FF:FF:FF'),
           [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
     });
@@ -48,8 +49,8 @@ void main() {
     });
 
     test('reboot targets a MAC by unicast', () {
-      final json = jsonDecode(DcpMessage.reboot(
-          targetMac: '02:81:F9:30:81:F9', nonce: 'corr-3'));
+      final json = jsonDecode(
+          DcpMessage.reboot(targetMac: '02:81:F9:30:81:F9', nonce: 'corr-3'));
       expect(json['op'], 'reboot');
       expect(json['target'], '02:81:F9:30:81:F9');
     });

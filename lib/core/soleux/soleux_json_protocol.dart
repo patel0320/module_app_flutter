@@ -71,7 +71,14 @@ abstract final class SoleuxJsonPages {
 }
 
 /// Energy-history parameters (PDU Energy Meter).
-enum SoleuxEnergyParameter { voltage, current, power, powerFactor, apparentPower, energy }
+enum SoleuxEnergyParameter {
+  voltage,
+  current,
+  power,
+  powerFactor,
+  apparentPower,
+  energy
+}
 
 extension SoleuxEnergyParameterX on SoleuxEnergyParameter {
   /// The device-side parameter index (`0=voltage ... 5=energy`).
@@ -101,7 +108,8 @@ class SoleuxJsonRequest {
   final String action;
   final Map<String, dynamic> params;
 
-  const SoleuxJsonRequest({required this.id, required this.action, this.params = const {}});
+  const SoleuxJsonRequest(
+      {required this.id, required this.action, this.params = const {}});
 
   /// Encodes the request as a single `J:` line terminated with CRLF.
   String encode() {
@@ -170,7 +178,8 @@ class SoleuxJsonResponse {
     final map = decoded;
     final id = map['id'];
     if (id is! num) {
-      throw const FormatException('Soleux JSON response is missing a numeric id');
+      throw const FormatException(
+          'Soleux JSON response is missing a numeric id');
     }
     final ok = map['ok'];
     if (ok is! bool) {
@@ -187,7 +196,8 @@ class SoleuxJsonResponse {
     return SoleuxJsonResponse(
       id: id.toInt(),
       ok: ok,
-      protocol: map['protocol'] is num ? (map['protocol'] as num).toInt() : null,
+      protocol:
+          map['protocol'] is num ? (map['protocol'] as num).toInt() : null,
       result: result is Map ? Map<String, dynamic>.from(result) : null,
       error: map['error'] == null ? null : SoleuxJsonError(map['error']),
     );

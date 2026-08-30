@@ -117,8 +117,7 @@ abstract final class SoleuxDeviceFamilies {
   };
 
   static final Map<String, SoleuxDeviceFamily> _byJsonDevice = {
-    for (final family in SoleuxDeviceFamily.values)
-      family.jsonDevice: family,
+    for (final family in SoleuxDeviceFamily.values) family.jsonDevice: family,
   };
 
   /// Resolves the family from a discovery/DCP `GUID` value. Case-insensitive;

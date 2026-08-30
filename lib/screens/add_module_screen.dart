@@ -130,7 +130,8 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       id: 'discovered-${discovered.serial.isNotEmpty ? discovered.serial : discovered.guid}',
       name: discovered.name.isNotEmpty
           ? discovered.name
-          : (family?.label ?? AppLocalizations.of(context).addModuleUnnamedRelay),
+          : (family?.label ??
+              AppLocalizations.of(context).addModuleUnnamedRelay),
       type: type,
       ipAddress: discovered.ip,
       tcpPort: discovered.tcpPort,
@@ -250,8 +251,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                   (module.firmware != null &&
                                           module.firmware!.isNotEmpty)
                                       ? l10n.addModuleFamilyMeta(
-                                          module.type.label,
-                                          module.firmware!)
+                                          module.type.label, module.firmware!)
                                       : l10n.configModuleSummary(
                                           module.type.label, module.ipAddress),
                                   style: TextStyle(
@@ -263,8 +263,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                 module.ipAddress,
                                 style: TextStyle(
                                     fontSize: 11,
-                                    color:
-                                        onSurface.withValues(alpha: 0.45)),
+                                    color: onSurface.withValues(alpha: 0.45)),
                               ),
                             ],
                           ),

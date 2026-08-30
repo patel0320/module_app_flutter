@@ -354,8 +354,8 @@ class ModuleStatusService {
       final helloData = SoleuxHelloData.fromResult(hello.result ?? {});
       fetcher.apply(live, helloData);
 
-      final config = await unit
-          .getRelayConfiguration(timeout: const Duration(seconds: 3));
+      final config =
+          await unit.getRelayConfiguration(timeout: const Duration(seconds: 3));
       if (config.ok) {
         fetcher.applyConfiguration(
             live, SoleuxRelayConfiguration.fromResult(config.result ?? {}));
@@ -365,8 +365,7 @@ class ModuleStatusService {
     } on TimeoutException {
       // No JSON `hello` within the window - this is a legacy protocol device;
       // drop the JSON unit and let the AT+ path take over.
-      debugPrint(
-          'Module ${live.name} (${live.id}) did not answer JSON hello; '
+      debugPrint('Module ${live.name} (${live.id}) did not answer JSON hello; '
           'falling back to legacy AT+');
       _disposeJsonUnit(live.id);
       return null;
@@ -439,7 +438,8 @@ class ModuleStatusService {
     unit.connectionStateStream.listen((connected) {
       final live = store.byId(module.id);
       if (live == null) return;
-      live.status = connected ? ConnectionStatus.online : ConnectionStatus.offline;
+      live.status =
+          connected ? ConnectionStatus.online : ConnectionStatus.offline;
       _scheduleCommit();
     });
 

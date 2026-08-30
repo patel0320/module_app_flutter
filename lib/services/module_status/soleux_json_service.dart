@@ -31,7 +31,16 @@ class _JsonPending {
 }
 
 /// Kind of a parsed non-JSON (legacy) line.
-enum SoleuxLegacyEventType { output, input, overrideOn, overrideOff, energy, ok, error, other }
+enum SoleuxLegacyEventType {
+  output,
+  input,
+  overrideOn,
+  overrideOff,
+  energy,
+  ok,
+  error,
+  other
+}
 
 /// A parsed non-JSON (legacy) line emitted by the device.
 class SoleuxLegacyEvent {
@@ -58,15 +67,13 @@ class SoleuxLegacyEvent {
   /// Parses one legacy line.
   static SoleuxLegacyEvent parse(String line) {
     final trimmed = line.trim();
-    final field =
-        RegExp(r'^(OUT|IN):(\d+):(ON|OFF)$').firstMatch(trimmed);
+    final field = RegExp(r'^(OUT|IN):(\d+):(ON|OFF)$').firstMatch(trimmed);
     if (field != null) {
       final isOut = field.group(1) == 'OUT';
       return SoleuxLegacyEvent(
         raw: trimmed,
-        type: isOut
-            ? SoleuxLegacyEventType.output
-            : SoleuxLegacyEventType.input,
+        type:
+            isOut ? SoleuxLegacyEventType.output : SoleuxLegacyEventType.input,
         channel: int.parse(field.group(2)!),
         state: field.group(3) == 'ON',
       );
@@ -92,11 +99,11 @@ class SoleuxLegacyEvent {
     if (trimmed == 'ERROR' ||
         trimmed.startsWith('Error') ||
         trimmed.startsWith('ERROR:')) {
-      return SoleuxLegacyEvent(
-          raw: trimmed, type: SoleuxLegacyEventType.error);
+      return SoleuxLegacyEvent(raw: trimmed, type: SoleuxLegacyEventType.error);
     }
     // Generic `KEY:value` scalar (SYSTEMP, VER, ...).
-    final scalar = RegExp(r'^([A-Za-z_][A-Za-z0-9_]*):(.*)$').firstMatch(trimmed);
+    final scalar =
+        RegExp(r'^([A-Za-z_][A-Za-z0-9_]*):(.*)$').firstMatch(trimmed);
     if (scalar != null) {
       return SoleuxLegacyEvent(
         raw: trimmed,
@@ -194,8 +201,8 @@ class SoleuxJsonService {
     final timer = Timer(timeout, () {
       _pending.remove(id);
       if (!completer.isCompleted) {
-        completer.completeError(TimeoutException(
-            'Soleux JSON request $action (id $id) timed out'));
+        completer.completeError(
+            TimeoutException('Soleux JSON request $action (id $id) timed out'));
       }
     });
     _pending[id] = _JsonPending(completer: completer, timer: timer);
@@ -209,7 +216,8 @@ class SoleuxJsonService {
   // ---------------------------------------------------------------------------
 
   /// `hello` - identifies protocol, device, name and channel counts.
-  Future<SoleuxJsonResponse> hello({Duration timeout = const Duration(seconds: 5)}) =>
+  Future<SoleuxJsonResponse> hello(
+          {Duration timeout = const Duration(seconds: 5)}) =>
       request(SoleuxJsonActions.hello, const {}, timeout: timeout);
 
   /// `get_relay_configuration` - full I/O + settings + mapping dump.
@@ -326,8 +334,8 @@ class SoleuxJsonService {
     for (final pending in _pending.values) {
       pending.timer.cancel();
       if (!pending.completer.isCompleted) {
-        pending.completer.completeError(
-            StateError('Soleux JSON service disposed'));
+        pending.completer
+            .completeError(StateError('Soleux JSON service disposed'));
       }
     }
     _pending.clear();

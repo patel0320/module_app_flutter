@@ -99,7 +99,8 @@ class DiscoveredModule {
     return DiscoveredModule(
       guid: guid,
       version: map['VER'] ?? '',
-      tcpPort: int.tryParse(portRaw ?? '') ?? SoleuxConstants.defaultCommandPort,
+      tcpPort:
+          int.tryParse(portRaw ?? '') ?? SoleuxConstants.defaultCommandPort,
       serial: map['SN'] ?? '',
       name: map['NAME'] ?? '',
       ip: ip,

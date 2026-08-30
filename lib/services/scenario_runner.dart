@@ -106,9 +106,8 @@ class ScenarioRunner {
 
     try {
       final bool ok = switch ((action.isDimmerAction, action.turnOn)) {
-        (true, _) =>
-          await service.sendLegacyCommand(
-              module.id, 'AT+BRIGH:$index:${action.brightnessPct}\r'),
+        (true, _) => await service.sendLegacyCommand(
+            module.id, 'AT+BRIGH:$index:${action.brightnessPct}\r'),
         (false, true) => await service.turnOnOutput(module.id, index),
         (false, false) => await service.turnOffOutput(module.id, index),
       };

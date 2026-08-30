@@ -120,8 +120,8 @@ class _FakeSoleuxDevice {
 
 void main() {
   test('message parsing by SoleuxLegacyEvent', () {
-    expect(SoleuxLegacyEvent.parse('OUT:0:ON').type,
-        SoleuxLegacyEventType.output);
+    expect(
+        SoleuxLegacyEvent.parse('OUT:0:ON').type, SoleuxLegacyEventType.output);
     expect(SoleuxLegacyEvent.parse('OUT:0:ON').channel, 0);
     expect(SoleuxLegacyEvent.parse('IN:1:OFF').state, isFalse);
     expect(SoleuxLegacyEvent.parse('OVERRIDE:ON').type,
@@ -147,7 +147,8 @@ void main() {
     service.jsonEventStream.listen(jsonEvents.add);
     service.eventStream.listen(legacyEvents.add);
 
-    service.feed('J:{"protocol":2,"id":99,"ok":true,"result":{"device":"dimmer"}}\r\n');
+    service.feed(
+        'J:{"protocol":2,"id":99,"ok":true,"result":{"device":"dimmer"}}\r\n');
     service.feed('OUT:0:ON\r\n');
     service.feed('J:{"id":100,"ok":false,"error":"oops"}\r\n');
 
@@ -155,8 +156,7 @@ void main() {
     // routes to the legacy event stream.
     expect(jsonEvents, hasLength(2));
     expect(jsonEvents.first['device'], 'dimmer');
-    expect(legacyEvents.map((e) => e.type),
-        [SoleuxLegacyEventType.output]);
+    expect(legacyEvents.map((e) => e.type), [SoleuxLegacyEventType.output]);
     service.dispose();
   });
 

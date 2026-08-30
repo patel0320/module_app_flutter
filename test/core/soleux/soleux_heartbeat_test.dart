@@ -59,8 +59,8 @@ void main() {
     final clientTcpPort = serverPort - 2;
     final client = SoleuxHeartbeat(acceptWindow: const Duration(seconds: 2));
 
-    final result = await client.ping('127.0.0.1', clientTcpPort,
-        nonce: 'test-nonce-0001');
+    final result =
+        await client.ping('127.0.0.1', clientTcpPort, nonce: 'test-nonce-0001');
 
     expect(result.alive, isTrue);
     expect(result.pong, isNotNull);
@@ -74,7 +74,8 @@ void main() {
     // A socket bound to a port that never replies.
     final silent =
         await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final client = SoleuxHeartbeat(acceptWindow: const Duration(milliseconds: 300));
+    final client =
+        SoleuxHeartbeat(acceptWindow: const Duration(milliseconds: 300));
     final result = await client.ping(
       '127.0.0.1',
       silent.port - 2, // targets the silent heartbeat port
@@ -89,8 +90,8 @@ void main() {
     final client = SoleuxHeartbeat();
     expect((await client.ping('127.0.0.1', 5005, nonce: '')).alive, isFalse);
     final tooLong = 'x' * 65;
-    expect((await client.ping('127.0.0.1', 5005, nonce: tooLong)).alive,
-        isFalse);
+    expect(
+        (await client.ping('127.0.0.1', 5005, nonce: tooLong)).alive, isFalse);
   });
 
   test('SoleuxHeartbeatMonitor ticks periodically and reports reachability',

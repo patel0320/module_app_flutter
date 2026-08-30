@@ -18,9 +18,7 @@ void main() {
         channels: [
           for (var i = 0; i < channels; i++)
             ChannelOutput(
-                id: 'm1c${i + 1}',
-                name: 'Out ${i + 1}',
-                icon: Icons.power),
+                id: 'm1c${i + 1}', name: 'Out ${i + 1}', icon: Icons.power),
         ],
       );
 
@@ -44,8 +42,14 @@ void main() {
 
   test('apply() sets the advertised device name', () {
     final module = relayModule(8);
-    fetcher.apply(module, SoleuxHelloData.fromResult(
-        {'protocol': 2, 'device': 'relay_module', 'name': 'Plant Room Relays', 'output_count': 8}));
+    fetcher.apply(
+        module,
+        SoleuxHelloData.fromResult({
+          'protocol': 2,
+          'device': 'relay_module',
+          'name': 'Plant Room Relays',
+          'output_count': 8
+        }));
     expect(module.name, 'Plant Room Relays');
   });
 
@@ -100,7 +104,8 @@ void main() {
 
   test('trims channels beyond the reported count', () {
     final module = relayModule(8);
-    fetcher.applyConfiguration(module, const SoleuxRelayConfiguration(outputCount: 2));
+    fetcher.applyConfiguration(
+        module, const SoleuxRelayConfiguration(outputCount: 2));
     expect(module.channels.length, 2);
   });
 

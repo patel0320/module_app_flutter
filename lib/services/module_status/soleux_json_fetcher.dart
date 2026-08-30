@@ -37,9 +37,8 @@ class SoleuxHelloData {
 
   factory SoleuxHelloData.fromResult(Map<String, dynamic> result) =>
       SoleuxHelloData(
-        protocol: result['protocol'] is num
-            ? (result['protocol'] as num).toInt()
-            : 0,
+        protocol:
+            result['protocol'] is num ? (result['protocol'] as num).toInt() : 0,
         device: result['device'] as String? ?? '',
         name: result['name'] as String? ?? '',
         inputCount: _int(result['input_count']),
@@ -48,8 +47,7 @@ class SoleuxHelloData {
       );
 
   /// Device family reported by `device`, when known.
-  SoleuxDeviceFamily? get family =>
-      SoleuxDeviceFamilies.fromJsonDevice(device);
+  SoleuxDeviceFamily? get family => SoleuxDeviceFamilies.fromJsonDevice(device);
 }
 
 /// One `outputs[]` entry from `get_relay_configuration`.
@@ -75,9 +73,7 @@ class SoleuxOutputState {
     final channel = _int(json['channel']);
     return SoleuxOutputState(
       channel: channel,
-      name: json['output_name'] as String? ??
-          json['name'] as String? ??
-          '',
+      name: json['output_name'] as String? ?? json['name'] as String? ?? '',
       state: json['output_state'] as bool? ?? false,
       pwm: pwmRaw is num ? pwmRaw.toInt() : null,
       raw: json,
@@ -105,9 +101,7 @@ class SoleuxInputState {
       channel: _int(json['channel']),
       name: json['input_name'] as String? ?? json['name'] as String? ?? '',
       state: json['input_state'] as bool? ?? false,
-      enabled: enabledRaw is bool
-          ? enabledRaw
-          : (enabledRaw as num? ?? 1) != 0,
+      enabled: enabledRaw is bool ? enabledRaw : (enabledRaw as num? ?? 1) != 0,
     );
   }
 }
@@ -134,12 +128,15 @@ class SoleuxRelayConfiguration {
         virtualInputCount: _int(result['virtual_input_count']),
         outputCount: _int(result['output_count']),
         outputs: [
-          for (final o in result['outputs'] is List ? result['outputs'] as List : const [])
+          for (final o in result['outputs'] is List
+              ? result['outputs'] as List
+              : const [])
             if (o is Map)
               SoleuxOutputState.fromJson(Map<String, dynamic>.from(o)),
         ],
         inputs: [
-          for (final i in result['inputs'] is List ? result['inputs'] as List : const [])
+          for (final i
+              in result['inputs'] is List ? result['inputs'] as List : const [])
             if (i is Map)
               SoleuxInputState.fromJson(Map<String, dynamic>.from(i)),
         ],
@@ -164,9 +161,10 @@ class SoleuxJsonFetcher {
         ? config.outputCount
         : (config.outputs.isEmpty
             ? module.channels.length
-            : (config.outputs.map((o) => o.channel).fold<int>(
-                        0, (a, b) => a > b ? a : b) +
-                    1));
+            : (config.outputs
+                    .map((o) => o.channel)
+                    .fold<int>(0, (a, b) => a > b ? a : b) +
+                1));
 
     final stdoutNames = {
       for (final o in config.outputs) o.channel: o.name,
@@ -205,9 +203,10 @@ class SoleuxJsonFetcher {
 
     final targetInputs = config.inputs.isEmpty
         ? module.inputs.length
-        : (config.inputs.map((i) => i.channel).fold<int>(
-                    0, (a, b) => a > b ? a : b) +
-                1);
+        : (config.inputs
+                .map((i) => i.channel)
+                .fold<int>(0, (a, b) => a > b ? a : b) +
+            1);
     final inputNames = {
       for (final i in config.inputs) i.channel: i.name,
     };

@@ -8,8 +8,8 @@ void main() {
   group('discovery constants (v2)', () {
     test('request GUID and protocol version match the doc', () {
       expect(ModuleDiscovery.discoveryPort, 8000);
-      expect(ModuleDiscovery.requestGuid,
-          '8C93472D-2EF0-4B82-BE96-4FBBED57783F');
+      expect(
+          ModuleDiscovery.requestGuid, '8C93472D-2EF0-4B82-BE96-4FBBED57783F');
       expect(ModuleDiscovery.requestVersion, '2.0');
     });
   });
@@ -18,10 +18,10 @@ void main() {
     test('parses the Relay Module example response by field name', () {
       final module = DiscoveredModule.parseIdentityResponse(
           'GUID:579E6EA1-2F64-4CDE-8190-1CD3646EFAA1\r\n'
-          'VER:7.10\r\n'
-          'PORT:5005\r\n'
-          'SN:0000000012345678\r\n'
-          'NAME:Plant Room Relays\r\n',
+              'VER:7.10\r\n'
+              'PORT:5005\r\n'
+              'SN:0000000012345678\r\n'
+              'NAME:Plant Room Relays\r\n',
           '10.100.20.42');
       expect(module, isNotNull);
       expect(module!.guid, '579E6EA1-2F64-4CDE-8190-1CD3646EFAA1');
@@ -37,10 +37,10 @@ void main() {
     test('parses the Dimmer example response', () {
       final module = DiscoveredModule.parseIdentityResponse(
           'GUID:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91\r\n'
-          'VER:7.10\r\n'
-          'PORT:5005\r\n'
-          'SN:0000000012349999\r\n'
-          'NAME:Lobby Dimmer\r\n',
+              'VER:7.10\r\n'
+              'PORT:5005\r\n'
+              'SN:0000000012349999\r\n'
+              'NAME:Lobby Dimmer\r\n',
           '10.100.20.43');
       expect(module!.family, SoleuxDeviceFamily.dimmer);
       expect(module.name, 'Lobby Dimmer');
@@ -49,9 +49,9 @@ void main() {
     test('accepts legacy `Port` casing (PDU V1.0)', () {
       final module = DiscoveredModule.parseIdentityResponse(
           'GUID:B4A6B160-0CBA-4BD8-873D-EDC9DF895C26\r\n'
-          'Port:5100\r\n'
-          'SN:0000000011111111\r\n'
-          'NAME:Legacy Rack PDU\r\n',
+              'Port:5100\r\n'
+              'SN:0000000011111111\r\n'
+              'NAME:Legacy Rack PDU\r\n',
           '10.100.20.44');
       expect(module!.family, SoleuxDeviceFamily.pduV1);
       expect(module.tcpPort, 5100);
@@ -60,11 +60,11 @@ void main() {
     test('tolerates mixed line order and ignores unknown fields', () {
       final module = DiscoveredModule.parseIdentityResponse(
           'NAME:Soleux PDU 10k\r\n'
-          'FUTURE_FIELD:something\r\n'
-          'SN:42\r\n'
-          'GUID:A728DD7D-0DEB-49B9-9B8B-A4556771815F\r\n'
-          'VER:8.0\r\n'
-          'PORT:5005\r\n',
+              'FUTURE_FIELD:something\r\n'
+              'SN:42\r\n'
+              'GUID:A728DD7D-0DEB-49B9-9B8B-A4556771815F\r\n'
+              'VER:8.0\r\n'
+              'PORT:5005\r\n',
           '10.0.0.9');
       expect(module!.family, SoleuxDeviceFamily.pdu10kw);
       expect(module.name, 'Soleux PDU 10k');
@@ -83,8 +83,7 @@ void main() {
 
     test('defaults the port to 5005 when absent', () {
       final module = DiscoveredModule.parseIdentityResponse(
-          'GUID:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91\r\nSN:1\r\n',
-          '1.2.3.4');
+          'GUID:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91\r\nSN:1\r\n', '1.2.3.4');
       expect(module!.tcpPort, SoleuxConstants.defaultCommandPort);
     });
   });

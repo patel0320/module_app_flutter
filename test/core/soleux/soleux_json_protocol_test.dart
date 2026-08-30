@@ -8,14 +8,13 @@ import 'package:soleux_device_manager/core/soleux/soleux_json_protocol.dart';
 void main() {
   group('SoleuxJsonRequest.encode', () {
     test('produces one CRLF-terminated J: line', () {
-      const request =
-          SoleuxJsonRequest(id: 1, action: 'hello', params: {});
-      expect(request.encode(),
-          'J:{"id":1,"action":"hello","params":{}}\r\n');
+      const request = SoleuxJsonRequest(id: 1, action: 'hello', params: {});
+      expect(request.encode(), 'J:{"id":1,"action":"hello","params":{}}\r\n');
     });
 
     test('carries params verbatim', () {
-      const request = SoleuxJsonRequest(id: 40, action: 'get_energy_history', params: {
+      const request =
+          SoleuxJsonRequest(id: 40, action: 'get_energy_history', params: {
         'parameter': 0,
         'start_date': '2026-08-01',
         'end_date': '2026-08-29',
@@ -54,10 +53,10 @@ void main() {
       expect(asString.ok, isFalse);
       expect(asString.error!.summary, 'cannot rebind port');
 
-      final asObject = SoleuxJsonResponse.parseFromBody(
-          '{"protocol":2,"id":10,"ok":false,'
-          '"error":{"code":"internal_error","message":"delay and runtime '
-          'values must be between 0 and 65000"}}');
+      final asObject =
+          SoleuxJsonResponse.parseFromBody('{"protocol":2,"id":10,"ok":false,'
+              '"error":{"code":"internal_error","message":"delay and runtime '
+              'values must be between 0 and 65000"}}');
       expect(asObject.error!.code, 'internal_error');
       expect(asObject.error!.message, contains('65000'));
     });
@@ -74,8 +73,8 @@ void main() {
     test('returns null for non-J lines (events/legacy)', () {
       expect(SoleuxJsonResponse.maybeParse('OUT:0:ON'), isNull);
       expect(SoleuxJsonResponse.maybeParse('OK'), isNull);
-      expect(SoleuxJsonResponse.maybeParse('Error : Function Disabled'),
-          isNull);
+      expect(
+          SoleuxJsonResponse.maybeParse('Error : Function Disabled'), isNull);
     });
 
     test('returns null for malformed J: lines instead of throwing', () {
@@ -95,8 +94,7 @@ void main() {
   group('SoleuxLineSplitter framing', () {
     test('splits CRLF-terminated lines', () {
       final splitter = SoleuxLineSplitter();
-      final lines =
-          splitter.add('J:{"id":1}\r\nJ:{"id":2}\r\n');
+      final lines = splitter.add('J:{"id":1}\r\nJ:{"id":2}\r\n');
       expect(lines, hasLength(2));
       expect(lines[0], 'J:{"id":1}');
       expect(lines[1], 'J:{"id":2}');
@@ -140,6 +138,6 @@ void main() {
 }
 
 // `hasLength` + equality helper for the single buffered line case.
-Matcher singleLineBufferEquals(String expected) =>
-    predicate((List<String> lines) => lines.length == 1 && lines.single == expected,
-        'a single line equal to $expected');
+Matcher singleLineBufferEquals(String expected) => predicate(
+    (List<String> lines) => lines.length == 1 && lines.single == expected,
+    'a single line equal to $expected');

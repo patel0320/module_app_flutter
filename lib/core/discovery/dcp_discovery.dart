@@ -73,9 +73,7 @@ List<int> macToBytes(String mac) {
   if (normalized == null) {
     throw ArgumentError.value(mac, 'mac', 'invalid MAC address');
   }
-  return [
-    for (final part in normalized.split(':')) int.parse(part, radix: 16)
-  ];
+  return [for (final part in normalized.split(':')) int.parse(part, radix: 16)];
 }
 
 /// Builds and parses the JSON carried inside Soleux L2 frames.
@@ -182,8 +180,7 @@ class DcpIdentity {
   /// over DCP before it can be opened over TCP).
   bool get hasUsableIp => !_isZero(ip);
 
-  static bool _isZero(String value) =>
-      value == '0.0.0.0' || value.isEmpty;
+  static bool _isZero(String value) => value == '0.0.0.0' || value.isEmpty;
 
   factory DcpIdentity.fromFrame(DcpFrame frame) {
     final fields = frame.fields;
@@ -243,9 +240,8 @@ class DcpFrameBuilder {
     ];
     final body = utf8.encode(jsonPayload);
     final payloadLength = header.length + body.length;
-    final padded = payloadLength < minimumFrameSize
-        ? minimumFrameSize - payloadLength
-        : 0;
+    final padded =
+        payloadLength < minimumFrameSize ? minimumFrameSize - payloadLength : 0;
     return [...header, ...body, ...List<int>.filled(padded, 0)];
   }
 }

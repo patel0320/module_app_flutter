@@ -33,7 +33,8 @@ class SoleuxPong {
   final int tcpPort;
   final String name;
 
-  const SoleuxPong({required this.nonce, required this.tcpPort, this.name = ''});
+  const SoleuxPong(
+      {required this.nonce, required this.tcpPort, this.name = ''});
 
   factory SoleuxPong.parse(String body) {
     final decoded = jsonDecode(body);
@@ -105,7 +106,8 @@ class SoleuxHeartbeat {
     Duration? acceptWindow,
   }) async {
     final nonceValue = nonce ?? SoleuxNonce.generate();
-    if (nonceValue.isEmpty || nonceValue.length > SoleuxConstants.maxNonceLength) {
+    if (nonceValue.isEmpty ||
+        nonceValue.length > SoleuxConstants.maxNonceLength) {
       return HeartbeatResult.dead(Exception(
           'nonce must be 1..${SoleuxConstants.maxNonceLength} characters'));
     }
@@ -142,8 +144,8 @@ class SoleuxHeartbeat {
       final subscription = socket.listen(onData);
       final timer = Timer(window, () {
         if (!completer.isCompleted) {
-          completer.completeError(
-              TimeoutException('heartbeat pong not received'));
+          completer
+              .completeError(TimeoutException('heartbeat pong not received'));
         }
       });
 

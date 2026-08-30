@@ -28,9 +28,11 @@ void main() {
     });
 
     test('fromGuid resolves case-insensitively', () {
-      expect(SoleuxDeviceFamilies.fromGuid('579E6EA1-2F64-4CDE-8190-1CD3646EFAA1'),
+      expect(
+          SoleuxDeviceFamilies.fromGuid('579E6EA1-2F64-4CDE-8190-1CD3646EFAA1'),
           SoleuxDeviceFamily.relayModule);
-      expect(SoleuxDeviceFamilies.fromGuid('579e6ea1-2f64-4cde-8190-1cd3646efaa1'),
+      expect(
+          SoleuxDeviceFamilies.fromGuid('579e6ea1-2f64-4cde-8190-1cd3646efaa1'),
           SoleuxDeviceFamily.relayModule);
       expect(SoleuxDeviceFamilies.fromGuid(null), isNull);
       expect(SoleuxDeviceFamilies.fromGuid('unknown-guid'), isNull);
@@ -47,7 +49,8 @@ void main() {
 
   group('Default app module mapping', () {
     test('relay/PDU families seed as relay, dimmer as dimmerDc', () {
-      expect(SoleuxDeviceFamily.relayModule.defaultModuleType, ModuleType.relay);
+      expect(
+          SoleuxDeviceFamily.relayModule.defaultModuleType, ModuleType.relay);
       expect(SoleuxDeviceFamily.dimmer.defaultModuleType, ModuleType.dimmerDc);
       expect(SoleuxDeviceFamily.pduEnergyMeter.defaultModuleType,
           ModuleType.relay);
