@@ -1,0 +1,233 @@
+// Integration tests for SoleuxJsonService: request/response id matching,
+// buffered line routing, legacy event parsing and the legacy AT+ control
+// helper, driven over real loopback sockets.
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:soleux_device_manager/services/module_status/module_tcp_service.dart';
+import 'package:soleux_device_manager/services/module_status/soleux_json_fetcher.dart';
+import 'package:soleux_device_manager/services/module_status/soleux_json_service.dart';
+
+/// A fake Soleux device: accepts one TCP connection and answers JSON `hello` /
+/// `get_relay_configuration` requests (from a J: line, matched by id) and
+/// legacy `AT+...` commands with `OK`.
+class _FakeSoleuxDevice {
+  final ServerSocket server;
+  final List<String> received = [];
+
+  _FakeSoleuxDevice._(this.server);
+
+  static Future<_FakeSoleuxDevice> start() async {
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final device = _FakeSoleuxDevice._(server);
+    server.listen((socket) {
+      device._handle(socket);
+    });
+    return device;
+  }
+
+  int get port => server.port;
+
+  void _handle(Socket socket) => _onInbound(socket);
+
+  void _onInbound(Socket socket) {
+    final buffer = StringBuffer();
+    socket.listen((bytes) {
+      buffer.write(utf8.decode(bytes));
+      var text = buffer.toString();
+      var idx = text.indexOf('\n');
+      while (idx >= 0) {
+        var line = text.substring(0, idx);
+        while (line.endsWith('\r')) {
+          line = line.substring(0, line.length - 1);
+        }
+        received.add(line);
+        _reply(line, socket).ignore();
+        final rest = text.substring(idx + 1);
+        buffer.clear();
+        buffer.write(rest);
+        text = rest;
+        idx = text.indexOf('\n');
+      }
+    }, onDone: () => socket.destroy());
+  }
+
+  Future<void> _reply(String line, Socket socket) async {
+    if (line.startsWith('J:')) {
+      final request = jsonDecode(line.substring(2)) as Map<String, dynamic>;
+      final id = request['id'];
+      final action = request['action'];
+      Map<String, dynamic> result;
+      if (action == 'hello') {
+        result = {
+          'protocol': 2,
+          'device': 'relay_module',
+          'name': 'Plant Room Relays',
+          'input_count': 8,
+          'virtual_input_count': 2,
+          'output_count': 8,
+        };
+      } else if (action == 'get_relay_configuration') {
+        result = {
+          'input_count': 2,
+          'virtual_input_count': 1,
+          'output_count': 4,
+          'outputs': [
+            {
+              'channel': 0,
+              'output_name': 'Server',
+              'output_state': true,
+              'output_on_delay': 0,
+              'output_off_delay': 0,
+              'output_on_run_time': 0,
+              'output_off_run_time': 0,
+              'start_delay': 0,
+              'initial_state': 0,
+              'turn_off_disable': false,
+              'restart_disable': false,
+            }
+          ],
+          'inputs': [
+            {
+              'channel': 0,
+              'input_name': 'Door',
+              'input_state': false,
+              'input_enabled': 1,
+            }
+          ],
+          'mapping': [],
+        };
+      } else {
+        result = {};
+      }
+      // Send the response in two half-lines to exercise chunked framing.
+      final body = 'J:${jsonEncode({
+            'protocol': 2,
+            'id': id,
+            'ok': true,
+            'result': result,
+          })}\r\n';
+      socket.write(body.substring(0, body.length ~/ 2));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      socket.write(body.substring(body.length ~/ 2));
+    } else {
+      // Legacy command -> OK.
+      socket.write('OK\r\n');
+    }
+  }
+}
+
+void main() {
+  test('message parsing by SoleuxLegacyEvent', () {
+    expect(SoleuxLegacyEvent.parse('OUT:0:ON').type,
+        SoleuxLegacyEventType.output);
+    expect(SoleuxLegacyEvent.parse('OUT:0:ON').channel, 0);
+    expect(SoleuxLegacyEvent.parse('IN:1:OFF').state, isFalse);
+    expect(SoleuxLegacyEvent.parse('OVERRIDE:ON').type,
+        SoleuxLegacyEventType.overrideOn);
+    expect(SoleuxLegacyEvent.parse('OVERRIDE:OFF').type,
+        SoleuxLegacyEventType.overrideOff);
+    expect(SoleuxLegacyEvent.parse('GETENERGY:229.7:1.25:274.2:E').type,
+        SoleuxLegacyEventType.energy);
+    expect(SoleuxLegacyEvent.parse('OK').type, SoleuxLegacyEventType.ok);
+    expect(SoleuxLegacyEvent.parse('Error : Function Disabled').type,
+        SoleuxLegacyEventType.error);
+    expect(SoleuxLegacyEvent.parse('SYSTEMP:34').kv['SYSTEMP'], '34');
+  });
+
+  test('feed() routes J: vs legacy lines without sockets', () {
+    // A service with an inert connection: we bypass `connect` and drive
+    // `feed` directly (visibleForTesting).
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1', port: 1, timeout: const Duration(seconds: 1));
+    final service = SoleuxJsonService(connection: connection);
+    final jsonEvents = <Map<String, dynamic>>[];
+    final legacyEvents = <SoleuxLegacyEvent>[];
+    service.jsonEventStream.listen(jsonEvents.add);
+    service.eventStream.listen(legacyEvents.add);
+
+    service.feed('J:{"protocol":2,"id":99,"ok":true,"result":{"device":"dimmer"}}\r\n');
+    service.feed('OUT:0:ON\r\n');
+    service.feed('J:{"id":100,"ok":false,"error":"oops"}\r\n');
+
+    // The two unmatched J: lines surface as JSON events; the legacy OUT line
+    // routes to the legacy event stream.
+    expect(jsonEvents, hasLength(2));
+    expect(jsonEvents.first['device'], 'dimmer');
+    expect(legacyEvents.map((e) => e.type),
+        [SoleuxLegacyEventType.output]);
+    service.dispose();
+  });
+
+  test('request() matches responses by id over a real socket', () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(connection: connection);
+    await service.connect();
+    expect(service.isConnected, isTrue);
+
+    final hello = await service.hello(timeout: const Duration(seconds: 3));
+    expect(hello.ok, isTrue);
+    expect(hello.id, 1);
+    expect(hello.result!['device'], 'relay_module');
+    expect(hello.result!['output_count'], 8);
+
+    final config = await service.getRelayConfiguration(
+        timeout: const Duration(seconds: 3));
+    expect(config.ok, isTrue);
+    final parsed = SoleuxRelayConfiguration.fromResult(config.result!);
+    expect(parsed.outputCount, 4);
+    expect(parsed.outputs.single.name, 'Server');
+    expect(parsed.outputs.single.state, isTrue);
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('legacy() sends AT+ and collects the OK acknowledgement', () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(connection: connection);
+    await service.connect();
+
+    final raw = await service.legacy('AT+ON:0\r');
+    expect(raw, 'OK');
+    expect(fake.received, contains('AT+ON:0'));
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('non-J lines are surfaced on the legacy event stream in-session',
+      () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(connection: connection);
+    final events = <SoleuxLegacyEvent>[];
+    service.eventStream.listen(events.add);
+    await service.connect();
+
+    // Hello forces the fake to write JSON; then a legacy echo command pushes
+    // an `OUT:` line? Simulate an unsolicited line via a raw legacy command
+    // that the fake answers with a status line before OK.
+    await service.legacy('AT+OUTSTAT:0\r');
+    // Any OK log proves the event stream fired at least once.
+    expect(events.any((e) => e.type == SoleuxLegacyEventType.ok), isTrue);
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+}
