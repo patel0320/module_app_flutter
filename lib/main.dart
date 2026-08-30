@@ -31,9 +31,11 @@ import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/module_status/background_status_worker.dart';
 import 'services/module_status/module_status_scheduler.dart';
+import 'services/module_status/module_status_service.dart';
 import 'services/notification_monitor.dart';
 import 'services/notification_service.dart';
 import 'services/scenario_store.dart';
+import 'services/session_store.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_palettes.dart';
@@ -47,6 +49,7 @@ void main() {
   ScenarioStore.shared.init();
   AutomationStore.shared.init();
   SettingsStore.shared.init();
+  SessionStore.shared.init();
   // Start the automation runtime: it arms daily timers for time-of-day rules
   // and watches the module fleet for device-state rules, firing them through
   // the scenario engine into the event history (see AutomationScheduler).
@@ -99,6 +102,7 @@ class AutomationApp extends StatelessWidget {
                     GlobalCupertinoLocalizations.delegate,
                   ],
                   scrollBehavior: const AppScrollBehavior(),
+                  restorationScopeId: 'app',
                   initialRoute: '/',
                   routes: {
                     '/': (context) => const SplashScreen(),
@@ -157,8 +161,33 @@ class RootShell extends StatefulWidget {
   State<RootShell> createState() => _RootShellState();
 }
 
-class _RootShellState extends State<RootShell> {
-  int _index = 0;
+class _RootShellState extends State<RootShell> with RestorationMixin {
+  /// Persisted across process death so the last visited tab is restored.
+  final RestorableInt _tabIndex = RestorableInt(0);
+
+  @override
+  String get restorationId => 'root_tabs';
+
+  @override
+  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
+    registerForRestoration(_tabIndex, 'selected_tab');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Connect to every configured module and pull a fresh status dump once the
+    // shell is up. Placed here rather than the splash because on state
+    // restoration the splash route is skipped entirely - the navigator restores
+    // straight into '/root'.
+    ModuleStatusService.shared.refreshAll().ignore();
+  }
+
+  @override
+  void dispose() {
+    _tabIndex.dispose();
+    super.dispose();
+  }
 
   static const List<Widget> _tabs = [
     HomeScreen(),
@@ -167,14 +196,15 @@ class _RootShellState extends State<RootShell> {
     SettingsScreen(),
   ];
 
-  void _onDestinationSelected(int index) => setState(() => _index = index);
+  void _onDestinationSelected(int index) =>
+      setState(() => _tabIndex.value = index);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
+      body: IndexedStack(index: _tabIndex.value, children: _tabs),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: _tabIndex.value,
         onDestinationSelected: _onDestinationSelected,
         destinations: [
           NavigationDestination(

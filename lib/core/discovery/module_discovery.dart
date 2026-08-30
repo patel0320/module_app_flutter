@@ -20,6 +20,16 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../services/module_store.dart';
+
+/// Platform channel for the Android WifiManager.MulticastLock (see
+/// MainActivity.kt). WiFi NICs filter out broadcast/multicast traffic unless
+/// the app holds this lock, which silently kills device discovery on Android
+/// phones. No-op on every other platform.
+const MethodChannel _androidWifiLock =
+    MethodChannel('soleux.device_manager/wifi_lock');
 
 /// The identity fields a responding PDU reports during discovery.
 class DiscoveredModule {
@@ -67,19 +77,43 @@ class ModuleDiscovery {
     final results = <DiscoveredModule>[];
     if (timeout.inMilliseconds <= 0) return results;
 
-    // Advertise a fresh TCP listener; PDUs dial back into this port.
-    final server = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+    // Sometimes required on the PDU side too (some firmwares also answer the
+    // discovery broadcast with a broadcast/multicast); always harmless.
+    await _acquireAndroidWifiLock();
+    try {
+      // Advertise a fresh TCP listener; PDUs dial back into this port.
+      final server = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
 
-    server.listen((socket) {
-      _readIdentity(socket, results);
-    }, onError: (_) {});
+      server.listen((socket) {
+        _readIdentity(socket, results);
+      }, onError: (_) {});
 
-    final localPort = server.port;
-    // Broadcast and keep the listener accepting identity responses for the
-    // full timeout window (_broadcast awaits the timeout), then close.
-    await _broadcast(localPort, timeout);
-    await server.close();
+      final localPort = server.port;
+      // Broadcast and keep the listener accepting identity responses for the
+      // full timeout window (_broadcast awaits the timeout), then close.
+      await _broadcast(localPort, timeout);
+      await server.close();
+    } finally {
+      await _releaseAndroidWifiLock();
+    }
     return results;
+  }
+
+  /// On Android, WiFi frame filtering drops broadcast/multicast packets unless
+  /// the process holds a WifiManager.MulticastLock. Best-effort: failures are
+  /// swallowed so discovery still proceeds without it.
+  static Future<void> _acquireAndroidWifiLock() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _androidWifiLock.invokeMethod('acquire');
+    } catch (_) {}
+  }
+
+  static Future<void> _releaseAndroidWifiLock() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _androidWifiLock.invokeMethod('release');
+    } catch (_) {}
   }
 
   Future<void> _broadcast(int localTcpPort, Duration timeout) async {
@@ -99,34 +133,86 @@ class ModuleDiscovery {
     udp.close();
   }
 
-  /// Directs broadcasts at the global address plus a directed /24 broadcast for
-  /// every IPv4 interface, so we reach PDUs on the active LAN.
+  /// Directs broadcasts at the global address plus a directed broadcast for
+  /// every IPv4 interface, so we reach PDUs on the active LAN. Also unicasts
+  /// the discovery request to every already-known module IP: some access
+  /// points filter broadcasts (client isolation / VLANs) while direct unicast
+  /// to a known LAN address still gets through.
   Future<List<InternetAddress>> _broadcastTargets(Duration timeout) async {
     final result = <InternetAddress>{
       InternetAddress(_globalBroadcast),
     };
     try {
       final interfaces = await NetworkInterface.list().timeout(timeout);
+      // Real per-interface netmasks (Linux/Android); unknown masks fall back
+      // to the /24 assumption with the global broadcast as insurance.
+      final netmasks = _readLinuxNetmasks();
       for (final iface in interfaces) {
         for (final addr in iface.addresses) {
           if (addr.type != InternetAddressType.IPv4) continue;
-          result.add(directedSubnetBroadcast(addr.address));
+          result
+              .add(directedSubnetBroadcast(addr.address, netmasks[iface.name]));
         }
       }
     } catch (_) {
       // Fall back to the global broadcast if interfaces are unavailable.
     }
+    try {
+      await ModuleStore.shared.init();
+      for (final module in ModuleStore.shared.modules) {
+        final ip = InternetAddress.tryParse(module.ipAddress);
+        if (ip != null && ip.type == InternetAddressType.IPv4) {
+          result.add(ip);
+        }
+      }
+    } catch (_) {
+      // Module store may be unavailable (e.g. tests); broadcast only.
+    }
     return result.toList();
   }
 
-  /// Computes a /24 directed broadcast for [host] (typical office/marine LAN).
-  /// Exposed for tests; assumes the common class-C layout.
-  static InternetAddress directedSubnetBroadcast(String host) {
+  /// Parses `/proc/net/route` (present on Android/Linux) for the real netmask
+  /// of each interface (default-route entry), so directed broadcasts are
+  /// computed against the actual subnet instead of assuming /24. The four
+  /// hex bytes are stored little-endian (e.g. /24 => `00FFFFFF`).
+  static Map<String, int> _readLinuxNetmasks() {
+    final result = <String, int>{};
+    try {
+      final file = File('/proc/net/route');
+      if (!file.existsSync()) return result;
+      for (final line in file.readAsLinesSync().skip(1)) {
+        final fields = line.trim().split(RegExp(r'\s+'));
+        // Interface, Destination, Gateway, Flags, RefCnt, Use, Metric, Mask.
+        if (fields.length < 9 || fields[1] != '00000000') continue;
+        final rawMask = int.tryParse(fields[7], radix: 16);
+        if (rawMask == null || rawMask == 0) continue;
+        // Byte-swap the little-endian hex value into a big-endian IPv4 mask.
+        result[fields[0]] = ((rawMask & 0xFF) << 24) |
+            ((rawMask & 0xFF00) << 8) |
+            ((rawMask >> 8) & 0xFF00) |
+            ((rawMask >> 24) & 0xFF);
+      }
+    } catch (_) {
+      // Non-Linux platform or unreadable procfs; caller keeps /24 fallback.
+    }
+    return result;
+  }
+
+  /// Computes the directed IPv4 broadcast for [host] given [prefixMask] (as a
+  /// big-endian /proc-style 32-bit mask) or the classic /24 subnet when the
+  /// mask is null. Exposed for tests; exported as a /24 helper on null.
+  static InternetAddress directedSubnetBroadcast(String host,
+      [int? prefixMask]) {
     final octets = host.split('.').map(int.tryParse).toList();
     final parts = octets.length == 4
         ? [for (final o in octets) o ?? 0]
         : const [0, 0, 0, 0];
-    return InternetAddress('${parts[0]}.${parts[1]}.${parts[2]}.255');
+    final ip = (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
+    final mask = prefixMask ?? 0xFFFFFF00;
+    final broadcast = (ip & mask) | (~mask & 0xFFFFFFFF);
+    return InternetAddress(
+        '${(broadcast >> 24) & 0xFF}.${(broadcast >> 16) & 0xFF}.'
+        '${(broadcast >> 8) & 0xFF}.${broadcast & 0xFF}');
   }
 
   void _readIdentity(Socket socket, List<DiscoveredModule> results) {

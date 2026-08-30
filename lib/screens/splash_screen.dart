@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
-import '../services/module_status/module_status_service.dart';
+import '../services/session_store.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,14 +20,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // On app open: load the persisted module fleet into the app-wide store,
-    // then connect to every configured module and fetch its live status over
-    // the PROTOCOLS.md §1 TCP protocol. Fire-and-forget so bootstrap never
-    // blocks navigation; every screen watches the same store and rebuilds as
-    // status arrives (online/offline, temperature, output states).
-    ModuleStatusService.shared.refreshAll().ignore();
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+    // Module fleet + live status are loaded by the root shell once it mounts
+    // (see _RootShellState.initState); here we only pick the landing route.
+    Future.delayed(const Duration(milliseconds: 1400), () async {
+      // A persisted sign-in session (see SessionStore) takes the user straight
+      // back to the main shell after the OS killed the process in the
+      // background; first-time / signed-out launches go to the sign-in flow.
+      await SessionStore.shared.init();
+      if (!mounted) return;
+      Navigator.of(context).restorablePushReplacementNamed(
+          SessionStore.shared.signedIn ? '/root' : '/login');
     });
   }
 

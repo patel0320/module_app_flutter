@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
+import '../services/session_store.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -36,7 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    Navigator.of(context).pushNamedAndRemoveUntil('/root', (route) => false);
+    SessionStore.shared.setSignedIn(true);
+    Navigator.of(context)
+        .restorablePushNamedAndRemoveUntil('/root', (route) => false);
   }
 
   @override

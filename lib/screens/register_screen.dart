@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
+import '../services/session_store.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -44,7 +46,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
-    Navigator.of(context).pushNamedAndRemoveUntil('/root', (route) => false);
+    SessionStore.shared.setSignedIn(true);
+    Navigator.of(context)
+        .restorablePushNamedAndRemoveUntil('/root', (route) => false);
   }
 
   @override

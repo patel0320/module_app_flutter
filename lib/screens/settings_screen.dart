@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/event_log_store.dart';
+import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'appearance_settings_screen.dart';
@@ -41,7 +42,9 @@ class SettingsScreen extends StatelessWidget {
       confirmLabel: l10n.settingsSignOutDialog,
     );
     if (confirmed && context.mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      SessionStore.shared.setSignedIn(false);
+      Navigator.of(context)
+          .restorablePushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 
@@ -69,7 +72,8 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               subtitle: const Text('alex.popescu@example.com'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).pushNamed('/settings/account'),
+              onTap: () => Navigator.of(context)
+                  .restorablePushNamed('/settings/account'),
             ),
           ),
           const SizedBox(height: 24),
@@ -82,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                   title: Text(l10n.settingsNotifications),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context)
-                      .pushNamed('/settings/notifications'),
+                      .restorablePushNamed('/settings/notifications'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -90,8 +94,8 @@ class SettingsScreen extends StatelessWidget {
                   title: Text(l10n.settingsLanguage),
                   subtitle: Text(l10n.settingsLanguageEn),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () =>
-                      Navigator.of(context).pushNamed('/settings/language'),
+                  onTap: () => Navigator.of(context)
+                      .restorablePushNamed('/settings/language'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -108,8 +112,8 @@ class SettingsScreen extends StatelessWidget {
                     title: Text(l10n.settingsAppearance),
                     subtitle: Text(appearanceLabel(mode, l10n)),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        Navigator.of(context).pushNamed('/settings/appearance'),
+                    onTap: () => Navigator.of(context)
+                        .restorablePushNamed('/settings/appearance'),
                   ),
                 ),
               ],

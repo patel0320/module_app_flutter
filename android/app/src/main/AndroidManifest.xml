@@ -1,9 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- MQTT / TCP communication with the Soleux modules and the cloud backend. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Reading the current network state before dialing MQTT / LAN connections. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Resolving the active Wi-Fi interface for the LAN UDP discovery broadcast. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- Enables multicast/broadcast on Wi-Fi so PDUs on the LAN are discovered 
+         (Dart's RawDatagramSocket takes a WifiManager.MulticastLock for this). -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+    <!-- Android 13+ runtime permission for Wi-Fi based device discovery 
+         ("Never for location"; the app derives no location from it). -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"/>
     <!-- Keeps the periodic module-status background worker scheduled across device reboots. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Posting local notifications (Android 13+; requested at runtime). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Vibrating for incoming alert notifications on older Android releases. -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Keeps the device awake while surfacing notifications in Doze. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:label="Soleux Device Manager"

@@ -56,7 +56,8 @@ class OfflineAlertBanner extends StatelessWidget {
       color: AppColors.offline,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed('/system-status'),
+        onTap: () =>
+            Navigator.of(context).restorablePushNamed('/system-status'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

@@ -78,19 +78,20 @@ class ScenariosScreen extends StatelessWidget {
               IconButton(
                 tooltip: l10n.scenariosRooms,
                 icon: const Icon(Icons.meeting_room_outlined),
-                onPressed: () => Navigator.of(context).pushNamed('/rooms'),
+                onPressed: () =>
+                    Navigator.of(context).restorablePushNamed('/rooms'),
               ),
               IconButton(
                 tooltip: l10n.scenariosAutomations,
                 icon: const Icon(Icons.rule_outlined),
                 onPressed: () =>
-                    Navigator.of(context).pushNamed('/automations'),
+                    Navigator.of(context).restorablePushNamed('/automations'),
               ),
               IconButton(
                 tooltip: l10n.scenariosEventHistory,
                 icon: const Icon(Icons.history),
                 onPressed: () =>
-                    Navigator.of(context).pushNamed('/event-history'),
+                    Navigator.of(context).restorablePushNamed('/event-history'),
               ),
             ],
           ),
