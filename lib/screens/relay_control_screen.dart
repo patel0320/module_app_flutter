@@ -52,28 +52,26 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
     if (saved) setState(() {});
   }
 
-  /// Sends the ON/OFF relay command to the module, then re-asks for the
-  /// actual output states (`AT+OUTSTAT`). The parsed response flows through
-  /// the command service into the store, which rebuilds this screen to reflect
-  /// the module-reported state.
+  /// Sends the ON/OFF relay command to the module through whichever transport
+  /// is active (Soleux JSON unit or legacy AT+ unit), then re-asks for the
+  /// actual output states. The parsed response flows through the service into
+  /// the store, which rebuilds this screen to reflect the module-reported
+  /// state.
   Future<void> _toggleOutput(DeviceModule module, int index, bool next) async {
     EventLogStore.shared.recordModuleAction(
       moduleName: module.name,
       outputName: module.channels[index].name,
       on: next,
     );
-    final service = ModuleStatusService.shared.commandServiceFor(module.id);
-    if (service == null || !service.isConnected) {
-      // No live command/status unit - fall back to a local toggle.
-      setState(() => module.channels[index].isOn = next);
-      return;
-    }
+    final service = ModuleStatusService.shared;
     try {
       final ok = next
-          ? await service.turnOnRelay(index)
-          : await service.turnOffRelay(index);
-      if (!ok) return;
-      //await service.command(PduAtCommands.allOutputStates);
+          ? await service.turnOnOutput(module.id, index)
+          : await service.turnOffOutput(module.id, index);
+      if (!ok) {
+        // No live unit for this module - fall back to a local toggle.
+        setState(() => module.channels[index].isOn = next);
+      }
     } catch (_) {
       // Command failed or module offline - keep the UI showing reality.
     }

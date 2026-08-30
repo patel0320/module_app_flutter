@@ -2,8 +2,9 @@
 //
 // Brief section 2.1 "Simplified Addition": modules broadcast a self
 // discovery message that the app can pick up (see ModuleDiscovery, which
-// implements the UDP Discovery Protocol in doc/PROTOCOLS.md §2), and are
-// otherwise identified / added manually by IP address. Selecting or
+// implements the Soleux UDP discovery protocol in
+// doc/Soleux-Network-Discovery-and-DCP.md §1), and are otherwise
+// identified / added manually by IP address. Selecting or
 // submitting a module simply returns it to the Configuration screen via
 // `Navigator.pop`.
 import 'package:flutter/material.dart';
@@ -118,25 +119,28 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     return parsed.clamp(0, 100);
   }
 
-  /// Builds a configurable [DeviceModule] from a discovery reply. The UDP
-  /// identity response does not advertise a module type or channel count, so
-  /// discovered units are presented as standard relay PDUs (they can be
-  /// renamed and re-typed after registering).
+  /// Builds a [DeviceModule] from a UDP discovery reply. The family GUID maps
+  /// to a device family (relay module / dimmer / PDU ...), which picks the
+  /// default module type, channel shape and label; the returned HostPort and
+  /// firmware version are carried over for the status service.
   DeviceModule _toDeviceModule(DiscoveredModule discovered) {
+    final family = discovered.family;
+    final type = family?.defaultModuleType ?? ModuleType.relay;
     return DeviceModule(
       id: 'discovered-${discovered.serial.isNotEmpty ? discovered.serial : discovered.guid}',
       name: discovered.name.isNotEmpty
           ? discovered.name
-          : AppLocalizations.of(context).addModuleUnnamedRelay,
-      type: ModuleType.relay,
+          : (family?.label ?? AppLocalizations.of(context).addModuleUnnamedRelay),
+      type: type,
       ipAddress: discovered.ip,
       tcpPort: discovered.tcpPort,
+      firmware: discovered.version.isEmpty ? null : discovered.version,
+      serial: discovered.serial.isEmpty ? null : discovered.serial,
       status: ConnectionStatus.online,
       roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
       tempMaxC: SettingsStore.shared.defaultTemperatureThreshold,
-      channels:
-          _defaultChannelsFor(ModuleType.relay, AppLocalizations.of(context)),
+      channels: _defaultChannelsFor(type, AppLocalizations.of(context)),
     );
   }
 
@@ -204,9 +208,25 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
               ),
             )
           else if (_discovered.isEmpty)
-            EmptyState(
-                icon: Icons.wifi_find_outlined,
-                message: l10n.addModuleNoneFound)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                children: [
+                  EmptyState(
+                      icon: Icons.wifi_find_outlined,
+                      message: l10n.addModuleNoneFound),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.addModuleDcpHint,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            )
           else
             for (final module in _discovered)
               Padding(
@@ -227,12 +247,25 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 2),
                               Text(
-                                  l10n.configModuleSummary(
-                                      module.type.label, module.ipAddress),
+                                  (module.firmware != null &&
+                                          module.firmware!.isNotEmpty)
+                                      ? l10n.addModuleFamilyMeta(
+                                          module.type.label,
+                                          module.firmware!)
+                                      : l10n.configModuleSummary(
+                                          module.type.label, module.ipAddress),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color:
                                           onSurface.withValues(alpha: 0.55))),
+                              const SizedBox(height: 2),
+                              Text(
+                                module.ipAddress,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color:
+                                        onSurface.withValues(alpha: 0.45)),
+                              ),
                             ],
                           ),
                         ),

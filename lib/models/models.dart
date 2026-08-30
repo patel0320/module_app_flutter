@@ -240,6 +240,8 @@ class DeviceModule {
     this.tempMinC = 0,
     this.tempMaxC = 60,
     this.firmware,
+    this.serial,
+    this.mac,
     List<ChannelOutput>? channels,
     List<PhysicalInput>? inputs,
   })  : _tcpPort = tcpPort,
@@ -253,6 +255,12 @@ class DeviceModule {
 
   /// Firmware/build reported by the module (e.g. `AT+VER` → `VER:`).
   String? firmware;
+
+  /// Device serial number (identifies an individual physical device).
+  String? serial;
+
+  /// Ethernet MAC address (authoritative when reported by DCP).
+  String? mac;
 
   /// TCP port the module listens on (default 5005). Backed by a nullable
   /// field so legacy persisted JSON (or any null) degrades to the default.
@@ -287,6 +295,8 @@ class DeviceModule {
         'tempMinC': tempMinC,
         'tempMaxC': tempMaxC,
         'firmware': firmware,
+        'serial': serial,
+        'mac': mac,
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -303,6 +313,8 @@ class DeviceModule {
         tempMinC: (json['tempMinC'] as num?)?.toDouble() ?? 0,
         tempMaxC: (json['tempMaxC'] as num?)?.toDouble() ?? 60,
         firmware: json['firmware'] as String?,
+        serial: json['serial'] as String?,
+        mac: json['mac'] as String?,
         channels: [
           for (final c in json['channels'] as List? ?? const [])
             ChannelOutput.fromJson((c as Map).cast<String, Object?>()),
