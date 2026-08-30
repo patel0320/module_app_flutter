@@ -92,8 +92,11 @@ class ScenarioRunner {
     }
     final channel = module.channels[index];
 
-    final service = ModuleStatusService.shared.commandServiceFor(module.id);
-    if (service == null || !service.isConnected) {
+    final service = ModuleStatusService.shared;
+    final connected = (service.commandServiceFor(module.id)?.isConnected ??
+            service.jsonCommandServiceFor(module.id)?.isConnected) ??
+        false;
+    if (!connected) {
       return ScenarioActionResult(
         description: description,
         success: false,
@@ -102,14 +105,13 @@ class ScenarioRunner {
     }
 
     try {
-      final bool ok;
-      if (action.isDimmerAction) {
-        ok = await service.command('AT+BRIGH:$index:${action.brightnessPct}\r');
-      } else if (action.turnOn) {
-        ok = await service.turnOnRelay(index);
-      } else {
-        ok = await service.turnOffRelay(index);
-      }
+      final bool ok = switch ((action.isDimmerAction, action.turnOn)) {
+        (true, _) =>
+          await service.sendLegacyCommand(
+              module.id, 'AT+BRIGH:$index:${action.brightnessPct}\r'),
+        (false, true) => await service.turnOnOutput(module.id, index),
+        (false, false) => await service.turnOffOutput(module.id, index),
+      };
       return ScenarioActionResult(
         description: description,
         success: ok,

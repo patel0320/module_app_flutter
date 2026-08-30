@@ -28,6 +28,8 @@ import '../module_store.dart';
 import 'module_command_service.dart';
 import 'module_status_fetcher.dart';
 import 'module_tcp_service.dart';
+import 'soleux_json_fetcher.dart';
+import 'soleux_json_service.dart';
 
 /// Outcome of a single status pass over the fleet.
 class ModuleStatusResult {
@@ -58,6 +60,9 @@ class ModuleStatusService {
   /// Persistent per-module command/status units (transport + parsing).
   final Map<String, ModuleCommandService> _units = {};
 
+  /// Persistent per-module JSON command/status units (Soleux J: protocol).
+  final Map<String, SoleuxJsonService> _jsonUnits = {};
+
   ModuleStatusService({required this.store, this.timeout = defaultTimeout});
 
   /// Shared service wired to the shared store, used by the launch path.
@@ -81,6 +86,41 @@ class ModuleStatusService {
   /// The live command/status unit driving [moduleId], or null when the module
   /// type is unsupported or its unit has not been created yet.
   ModuleCommandService? commandServiceFor(String moduleId) => _units[moduleId];
+
+  /// The live Soleux JSON unit driving [moduleId], or null when the device is
+  /// not JSON-capable (or not yet probed).
+  SoleuxJsonService? jsonCommandServiceFor(String moduleId) =>
+      _jsonUnits[moduleId];
+
+  /// Sends a raw legacy `AT+...` control command through whichever persistent
+  /// unit is active for [moduleId]: the Soleux JSON unit for JSON-capable
+  /// devices, the legacy AT+ unit otherwise. Returns true when the device
+  /// acknowledged with `OK`.
+  Future<bool> sendLegacyCommand(String moduleId, String command) async {
+    final jsonUnit = _jsonUnits[moduleId];
+    if (jsonUnit != null) {
+      if (!jsonUnit.isConnected) return false;
+      try {
+        final raw = await jsonUnit.legacy(command);
+        return raw.endsWith('OK');
+      } catch (_) {
+        return false;
+      }
+    }
+    final atUnit = _units[moduleId];
+    if (atUnit != null) {
+      return atUnit.command(command);
+    }
+    return false;
+  }
+
+  /// Turns an output on (zero-based channel) via the active transport.
+  Future<bool> turnOnOutput(String moduleId, int index) =>
+      sendLegacyCommand(moduleId, 'AT+ON:$index\r');
+
+  /// Turns an output off (zero-based channel) via the active transport.
+  Future<bool> turnOffOutput(String moduleId, int index) =>
+      sendLegacyCommand(moduleId, 'AT+OFF:$index\r');
 
   /// Ensures every module is connected and re-asks it for a fresh status dump,
   /// committing the fleet once. Concurrent calls are coalesced.
@@ -122,6 +162,7 @@ class ModuleStatusService {
   /// counts reflect exactly the modules that remain.
   void removeModule(String moduleId) {
     _units.remove(moduleId)?.dispose();
+    _disposeJsonUnit(moduleId);
   }
 
   /// Closes every persistent socket (and stops each unit's auto-reconnect)
@@ -130,6 +171,9 @@ class ModuleStatusService {
   /// where keeping sockets open wastes battery.
   Future<void> suspendAll() async {
     for (final unit in _units.values) {
+      await unit.disconnect();
+    }
+    for (final unit in _jsonUnits.values) {
       await unit.disconnect();
     }
   }
@@ -143,6 +187,10 @@ class ModuleStatusService {
       final unit = _units[module.id];
       if (unit != null) {
         await unit.connect();
+      }
+      final jsonUnit = _jsonUnits[module.id];
+      if (jsonUnit != null) {
+        await jsonUnit.connect();
       }
     }
     return refreshAll();
@@ -242,6 +290,25 @@ class ModuleStatusService {
     // module is only flipped back to online once the full dump is acknowledged.
     live.status = ConnectionStatus.offline;
 
+    // Soleux JSON path first (the recommended protocol for new mobile
+    // clients), falling back to the legacy AT+ dump when the device does not
+    // answer a JSON `hello`.
+    final jsonOk = await _refreshOneJson(live);
+    if (jsonOk == true) {
+      live.status = ConnectionStatus.online;
+      // A JSON-capable device must not keep a duplicate legacy AT+ unit (and
+      // its second socket) around.
+      _units.remove(live.id)?.dispose();
+      return true;
+    }
+    if (jsonOk == false) {
+      // Connected but the JSON protocol was rejected - the device is not a
+      // current Soleux JSON device; report unreachable/unsupported so the AT
+      // path is not silently closed over.
+      return false;
+    }
+
+    // Legacy AT+ path.
     final unit = _ensureUnit(live, fetcher);
     unit.attach(live);
 
@@ -263,6 +330,54 @@ class ModuleStatusService {
       return false;
     }
   }
+
+  /// Attempts the Soleux JSON `hello` + `get_relay_configuration` probe.
+  ///
+  /// Returns:
+  ///   - `true`  when the device answered the JSON protocol and the dump was
+  ///             fetched;
+  ///   - `false` when the JSON protocol was definitively rejected (connected
+  ///             but no `ok` hello, or the socket is unreachable);
+  ///   - `null`  when the TCP path is fine but no JSON `hello` arrived in time
+  ///             - a legacy device, so the caller falls back to AT+.
+  Future<bool?> _refreshOneJson(DeviceModule live) async {
+    final unit = _ensureJsonUnit(live);
+    await unit.connect();
+    if (!unit.isConnected) {
+      return false;
+    }
+
+    const fetcher = SoleuxJsonFetcher();
+    try {
+      final hello = await unit.hello(timeout: _jsonHelloTimeout);
+      if (!hello.ok) return false;
+      final helloData = SoleuxHelloData.fromResult(hello.result ?? {});
+      fetcher.apply(live, helloData);
+
+      final config = await unit
+          .getRelayConfiguration(timeout: const Duration(seconds: 3));
+      if (config.ok) {
+        fetcher.applyConfiguration(
+            live, SoleuxRelayConfiguration.fromResult(config.result ?? {}));
+        _scheduleCommit();
+      }
+      return true;
+    } on TimeoutException {
+      // No JSON `hello` within the window - this is a legacy protocol device;
+      // drop the JSON unit and let the AT+ path take over.
+      debugPrint(
+          'Module ${live.name} (${live.id}) did not answer JSON hello; '
+          'falling back to legacy AT+');
+      _disposeJsonUnit(live.id);
+      return null;
+    } catch (e) {
+      debugPrint('Module ${live.name} (${live.id}) JSON probe failed: $e');
+      return false;
+    }
+  }
+
+  /// Per-module timeout for a JSON `hello` round-trip.
+  static const Duration _jsonHelloTimeout = Duration(seconds: 2);
 
   /// Gets the persistent unit for [module], creating (and wiring) it the first
   /// time. Its live streams are routed into the store on creation only.
@@ -293,6 +408,49 @@ class ModuleStatusService {
     return unit;
   }
 
+  /// Gets the persistent Soleux JSON unit for [module], creating (and wiring)
+  /// it the first time. Its live legacy/event lines are folded into the
+  /// module's channel state and its connect/disconnect transitions flip the
+  /// online status.
+  SoleuxJsonService _ensureJsonUnit(DeviceModule module) {
+    final existing = _jsonUnits[module.id];
+    if (existing != null) return existing;
+
+    final unit = SoleuxJsonService(
+      connection: ModuleTcpConnection(
+        host: module.ipAddress,
+        port: module.tcpPort,
+        timeout: timeout,
+      ),
+    );
+    // Unsolicited `OUT:`/`IN:` state pushes keep the channel list live.
+    unit.eventStream.listen((event) {
+      final live = store.byId(module.id);
+      if (live == null) return;
+      if (event.channel != null &&
+          event.state != null &&
+          event.channel! >= 0 &&
+          event.channel! < live.channels.length) {
+        live.channels[event.channel!].isOn = event.state!;
+        _scheduleCommit();
+      }
+    });
+    // Connect/disconnect -> flip the module's online status.
+    unit.connectionStateStream.listen((connected) {
+      final live = store.byId(module.id);
+      if (live == null) return;
+      live.status = connected ? ConnectionStatus.online : ConnectionStatus.offline;
+      _scheduleCommit();
+    });
+
+    _jsonUnits[module.id] = unit;
+    return unit;
+  }
+
+  void _disposeJsonUnit(String moduleId) {
+    _jsonUnits.remove(moduleId)?.dispose();
+  }
+
   /// Coalesces the frequent, unsolicited stream updates into a single delayed
   /// store commit instead of persisting on every byte burst.
   void _scheduleCommit() {
@@ -308,5 +466,9 @@ class ModuleStatusService {
       unit.dispose();
     }
     _units.clear();
+    for (final unit in _jsonUnits.values) {
+      unit.dispose();
+    }
+    _jsonUnits.clear();
   }
 }

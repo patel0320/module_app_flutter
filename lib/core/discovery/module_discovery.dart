@@ -1,20 +1,24 @@
 // lib/core/discovery/module_discovery.dart
 //
-// Implements the UDP Discovery Protocol described in doc/PROTOCOLS.md §2:
+// Implements the Soleux UDP discovery protocol described in
+// doc/Soleux-Network-Discovery-and-DCP.md §1 (protocol version 2.0):
 //
 //  1. The app broadcasts a JSON request to UDP port 8000:
-//       { "GUID": "8481fba0-f387-11ea-adc1-0242ac120002",
-//         "Port": "<client_tcp_port>" }
-//  2. Each PDU validates the GUID and opens a NEW TCP connection back to the
-//     app's IP on the advertised <client_tcp_port>.
-//  3. Over that TCP connection the PDU sends its identity response:
-//       GUID:<guid>
-//       VER:<version>
+//       { "GUID": "8C93472D-2EF0-4B82-BE96-4FBBED57783F",
+//         "VER": "2.0",
+//         "PORT": "<client_tcp_port>" }
+//  2. Each Soleux device validates the GUID, dedups the broadcast, and opens a
+//     NEW TCP connection back to the app's IP on the advertised callback
+//     <client_tcp_port>.
+//  3. Over that TCP connection the device sends its identity response:
+//       GUID:<family-guid>
+//       VER:<firmware>
 //       PORT:<tcp_port>
 //       SN:<serial_number>
 //       NAME:<app_name>
 //
-// This replaces the previous hardcoded simulation (`mockDiscoveredModules`).
+// The TCP peer address is authoritative for the device IP; unknown fields are
+// ignored for forward compatibility.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,6 +27,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/module_store.dart';
+import '../soleux/soleux_device_family.dart';
 
 /// Platform channel for the Android WifiManager.MulticastLock (see
 /// MainActivity.kt). WiFi NICs filter out broadcast/multicast traffic unless
@@ -31,14 +36,32 @@ import '../../services/module_store.dart';
 const MethodChannel _androidWifiLock =
     MethodChannel('soleux.device_manager/wifi_lock');
 
-/// The identity fields a responding PDU reports during discovery.
+/// The identity fields a responding device reports during discovery.
 class DiscoveredModule {
+  /// Device-family GUID (doc/Soleux-Network-Discovery-and-DCP.md identity
+  /// table). Distinct from the app's discovery-request GUID.
   final String guid;
+
+  /// Installed device firmware version.
   final String version;
+
+  /// TCP command HostPort returned by the device.
   final int tcpPort;
+
+  /// Device serial number (identifies an individual physical device).
   final String serial;
+
+  /// User-configured device name.
   final String name;
+
+  /// Device IPv4 address (the TCP callback peer address).
   final String ip;
+
+  /// Resolved [SoleuxDeviceFamily] from [guid], or null when unknown.
+  final SoleuxDeviceFamily? family;
+
+  /// UDP heartbeat port (TCP HostPort + 2) for reachability checks.
+  int get heartbeatPort => SoleuxConstants.heartbeatPort(tcpPort);
 
   const DiscoveredModule({
     required this.guid,
@@ -47,7 +70,42 @@ class DiscoveredModule {
     required this.serial,
     required this.name,
     required this.ip,
+    this.family,
   });
+
+  /// Stable identity key used for deduplication.
+  ///
+  /// Serial number is preferred when present and stable; otherwise the family
+  /// GUID plus IP (doc: "Deduplicate by serial number, then MAC/IP").
+  String get dedupeKey => serial.isNotEmpty ? 'sn:$serial' : 'ip:$guid@$ip';
+
+  /// Parses a `KEY:value` identity response (one value per line), matched by
+  /// field name rather than line order. Unknown fields are ignored for
+  /// forward compatibility. Exposed for tests and alternative transports.
+  static DiscoveredModule? parseIdentityResponse(String text, String ip) {
+    if (text.isEmpty) return null;
+    final map = <String, String>{};
+    for (final line in text.split(RegExp(r'[\r\n]'))) {
+      final idx = line.indexOf(':');
+      if (idx <= 0) continue;
+      final key = line.substring(0, idx).trim().toUpperCase();
+      final value = line.substring(idx + 1).trim();
+      if (value.isNotEmpty) map[key] = value;
+    }
+    if (map['GUID'] == null) return null;
+    // `PORT` is the canonical field; PDU V1.0 also answers legacy `Port`.
+    final portRaw = map['PORT'] ?? map['Port'];
+    final guid = map['GUID']!;
+    return DiscoveredModule(
+      guid: guid,
+      version: map['VER'] ?? '',
+      tcpPort: int.tryParse(portRaw ?? '') ?? SoleuxConstants.defaultCommandPort,
+      serial: map['SN'] ?? '',
+      name: map['NAME'] ?? '',
+      ip: ip,
+      family: SoleuxDeviceFamilies.fromGuid(guid),
+    );
+  }
 }
 
 /// Sends the UDP discovery broadcast and collects PDU identity responses.
@@ -55,11 +113,14 @@ class DiscoveredModule {
 /// Simple implementation: bound to a fresh local TCP listener, broadcasts the
 /// request, then accepts the inbound identity connections until [timeout].
 class ModuleDiscovery {
-  /// Broadcast request target port (PROTOCOLS.md §2).
-  static const int discoveryPort = 8000;
+  /// Broadcast request target port (doc §1): UDP 8000.
+  static const int discoveryPort = SoleuxConstants.discoveryPort;
 
-  /// Client-side request identifier expected by every PDU (PROTOCOLS.md §2).
-  static const String requestGuid = '8481fba0-f387-11ea-adc1-0242ac120002';
+  /// Client-side discovery-request identity expected by every device.
+  static const String requestGuid = SoleuxConstants.discoveryGuid;
+
+  /// Discovery protocol version carried in the broadcast request.
+  static const String requestVersion = SoleuxConstants.discoveryVersion;
 
   /// Legacy global broadcast address; sent alongside per-subnet broadcasts.
   static const _globalBroadcast = '255.255.255.255';
@@ -120,8 +181,11 @@ class ModuleDiscovery {
     final udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
     udp.broadcastEnabled = true;
     final targets = await _broadcastTargets(timeout);
-    final payload =
-        utf8.encode(jsonEncode({'GUID': requestGuid, 'Port': localTcpPort}));
+    final payload = utf8.encode(jsonEncode({
+      'GUID': requestGuid,
+      'VER': requestVersion,
+      'PORT': localTcpPort,
+    }));
 
     for (final target in targets) {
       for (var i = 0; i < _broadcastRepetitions; i++) {
@@ -220,9 +284,12 @@ class ModuleDiscovery {
     socket.listen(
       (chunk) {
         buffer.write(utf8.decode(chunk, allowMalformed: true));
-        final device =
-            _parseIdentity(buffer.toString(), socket.remoteAddress.address);
-        if (device != null && !results.any((r) => r.guid == device.guid)) {
+        final device = DiscoveredModule.parseIdentityResponse(
+            buffer.toString(), socket.remoteAddress.address);
+        // Deduplicate by serial number first (fallback: GUID+IP). A physical
+        // device may answer on more than one interface.
+        if (device != null &&
+            !results.any((r) => r.dedupeKey == device.dedupeKey)) {
           debugPrint(
               'Discovered module: ${device.guid} @ ${device.ip} (${device.name})');
           results.add(device);
@@ -230,28 +297,6 @@ class ModuleDiscovery {
       },
       onError: (_) {},
       onDone: () => socket.destroy(),
-    );
-  }
-
-  /// Parses a `KEY:value` identity response (one value per line).
-  DiscoveredModule? _parseIdentity(String text, String ip) {
-    if (text.isEmpty) return null;
-    final map = <String, String>{};
-    for (final line in text.split(RegExp(r'[\r\n]'))) {
-      final idx = line.indexOf(':');
-      if (idx <= 0) continue;
-      final key = line.substring(0, idx).trim().toUpperCase();
-      final value = line.substring(idx + 1).trim();
-      if (value.isNotEmpty) map[key] = value;
-    }
-    if (map['GUID'] == null) return null;
-    return DiscoveredModule(
-      guid: map['GUID']!,
-      version: map['VER'] ?? '',
-      tcpPort: int.tryParse(map['PORT'] ?? '') ?? 5005,
-      serial: map['SN'] ?? '',
-      name: map['NAME'] ?? '',
-      ip: ip,
     );
   }
 }
