@@ -14,6 +14,7 @@ import java.net.Inet4Address
 class MainActivity : FlutterActivity() {
     private var multicastLock: WifiManager.MulticastLock? = null
     private var nearbyWifiPermissionContinuation: MethodChannel.Result? = null
+    private var localNetworkPermissionContinuation: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -36,6 +37,9 @@ class MainActivity : FlutterActivity() {
                     }
                     "requestNearbyWifiPermission" -> {
                         requestNearbyWifiPermission(result)
+                    }
+                    "requestLocalNetworkPermission" -> {
+                        requestLocalNetworkPermission(result)
                     }
                     else -> result.notImplemented()
                 }
@@ -98,12 +102,44 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_NEARBY_WIFI) {
-            val granted = grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            nearbyWifiPermissionContinuation?.success(granted)
-            nearbyWifiPermissionContinuation = null
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        when (requestCode) {
+            REQUEST_NEARBY_WIFI -> {
+                nearbyWifiPermissionContinuation?.success(granted)
+                nearbyWifiPermissionContinuation = null
+            }
+            REQUEST_LOCAL_NETWORK -> {
+                localNetworkPermissionContinuation?.success(granted)
+                localNetworkPermissionContinuation = null
+            }
         }
+    }
+
+    // Android 16 (API 36, targetSdk 36) gates every packet to the local LAN
+    // (UDP discovery, TCP command/status, local MQTT) behind a runtime
+    // permission; without the grant the discovery broadcast never egresses.
+    private fun requestLocalNetworkPermission(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            result.success(true)
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            result.success(true)
+            return
+        }
+        val previous = localNetworkPermissionContinuation
+        if (previous != null) {
+            // A request is already in flight; resolve the older one as denied.
+            previous.success(false)
+        }
+        localNetworkPermissionContinuation = result
+        requestPermissions(
+            arrayOf(Manifest.permission.ACCESS_LOCAL_NETWORK),
+            REQUEST_LOCAL_NETWORK
+        )
     }
 
     // Returns the active network's IPv4 link address (interface name, address,
@@ -136,5 +172,6 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val REQUEST_NEARBY_WIFI = 0x1001
+        private const val REQUEST_LOCAL_NETWORK = 0x1002
     }
 }

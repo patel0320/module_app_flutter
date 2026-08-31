@@ -148,7 +148,10 @@ class ModuleDiscovery {
 
       server.listen((socket) {
         _readIdentity(socket, results);
-      }, onError: (_) {});
+      }, onError: (err) {
+        debugPrint(
+            'ModuleDiscovery: error occurred while listening for identity responses: $err');
+      });
 
       final localPort = server.port;
       // Broadcast and keep the listener accepting identity responses for the
@@ -172,6 +175,14 @@ class ModuleDiscovery {
   /// discovery still proceeds (and may work on forgiving networks).
   static Future<void> _prepareAndroidDiscovery() async {
     if (!Platform.isAndroid) return;
+    // Android 16 blocks all local network traffic without the runtime grant;
+    // without it the UDP discovery broadcast never leaves the phone.
+    try {
+      await _androidWifiLock.invokeMethod('requestLocalNetworkPermission');
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: local network permission request failed: '
+          '$e\n$st');
+    }
     try {
       await _androidWifiLock.invokeMethod('requestNearbyWifiPermission');
     } catch (e, st) {
@@ -200,7 +211,7 @@ class ModuleDiscovery {
     final payload = utf8.encode(jsonEncode({
       'GUID': requestGuid,
       'VER': requestVersion,
-      'PORT': localTcpPort,
+      'PORT': localTcpPort.toString(),
     }));
 
     for (final target in targets) {
@@ -406,6 +417,9 @@ class ModuleDiscovery {
     socket.listen(
       (chunk) {
         buffer.write(utf8.decode(chunk, allowMalformed: true));
+        debugPrint('ModuleDiscovery: received identity response from '
+            '${socket.remoteAddress.address}:${socket.remotePort}:\n'
+            '${buffer.toString()}');
         final device = DiscoveredModule.parseIdentityResponse(
             buffer.toString(), socket.remoteAddress.address);
         // Deduplicate by serial number first (fallback: GUID+IP). A physical

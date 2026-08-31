@@ -13,6 +13,10 @@
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"/>
+    <!-- Android 16+ runtime permission for direct LAN connections to the Soleux
+         modules (UDP discovery, TCP command/status, local MQTT). Apps targeting
+         SDK 36 are blocked from the local network without this grant. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
     <!-- Keeps the periodic module-status background worker scheduled across device reboots. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Posting local notifications (Android 13+; requested at runtime). -->
