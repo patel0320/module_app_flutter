@@ -124,7 +124,7 @@ class MainActivity : FlutterActivity() {
             result.success(true)
             return
         }
-        if (checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+        if (checkSelfPermission("android.permission.ACCESS_LOCAL_NETWORK") ==
             PackageManager.PERMISSION_GRANTED
         ) {
             result.success(true)
@@ -137,7 +137,7 @@ class MainActivity : FlutterActivity() {
         }
         localNetworkPermissionContinuation = result
         requestPermissions(
-            arrayOf(Manifest.permission.ACCESS_LOCAL_NETWORK),
+            arrayOf("android.permission.ACCESS_LOCAL_NETWORK"),
             REQUEST_LOCAL_NETWORK
         )
     }
