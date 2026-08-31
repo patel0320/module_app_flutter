@@ -209,9 +209,9 @@ class ModuleDiscovery {
     };
     try {
       final interfaces = await NetworkInterface.list().timeout(timeout);
-      // Real per-interface netmasks (Linux/Android); unknown masks fall back
+      // Real per-interface netmasks; unknown masks fall back
       // to the /24 assumption with the global broadcast as insurance.
-      final netmasks = _readLinuxNetmasks();
+      final netmasks = await _maskByInterface();
       for (final iface in interfaces) {
         for (final addr in iface.addresses) {
           if (addr.type != InternetAddressType.IPv4) continue;
@@ -236,11 +236,55 @@ class ModuleDiscovery {
     return result.toList();
   }
 
-  /// Parses `/proc/net/route` (present on Android/Linux) for the real netmask
-  /// of each interface (default-route entry), so directed broadcasts are
+  /// Resolves the IPv4 subnet mask for each local interface, keyed by
+  /// interface name.
+  ///
+  /// Android cannot read `/proc/net/route` (SELinux denies `getattr` on
+  /// `proc_net` for `untrusted_app`, which surfaces as an `avc: denied`
+  /// violation in logcat), so the active interface's prefix length is obtained
+  /// from `ConnectivityManager` via the native platform channel
+  /// (`soleux.device_manager/wifi_lock`, `ipv4LinkInfo`). On other platforms
+  /// (Linux desktop) the routing table is still parsed from `/proc/net/route`;
+  /// any failure falls back to the /24 assumption.
+  static Future<Map<String, int>> _maskByInterface() async {
+    if (Platform.isAndroid) {
+      return _androidNetmasks();
+    }
+    return _linuxProcNetmasks();
+  }
+
+  /// Android: reads `interface` / `ip` / `prefix` for the active network from
+  /// the platform channel; converts the prefix length to a big-endian /proc
+  /// style 32-bit mask (e.g. /24 => `0xFFFFFF00`). Returns an empty map when
+  /// the channel is unavailable or the network has no IPv4 link address.
+  static Future<Map<String, int>> _androidNetmasks() async {
+    try {
+      final info = await _androidWifiLock
+          .invokeMethod<Map<Object?, Object?>>('ipv4LinkInfo');
+      if (info == null) return const {};
+      final iface = info['interface'] as String?;
+      final prefix = info['prefix'];
+      if (iface == null || iface.isEmpty || prefix is! int) return const {};
+      if (prefix <= 0 || prefix > 32) return const {};
+      return {iface: _prefixToMask(prefix)};
+    } catch (_) {
+      // Channel missing (e.g. early tests); caller keeps the /24 fallback.
+      return const {};
+    }
+  }
+
+  /// Converts a CIDR prefix length into a big-endian 32-bit netmask value.
+  static int _prefixToMask(int prefix) {
+    if (prefix <= 0) return 0;
+    if (prefix >= 32) return 0xFFFFFFFF;
+    return (0xFFFFFFFF << (32 - prefix)) & 0xFFFFFFFF;
+  }
+
+  /// Parses `/proc/net/route` (Linux desktop only) for the real netmask of
+  /// each interface (default-route entry), so directed broadcasts are
   /// computed against the actual subnet instead of assuming /24. The four
   /// hex bytes are stored little-endian (e.g. /24 => `00FFFFFF`).
-  static Map<String, int> _readLinuxNetmasks() {
+  static Map<String, int> _linuxProcNetmasks() {
     final result = <String, int>{};
     try {
       final file = File('/proc/net/route');
