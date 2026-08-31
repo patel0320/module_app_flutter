@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -61,7 +62,10 @@ class MqttTransport implements Transport {
           final text = String.fromCharCodes(payload.payload.message);
           try {
             _inbound.add(jsonDecode(text) as Map<String, dynamic>);
-          } catch (_) {/* ignore malformed */}
+          } catch (e, st) {
+            debugPrint('MqttTransport: ignoring malformed inbound message: '
+                '$e\n$st');
+          }
         }
       }
     });

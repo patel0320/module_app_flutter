@@ -72,7 +72,8 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
         // No live unit for this module - fall back to a local toggle.
         setState(() => module.channels[index].isOn = next);
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('RelayControlScreen: toggle output failed: $e\n$st');
       // Command failed or module offline - keep the UI showing reality.
     }
   }

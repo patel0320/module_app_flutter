@@ -103,7 +103,9 @@ class ModuleStatusService {
       try {
         final raw = await jsonUnit.legacy(command);
         return raw.endsWith('OK');
-      } catch (_) {
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: legacy command "$command" on '
+            '$moduleId failed: $e\n$st');
         return false;
       }
     }
@@ -143,6 +145,9 @@ class ModuleStatusService {
 
       await store.commit();
       _lastResult = ModuleStatusResult(online: online, offline: offline);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: refreshAll failed: $e\n$st');
+      rethrow;
     } finally {
       _refreshing = false;
     }
@@ -259,12 +264,16 @@ class ModuleStatusService {
       await done.future;
       timer.cancel();
       reachable = buffer.toString().trimRight().endsWith('\r\nOK');
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: polling ${live.ipAddress}:'
+          '${live.tcpPort} failed: $e\n$st');
       reachable = false;
     } finally {
       try {
         socket?.destroy();
-      } catch (_) {/* ignore */}
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: socket destroy failed: $e\n$st');
+      }
     }
 
     live.status =

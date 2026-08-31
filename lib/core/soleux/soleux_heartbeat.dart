@@ -136,8 +136,9 @@ class SoleuxHeartbeat {
           if (pong.nonce == nonceValue && !completer.isCompleted) {
             completer.complete(pong);
           }
-        } catch (_) {
-          // Ignore non-pong / malformed datagrams.
+        } catch (e, st) {
+          debugPrint('SoleuxHeartbeat: ignoring malformed datagram '
+              'from $host:$port: $e\n$st');
         }
       }
 

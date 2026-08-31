@@ -149,7 +149,9 @@ class ModuleTcpConnection {
     _socket = null;
     try {
       socket?.destroy();
-    } catch (_) {/* ignore */}
+    } catch (e, st) {
+      debugPrint('ModuleTCP $key: socket destroy failed: $e\n$st');
+    }
   }
 
   /// Stops auto-reconnect and closes the socket.

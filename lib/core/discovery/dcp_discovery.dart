@@ -272,7 +272,8 @@ abstract final class DcpSupport {
       final ok =
           await _rawSocketChannel.invokeMethod<bool>('isAvailable') ?? false;
       _resolved = ok;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('DcpSupport: raw ethernet backend unavailable: $e\n$st');
       _resolved = false;
     }
     return _resolved!;

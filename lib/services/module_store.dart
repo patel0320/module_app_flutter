@@ -50,7 +50,8 @@ class ModuleStore extends ChangeNotifier {
     try {
       _repo = await ModuleRepository.load();
       _modules = _repo!.fetch();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ModuleStore: loading fleet failed: $e\n$st');
       _modules = [];
     }
     _loaded = true;

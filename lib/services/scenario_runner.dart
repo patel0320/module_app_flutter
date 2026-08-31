@@ -118,7 +118,8 @@ class ScenarioRunner {
             ? 'ACK on ${channel.name}'
             : 'Command rejected by ${module.name}',
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('ScenarioRunner: action "$description" failed: $e\n$st');
       return ScenarioActionResult(
         description: description,
         success: false,

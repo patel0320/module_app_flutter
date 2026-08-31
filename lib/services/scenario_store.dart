@@ -39,7 +39,8 @@ class ScenarioStore extends ChangeNotifier {
     try {
       _repo = await ScenarioRepository.load();
       _scenarios = _repo!.fetch();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ScenarioStore: loading scenarios failed: $e\n$st');
       _scenarios = [];
     }
     _loaded = true;

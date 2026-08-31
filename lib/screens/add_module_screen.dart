@@ -95,7 +95,8 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     try {
       final results = await _discovery.discover();
       found = [for (final d in results) _toDeviceModule(d)];
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('AddModuleScreen: discovery scan failed: $e\n$st');
       found = const [];
     }
     if (!mounted) return;

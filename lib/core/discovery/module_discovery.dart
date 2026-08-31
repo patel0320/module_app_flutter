@@ -155,6 +155,9 @@ class ModuleDiscovery {
       // full timeout window (_broadcast awaits the timeout), then close.
       await _broadcast(localPort, timeout);
       await server.close();
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: discovery pass failed: $e\n$st');
+      rethrow;
     } finally {
       await _releaseAndroidWifiLock();
     }
@@ -168,14 +171,18 @@ class ModuleDiscovery {
     if (!Platform.isAndroid) return;
     try {
       await _androidWifiLock.invokeMethod('acquire');
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: wifi lock acquire failed: $e\n$st');
+    }
   }
 
   static Future<void> _releaseAndroidWifiLock() async {
     if (!Platform.isAndroid) return;
     try {
       await _androidWifiLock.invokeMethod('release');
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: wifi lock release failed: $e\n$st');
+    }
   }
 
   Future<void> _broadcast(int localTcpPort, Duration timeout) async {
@@ -219,8 +226,9 @@ class ModuleDiscovery {
               .add(directedSubnetBroadcast(addr.address, netmasks[iface.name]));
         }
       }
-    } catch (_) {
-      // Fall back to the global broadcast if interfaces are unavailable.
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: enumerating broadcast interfaces failed '
+          '(falling back to global broadcast): $e\n$st');
     }
     try {
       await ModuleStore.shared.init();
@@ -230,8 +238,9 @@ class ModuleDiscovery {
           result.add(ip);
         }
       }
-    } catch (_) {
-      // Module store may be unavailable (e.g. tests); broadcast only.
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: loading known modules for unicast '
+          'requests failed: $e\n$st');
     }
     return result.toList();
   }
@@ -267,8 +276,9 @@ class ModuleDiscovery {
       if (iface == null || iface.isEmpty || prefix is! int) return const {};
       if (prefix <= 0 || prefix > 32) return const {};
       return {iface: _prefixToMask(prefix)};
-    } catch (_) {
-      // Channel missing (e.g. early tests); caller keeps the /24 fallback.
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: android netmask lookup failed (using /24 '
+          'fallback): $e\n$st');
       return const {};
     }
   }
@@ -301,8 +311,9 @@ class ModuleDiscovery {
             ((rawMask >> 8) & 0xFF00) |
             ((rawMask >> 24) & 0xFF);
       }
-    } catch (_) {
-      // Non-Linux platform or unreadable procfs; caller keeps /24 fallback.
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: reading /proc/net/route failed (using /24 '
+          'fallback): $e\n$st');
     }
     return result;
   }

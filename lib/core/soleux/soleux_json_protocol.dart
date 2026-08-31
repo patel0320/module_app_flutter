@@ -18,6 +18,8 @@ library;
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 /// The prefix every JSON protocol line starts with on the wire.
 const String kSoleuxJsonPrefix = 'J:';
 
@@ -189,7 +191,8 @@ class SoleuxJsonResponse {
     dynamic result;
     try {
       result = map['result'];
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('SoleuxJsonResponse: reading result field failed: $e\n$st');
       result = null;
     }
 
