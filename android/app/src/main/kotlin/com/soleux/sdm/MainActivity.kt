@@ -1,8 +1,11 @@
 ﻿package com.soleux.sdm
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -10,6 +13,7 @@ import java.net.Inet4Address
 
 class MainActivity : FlutterActivity() {
     private var multicastLock: WifiManager.MulticastLock? = null
+    private var nearbyWifiPermissionContinuation: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -29,6 +33,9 @@ class MainActivity : FlutterActivity() {
                     }
                     "ipv4LinkInfo" -> {
                         result.success(activeIpv4LinkInfo())
+                    }
+                    "requestNearbyWifiPermission" -> {
+                        requestNearbyWifiPermission(result)
                     }
                     else -> result.notImplemented()
                 }
@@ -59,6 +66,46 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // Android 13+ makes NEARBY_WIFI_DEVICES a runtime permission; from Android
+    // 14 (targetSdk 34+) WifiManager.createMulticastLock throws a
+    // SecurityException without it, which silently kills UDP discovery.
+    private fun requestNearbyWifiPermission(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            result.success(true)
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            result.success(true)
+            return
+        }
+        val previous = nearbyWifiPermissionContinuation
+        if (previous != null) {
+            // A request is already in flight; resolve the older one as denied.
+            previous.success(false)
+        }
+        nearbyWifiPermissionContinuation = result
+        requestPermissions(
+            arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES),
+            REQUEST_NEARBY_WIFI
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NEARBY_WIFI) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            nearbyWifiPermissionContinuation?.success(granted)
+            nearbyWifiPermissionContinuation = null
+        }
+    }
+
     // Returns the active network's IPv4 link address (interface name, address,
     // and CIDR prefix length) for the Dart-side directed-broadcast math.
     // Reading /proc/net/route is blocked by SELinux for untrusted_app, so the
@@ -66,7 +113,7 @@ class MainActivity : FlutterActivity() {
     // Requires API 23+; returns null (Dart falls back to /24 + global
     // broadcast) on older releases. Needs ACCESS_NETWORK_STATE.
     private fun activeIpv4LinkInfo(): Map<String, Any>? {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return null
         }
         val cm =
@@ -85,5 +132,9 @@ class MainActivity : FlutterActivity() {
             }
         }
         return null
+    }
+
+    companion object {
+        private const val REQUEST_NEARBY_WIFI = 0x1001
     }
 }

@@ -139,9 +139,9 @@ class ModuleDiscovery {
     final results = <DiscoveredModule>[];
     if (timeout.inMilliseconds <= 0) return results;
 
-    // Sometimes required on the PDU side too (some firmwares also answer the
-    // discovery broadcast with a broadcast/multicast); always harmless.
-    await _acquireAndroidWifiLock();
+    // On Android this guarantees the runtime nearby-devices grant and holds a
+    // WifiManager.MulticastLock (see _prepareAndroidDiscovery for why).
+    await _prepareAndroidDiscovery();
     try {
       // Advertise a fresh TCP listener; PDUs dial back into this port.
       final server = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
@@ -164,11 +164,20 @@ class ModuleDiscovery {
     return results;
   }
 
-  /// On Android, WiFi frame filtering drops broadcast/multicast packets unless
-  /// the process holds a WifiManager.MulticastLock. Best-effort: failures are
-  /// swallowed so discovery still proceeds without it.
-  static Future<void> _acquireAndroidWifiLock() async {
+  /// On Android: grants the runtime `NEARBY_WIFI_DEVICES` permission (Android
+  /// 13+ requires it; from Android 14 `WifiManager.createMulticastLock` throws
+  /// a `SecurityException` without it) and then holds a `WifiManager.MulticastLock`
+  /// - without the lock the NIC filters the broadcast/multicast frames that
+  /// carry discovery. Best-effort: failures are logged, never fatal, so
+  /// discovery still proceeds (and may work on forgiving networks).
+  static Future<void> _prepareAndroidDiscovery() async {
     if (!Platform.isAndroid) return;
+    try {
+      await _androidWifiLock.invokeMethod('requestNearbyWifiPermission');
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: nearby wifi permission request failed: '
+          '$e\n$st');
+    }
     try {
       await _androidWifiLock.invokeMethod('acquire');
     } catch (e, st) {
@@ -186,8 +195,7 @@ class ModuleDiscovery {
   }
 
   Future<void> _broadcast(int localTcpPort, Duration timeout) async {
-    final udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    udp.broadcastEnabled = true;
+    final udp = await _bindBroadcastSocket();
     final targets = await _broadcastTargets(timeout);
     final payload = utf8.encode(jsonEncode({
       'GUID': requestGuid,
@@ -203,6 +211,64 @@ class ModuleDiscovery {
 
     await Future<void>.delayed(timeout);
     udp.close();
+  }
+
+  /// On Android, binds the broadcast socket to the Wi-Fi interface IPv4 address
+  /// so the datagram egresses over Wi-Fi with a LAN-reachable source IP (PDUs
+  /// dial back to that source). A socket on 0.0.0.0 can instead be routed via
+  /// the cellular default network, whose source address no LAN device can
+  /// reach - which is why discovery works on Windows (single NIC) but silently
+  /// finds nothing on a phone with mobile data active. Falls back to 0.0.0.0
+  /// when the address is unknown or the bind fails.
+  static Future<RawDatagramSocket> _bindBroadcastSocket() async {
+    final local = await _localIPv4Address();
+    if (local != null) {
+      try {
+        final socket = await RawDatagramSocket.bind(InternetAddress(local), 0);
+        socket.broadcastEnabled = true;
+        return socket;
+      } catch (e, st) {
+        debugPrint('ModuleDiscovery: binding broadcast socket to $local failed '
+            '(falling back to 0.0.0.0): $e\n$st');
+      }
+    }
+    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+    socket.broadcastEnabled = true;
+    return socket;
+  }
+
+  /// First usable non-loopback IPv4 address, preferring Wi-Fi / Ethernet
+  /// interfaces. Only meaningful on Android; returns null elsewhere or when no
+  /// IPv4 lease is available (e.g. while on cellular).
+  static Future<String?> _localIPv4Address() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (final iface in interfaces) {
+        final name = iface.name.toLowerCase();
+        if (name == 'lo' ||
+            name.startsWith('tun') ||
+            name.startsWith('dummy') ||
+            name.startsWith('p2p')) {
+          continue;
+        }
+        for (final addr in iface.addresses) {
+          if (addr.type != InternetAddressType.IPv4) continue;
+          final ip = addr.address;
+          if (addr.isLoopback ||
+              ip.startsWith('127.') ||
+              ip.startsWith('169.254.') ||
+              ip.startsWith('0.')) {
+            continue;
+          }
+          return ip;
+        }
+      }
+    } catch (e, st) {
+      debugPrint('ModuleDiscovery: listing local IPv4 addresses failed: '
+          '$e\n$st');
+    }
+    return null;
   }
 
   /// Directs broadcasts at the global address plus a directed broadcast for
