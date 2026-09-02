@@ -6,12 +6,15 @@
 //
 //   - Foreground (resumed): persistent TCP sockets are kept alive per module
 //     (see [ModuleStatusService]) so pushed state changes and full status
-//     dumps flow into the store in real time. This is the default, rich mode.
+//     dumps flow into the store in real time. The UDP heartbeat monitor (see
+//     [ModuleHeartbeatService]) also runs here as independent, cheap
+//     reachability evidence and refreshes the module target set.
 //   - Background (paused/inactive/hidden/detached): keeping sockets open
 //     wastes battery and the OS may suspend the app anyway, so every socket is
-//     dropped and the fleet is instead polled by the OS's native background
-//     worker (see [BackgroundStatusWorker]: Android WorkManager / iOS
-//     BGAppRefreshTask), which survives the process being suspended or killed.
+//     dropped and aggressive in-Dart 5-second heartbeat polling is stopped;
+//     the fleet is instead polled by the OS's native background worker (see
+//     [BackgroundStatusWorker]: Android WorkManager / iOS BGAppRefreshTask),
+//     which survives the process being suspended or killed.
 //
 // The scheduler simply reacts to [AppLifecycleState] changes and switches
 // between the two modes - it no longer runs any in-Dart polling [Timer], so
@@ -19,6 +22,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'background_status_worker.dart';
+import 'module_heartbeat_service.dart';
 import 'module_status_service.dart';
 
 /// Toggles the module status strategy between persistent-socket (foreground)
@@ -73,10 +77,17 @@ class ModuleStatusScheduler with WidgetsBindingObserver {
     // Re-open any sockets that were dropped while backgrounded and re-ask for
     // a fresh status dump. Coalesced / no-op when sockets are already live.
     service.resumeAll().ignore();
+    // Begin lightweight UDP heartbeat monitoring as independent reachability
+    // evidence (spec §4.5); stopped again when the app backgrounds.
+    ModuleHeartbeatService.shared.start().ignore();
   }
 
   void _enterBackground() {
     _foreground = false;
+    // Stop the in-app UDP heartbeat polling: the OS may suspend the timers
+    // anyway, and aggressive 5-second monitoring must not run in a background
+    // state (spec §4.5). The native worker resumes reachability polling.
+    ModuleHeartbeatService.shared.stop();
     // Close every persistent socket so they are not held open in the
     // background, then let the OS's native background worker poll the fleet
     // while the app is suspended.

@@ -1,12 +1,15 @@
 // lib/core/discovery/module_discovery.dart
 //
 // Implements the Soleux UDP discovery protocol described in
-// doc/Soleux-Network-Discovery-and-DCP.md §1 (protocol version 2.0):
+// doc/Soleux_Network_Discovery_and_Heartbeat_Specification_v0.1.md §1
+// (protocol version 2.0):
 //
 //  1. The app broadcasts a JSON request to UDP port 8000:
 //       { "GUID": "8C93472D-2EF0-4B82-BE96-4FBBED57783F",
 //         "VER": "2.0",
-//         "PORT": "<client_tcp_port>" }
+//         "PORT": <client_tcp_port>,
+//         "CLIENT": "Soleux Device Manager",
+//         "WANT": ["MAC","API_PORT","HEARTBEAT_PORT","API_VER"] }
 //  2. Each Soleux device validates the GUID, dedups the broadcast, and opens a
 //     NEW TCP connection back to the app's IP on the advertised callback
 //     <client_tcp_port>.
@@ -16,9 +19,15 @@
 //       PORT:<tcp_port>
 //       SN:<serial_number>
 //       NAME:<app_name>
+//       MAC:<mac>              (additive)
+//       API_PORT:<5008>        (additive)
+//       HEARTBEAT_PORT:<5007>  (additive)
+//       API_VER:<3>            (additive)
+//       CAPS:control_api_v3,heartbeat,l2  (additive)
 //
 // The TCP peer address is authoritative for the device IP; unknown fields are
-// ignored for forward compatibility.
+// ignored for forward compatibility. Clients parse fields by name (not line
+// order) and never trust a separately reported IP more than the peer address.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -28,6 +37,7 @@ import 'package:flutter/services.dart';
 
 import '../../services/module_store.dart';
 import '../soleux/soleux_device_family.dart';
+import 'dcp_discovery.dart' show normalizeMac;
 
 /// Platform channel for the Android WifiManager.MulticastLock (see
 /// MainActivity.kt). WiFi NICs filter out broadcast/multicast traffic unless
@@ -36,10 +46,11 @@ import '../soleux/soleux_device_family.dart';
 const MethodChannel _androidWifiLock =
     MethodChannel('soleux.device_manager/wifi_lock');
 
-/// The identity fields a responding device reports during discovery.
+/// The identity fields a responding device reports during discovery
+/// (doc/Soleux_Network_Discovery_and_Heartbeat_Specification_v0.1.md §1.2).
 class DiscoveredModule {
-  /// Device-family GUID (doc/Soleux-Network-Discovery-and-DCP.md identity
-  /// table). Distinct from the app's discovery-request GUID.
+  /// Device-family GUID (spec §1.2 identity table). Distinct from the app's
+  /// discovery-request GUID.
   final String guid;
 
   /// Installed device firmware version.
@@ -57,11 +68,39 @@ class DiscoveredModule {
   /// Device IPv4 address (the TCP callback peer address).
   final String ip;
 
+  /// Ethernet MAC address when advertised (additive; authoritative value is
+  /// the frame source).
+  final String? mac;
+
+  /// Control API v3 TCP port when advertised (additive, normally 5008).
+  final int? apiPort;
+
+  /// Highest advertised Control API version (additive, current 3).
+  final int? apiVersion;
+
+  /// Advertised UDP heartbeat port (additive, normally 5007). When absent the
+  /// monitor probes the derived value `tcpPort + 2`.
+  final int? advertisedHeartbeatPort;
+
+  /// Compact advertised capability identifiers (additive), e.g.
+  /// `control_api_v3`, `heartbeat`, `l2`.
+  final List<String> caps;
+
   /// Resolved [SoleuxDeviceFamily] from [guid], or null when unknown.
   final SoleuxDeviceFamily? family;
 
-  /// UDP heartbeat port (TCP HostPort + 2) for reachability checks.
-  int get heartbeatPort => SoleuxConstants.heartbeatPort(tcpPort);
+  /// UDP heartbeat port for reachability checks: the advertised
+  /// HEARTBEAT_PORT when present, otherwise the derived `tcpPort + 2`.
+  int get heartbeatPort =>
+      advertisedHeartbeatPort ?? SoleuxConstants.heartbeatPort(tcpPort);
+
+  /// True when this record carries a usable peer IPv4 address and at least one
+  /// usable control endpoint (spec §1.2 `connectable`).
+  bool get connectable {
+    final peer = InternetAddress.tryParse(ip);
+    if (peer == null || peer.type != InternetAddressType.IPv4) return false;
+    return apiPort != null || tcpPort > 0;
+  }
 
   const DiscoveredModule({
     required this.guid,
@@ -70,14 +109,24 @@ class DiscoveredModule {
     required this.serial,
     required this.name,
     required this.ip,
+    this.mac,
+    this.apiPort,
+    this.apiVersion,
+    this.advertisedHeartbeatPort,
+    this.caps = const [],
     this.family,
   });
 
-  /// Stable identity key used for deduplication.
+  /// Stable identity key used for deduplication (spec §3.1 merge priority).
   ///
-  /// Serial number is preferred when present and stable; otherwise the family
-  /// GUID plus IP (doc: "Deduplicate by serial number, then MAC/IP").
-  String get dedupeKey => serial.isNotEmpty ? 'sn:$serial' : 'ip:$guid@$ip';
+  /// Preference order: stable serial number, then normalized Ethernet MAC,
+  /// then family GUID plus observed IPv4 plus legacy TCP port.
+  String get dedupeKey {
+    if (serial.isNotEmpty) return 'sn:$serial';
+    final normalizedMac = normalizeMac(mac ?? '');
+    if (normalizedMac != null) return 'mac:$normalizedMac';
+    return 'ip:$guid@$ip:$tcpPort';
+  }
 
   /// Parses a `KEY:value` identity response (one value per line), matched by
   /// field name rather than line order. Unknown fields are ignored for
@@ -104,8 +153,23 @@ class DiscoveredModule {
       serial: map['SN'] ?? '',
       name: map['NAME'] ?? '',
       ip: ip,
+      mac: map['MAC'],
+      apiPort: int.tryParse(map['API_PORT'] ?? ''),
+      apiVersion: int.tryParse(map['API_VER'] ?? ''),
+      advertisedHeartbeatPort: int.tryParse(map['HEARTBEAT_PORT'] ?? ''),
+      caps: _parseCaps(map['CAPS']),
       family: SoleuxDeviceFamilies.fromGuid(guid),
     );
+  }
+
+  /// Splits a `CSV`/`string[]` capability value into compact identifiers.
+  /// Malformed or empty values yield an empty list (additive, never fatal).
+  static List<String> _parseCaps(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    return [
+      for (final part in raw.split(','))
+        if (part.trim().isNotEmpty) part.trim().toLowerCase(),
+    ];
   }
 }
 
@@ -123,6 +187,18 @@ class ModuleDiscovery {
   /// Discovery protocol version carried in the broadcast request.
   static const String requestVersion = SoleuxConstants.discoveryVersion;
 
+  /// Additive client name sent for diagnostics (spec §1.1 `CLIENT`).
+  static const String requestClientName = 'Soleux Device Manager';
+
+  /// Additive fields requested from responding devices (spec §1.1 `WANT`).
+  /// Devices may ignore the list entirely.
+  static const List<String> requestedFields = [
+    'MAC',
+    'API_PORT',
+    'HEARTBEAT_PORT',
+    'API_VER',
+  ];
+
   /// Legacy global broadcast address; sent alongside per-subnet broadcasts.
   static const _globalBroadcast = '255.255.255.255';
 
@@ -131,6 +207,19 @@ class ModuleDiscovery {
 
   /// Number of times each broadcast target is pinged.
   static const int _broadcastRepetitions = 3;
+
+  /// Encodes the UDP discovery request for [callbackPort] (spec §1.1).
+  ///
+  /// `PORT` is an `integer|string` in the range 1-65535; it is sent as an
+  /// integer per the canonical example payload. `CLIENT` and `WANT` are
+  /// additive diagnostics that devices must ignore when unrecognized.
+  static String buildRequestPayload(int callbackPort) => jsonEncode({
+        'GUID': requestGuid,
+        'VER': requestVersion,
+        'PORT': callbackPort,
+        'CLIENT': requestClientName,
+        'WANT': requestedFields,
+      });
 
   /// Broadcasts the discovery request and returns every PDU that answers.
   Future<List<DiscoveredModule>> discover({
@@ -208,11 +297,7 @@ class ModuleDiscovery {
   Future<void> _broadcast(int localTcpPort, Duration timeout) async {
     final udp = await _bindBroadcastSocket();
     final targets = await _broadcastTargets(timeout);
-    final payload = utf8.encode(jsonEncode({
-      'GUID': requestGuid,
-      'VER': requestVersion,
-      'PORT': localTcpPort.toString(),
-    }));
+    final payload = utf8.encode(buildRequestPayload(localTcpPort));
 
     for (final target in targets) {
       for (var i = 0; i < _broadcastRepetitions; i++) {
@@ -422,8 +507,8 @@ class ModuleDiscovery {
             '${buffer.toString()}');
         final device = DiscoveredModule.parseIdentityResponse(
             buffer.toString(), socket.remoteAddress.address);
-        // Deduplicate by serial number first (fallback: GUID+IP). A physical
-        // device may answer on more than one interface.
+        // Deduplicate by serial number first (fallback: MAC, then GUID+IP). A
+        // physical device may answer on more than one interface.
         if (device != null &&
             !results.any((r) => r.dedupeKey == device.dedupeKey)) {
           debugPrint(

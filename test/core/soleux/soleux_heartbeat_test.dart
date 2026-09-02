@@ -1,5 +1,5 @@
-// Tests for the Soleux UDP heartbeat client
-// (doc/Soleux-Network-Discovery-and-DCP.md §3).
+// Tests for the Soleux UDP heartbeat client and monitor
+// (doc/Soleux_Network_Discovery_and_Heartbeat_Specification_v0.1.md §4).
 import 'dart:convert';
 import 'dart:io';
 
@@ -50,6 +50,29 @@ void main() {
     }
   });
 
+  test('SoleuxPong.parse reads additive Control API and boot fields (§4.2)', () {
+    final pong = SoleuxPong.parse(
+        '{"soleux_heartbeat":1,"op":"pong","nonce":"n","tcp_port":5005,'
+        '"name":"Plant Room Relays","api_port":5008,"api_version":3,'
+        '"device_id":"0000000012345678","boot_id":"4d2f9c"}');
+    expect(pong.nonce, 'n');
+    expect(pong.tcpPort, 5005);
+    expect(pong.name, 'Plant Room Relays');
+    expect(pong.apiPort, 5008);
+    expect(pong.apiVersion, 3);
+    expect(pong.deviceId, '0000000012345678');
+    expect(pong.bootId, '4d2f9c');
+  });
+
+  test('additive fields default to null on a minimal pong', () {
+    final pong = SoleuxPong.parse(
+        '{"soleux_heartbeat":1,"op":"pong","nonce":"n","tcp_port":5005}');
+    expect(pong.apiPort, isNull);
+    expect(pong.apiVersion, isNull);
+    expect(pong.deviceId, isNull);
+    expect(pong.bootId, isNull);
+  });
+
   test('ping() returns alive and the matched pong', () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Plant Room Relays');
@@ -70,6 +93,21 @@ void main() {
     server.close();
   });
 
+  test('uses an explicitly advertised heartbeat port (§4.2)', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Dimmer');
+    final client = SoleuxHeartbeat(acceptWindow: const Duration(seconds: 1));
+
+    // tcpPort is intentionally a wrong/arbitrary value: the advertised
+    // heartbeat port wins over the derived `tcpPort + 2`.
+    final result = await client.ping('127.0.0.1', 1234,
+        heartbeatPort: serverPort, nonce: 'explicit-port');
+
+    expect(result.alive, isTrue);
+    expect(result.pong!.name, 'Dimmer');
+    server.close();
+  });
+
   test('ping() reports dead when no pong arrives', () async {
     // A socket bound to a port that never replies.
     final silent =
@@ -84,6 +122,54 @@ void main() {
     expect(result.alive, isFalse);
     expect(result.error, isNotNull);
     silent.close();
+  });
+
+  test('strictSourcePort rejects a pong from a different source port (§4.5)',
+      () async {
+    final main = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final mainPort = main.port;
+    // A second socket on a *different* port that forges a pong. The real
+    // device would reply from the heartbeat socket; this one does not.
+    final rogue =
+        await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    main.listen((event) {
+      if (event != RawSocketEvent.read) return;
+      final datagram = main.receive();
+      if (datagram == null) return;
+      try {
+        final decoded = jsonDecode(utf8.decode(datagram.data));
+        if (decoded['op'] != 'ping') return;
+        final nonce = decoded['nonce'] as String;
+        final reply = utf8.encode(jsonEncode({
+          'soleux_heartbeat': 1,
+          'op': 'pong',
+          'nonce': nonce,
+          'tcp_port': 5005,
+          'name': 'Forged',
+        }));
+        rogue.send(reply, datagram.address, datagram.port);
+      } catch (_) {
+        // ignore malformed pings
+      }
+    });
+
+    final client = SoleuxHeartbeat(acceptWindow: const Duration(milliseconds: 500));
+    // Strict: the forged pong source port != heartbeat port -> ignored.
+    final strict = await client.ping('127.0.0.1', mainPort - 2,
+        heartbeatPort: mainPort, nonce: 'forged-nonce', strictSourcePort: true);
+    expect(strict.alive, isFalse,
+        reason: 'a pong from a foreign source port must be ignored');
+
+    // Relaxed: only the source IP is validated, so the foreign pong is
+    // accepted as reachability evidence.
+    final relaxed = await client.ping('127.0.0.1', mainPort - 2,
+        heartbeatPort: mainPort,
+        nonce: 'forged-nonce',
+        strictSourcePort: false);
+    expect(relaxed.alive, isTrue);
+
+    main.close();
+    rogue.close();
   });
 
   test('rejects invalid nonces', () async {
@@ -113,6 +199,62 @@ void main() {
     expect(results, isNotEmpty);
     expect(results.every((r) => r.alive), isTrue);
     expect(results.every((r) => r.pong!.tcpPort == 5007), isTrue);
+    server.close();
+  });
+
+  test('monitor transitions online -> suspect -> offline (§4.4)', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final clientTcpPort = serverPort - 2;
+    final states = <HeartbeatAvailability>[];
+    final monitor = SoleuxHeartbeatMonitor(
+      interval: const Duration(milliseconds: 150),
+      acceptWindow: const Duration(milliseconds: 300),
+      aliveThreshold: const Duration(milliseconds: 600),
+      suspectThreshold: const Duration(milliseconds: 400),
+      jitter: false,
+    );
+    monitor.onState = (target, state) => states.add(state);
+
+    monitor.start([('127.0.0.1', clientTcpPort)]);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    server.close(); // the device stops answering pings
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    monitor.stop();
+
+    expect(states, contains(HeartbeatAvailability.online));
+    expect(states, contains(HeartbeatAvailability.suspect));
+    expect(states, contains(HeartbeatAvailability.offline));
+    expect(states.indexOf(HeartbeatAvailability.online),
+        lessThan(states.indexOf(HeartbeatAvailability.suspect)));
+    expect(states.indexOf(HeartbeatAvailability.suspect),
+        lessThan(states.indexOf(HeartbeatAvailability.offline)));
+  });
+
+  test('refreshTargets keeps per-target state by key', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final target = HeartbeatTarget(
+      host: '127.0.0.1',
+      tcpPort: serverPort - 2,
+      key: 'module-1',
+    );
+    final monitor = SoleuxHeartbeatMonitor(
+      interval: const Duration(milliseconds: 150),
+      acceptWindow: const Duration(seconds: 1),
+      jitter: false,
+    );
+
+    monitor.start([('127.0.0.1', target.tcpPort)]);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    // Refreshing with an equivalent keyed target restarts the keyed state but
+    // the underlying host/port is tracked via the target record.
+    monitor.refreshTargets([target]);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(monitor.lastSeenAtFor('module-1'), isNotNull);
+
+    monitor.stop();
     server.close();
   });
 }

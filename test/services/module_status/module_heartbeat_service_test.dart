@@ -1,0 +1,182 @@
+// Tests for the fleet-wide module heartbeat service, which maps the Soleux
+// heartbeat availability state machine onto module online/offline status
+// (doc/Soleux_Network_Discovery_and_Heartbeat_Specification_v0.1.md §4).
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:soleux_device_manager/core/soleux/soleux_heartbeat.dart';
+import 'package:soleux_device_manager/models/models.dart';
+import 'package:soleux_device_manager/services/module_store.dart';
+import 'package:soleux_device_manager/services/module_status/module_heartbeat_service.dart';
+
+/// Local UDP echo that replies a `pong` for every `ping`.
+Future<(RawDatagramSocket, int)> startPongServer({
+  required int tcpPort,
+  required String name,
+}) async {
+  final socket = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+  socket.listen((event) {
+    if (event != RawSocketEvent.read) return;
+    final datagram = socket.receive();
+    if (datagram == null) return;
+    try {
+      final decoded = jsonDecode(utf8.decode(datagram.data));
+      if (decoded['op'] != 'ping') return;
+      final nonce = decoded['nonce'] as String;
+      socket.send(
+          utf8.encode(jsonEncode({
+            'soleux_heartbeat': 1,
+            'op': 'pong',
+            'nonce': nonce,
+            'tcp_port': tcpPort,
+            'name': name,
+          })),
+          datagram.address,
+          datagram.port);
+    } catch (_) {
+      // ignore malformed pings
+    }
+  });
+  return (socket, socket.port);
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  test('a live module is flipped online and lastSeenAt is recorded', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final store = ModuleStore.forTesting();
+    await store.init();
+
+    await store.upsert(DeviceModule(
+      id: 'relay-1',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      // heartbeatPort derives to serverPort while the TCP port stays nominal.
+      tcpPort: serverPort - 2,
+      status: ConnectionStatus.offline,
+      roomName: 'Cabin',
+      internalTempC: 25,
+      channels: [
+        ChannelOutput(id: 'c0', name: 'Light', icon: Icons.power),
+      ],
+    ));
+
+    final service = ModuleHeartbeatService.forTesting(
+      store: store,
+      monitor: SoleuxHeartbeatMonitor(
+        interval: const Duration(milliseconds: 150),
+        acceptWindow: const Duration(milliseconds: 300),
+        aliveThreshold: const Duration(milliseconds: 600),
+        suspectThreshold: const Duration(milliseconds: 400),
+        jitter: false,
+      ),
+    );
+
+    await service.start();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+
+    final module = store.byId('relay-1')!;
+    expect(module.status, ConnectionStatus.online);
+    expect(module.lastSeenAt, isNotNull);
+
+    service.stop();
+    server.close();
+  });
+
+  test('a device that stops answering pings goes offline', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final store = ModuleStore.forTesting();
+    await store.init();
+
+    await store.upsert(DeviceModule(
+      id: 'relay-2',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      tcpPort: serverPort - 2,
+      status: ConnectionStatus.online,
+      roomName: 'Cabin',
+      internalTempC: 25,
+    ));
+
+    final service = ModuleHeartbeatService.forTesting(
+      store: store,
+      monitor: SoleuxHeartbeatMonitor(
+        interval: const Duration(milliseconds: 150),
+        acceptWindow: const Duration(milliseconds: 300),
+        aliveThreshold: const Duration(milliseconds: 600),
+        suspectThreshold: const Duration(milliseconds: 400),
+        jitter: false,
+      ),
+    );
+
+    final states = <HeartbeatAvailability>[];
+    service.onAvailability = (_, state) => states.add(state);
+
+    await service.start();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    expect(store.byId('relay-2')!.status, ConnectionStatus.online);
+
+    server.close(); // device disappears
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+
+    expect(store.byId('relay-2')!.status, ConnectionStatus.offline);
+    expect(states,
+        containsAll([HeartbeatAvailability.online,
+            HeartbeatAvailability.offline]));
+
+    service.stop();
+  });
+
+  test('removing a module stops its heartbeat targets', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final store = ModuleStore.forTesting();
+    await store.init();
+
+    await store.upsert(DeviceModule(
+      id: 'relay-3',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      tcpPort: serverPort - 2,
+      status: ConnectionStatus.online,
+      roomName: 'Cabin',
+      internalTempC: 25,
+    ));
+
+    final service = ModuleHeartbeatService.forTesting(
+      store: store,
+      monitor: SoleuxHeartbeatMonitor(
+        interval: const Duration(milliseconds: 150),
+        acceptWindow: const Duration(seconds: 1),
+        jitter: false,
+      ),
+    );
+
+    await service.start();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(service.monitor.lastSeenAtFor('relay-3'), isNotNull);
+
+    await store.remove('relay-3');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    // The target was removed on the store-change listener.
+    expect(service.monitor.lastSeenAtFor('relay-3'), isNull);
+
+    service.stop();
+    server.close();
+  });
+}

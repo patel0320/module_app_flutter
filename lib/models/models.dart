@@ -242,6 +242,11 @@ class DeviceModule {
     this.firmware,
     this.serial,
     this.mac,
+    this.apiPort,
+    this.apiVersion,
+    this.heartbeatPort,
+    this.caps = const [],
+    this.lastSeenAt,
     List<ChannelOutput>? channels,
     List<PhysicalInput>? inputs,
   })  : _tcpPort = tcpPort,
@@ -261,6 +266,26 @@ class DeviceModule {
 
   /// Ethernet MAC address (authoritative when reported by DCP).
   String? mac;
+
+  /// Control API v3 TCP port when advertised by discovery (normally 5008).
+  int? apiPort;
+
+  /// Highest advertised/negotiated Control API version (current 3).
+  int? apiVersion;
+
+  /// Advertised UDP heartbeat port (normally 5007). Null means the monitor
+  /// derives it from [tcpPort] (`tcpPort + 2`).
+  int? heartbeatPort;
+
+  /// Advertised compact capability identifiers (`control_api_v3`, etc.).
+  final List<String> caps;
+
+  /// Last time the module answered a heartbeat pong (spec §4.2 `last_seen_at`).
+  DateTime? lastSeenAt;
+
+  /// UDP port heartbeat pings are directed at: advertised when present,
+  /// otherwise the derived legacy `tcpPort + 2` (spec §3 endpoint selection).
+  int get effectiveHeartbeatPort => heartbeatPort ?? tcpPort + 2;
 
   /// TCP port the module listens on (default 5005). Backed by a nullable
   /// field so legacy persisted JSON (or any null) degrades to the default.
@@ -297,6 +322,11 @@ class DeviceModule {
         'firmware': firmware,
         'serial': serial,
         'mac': mac,
+        'apiPort': apiPort,
+        'apiVersion': apiVersion,
+        'heartbeatPort': heartbeatPort,
+        'caps': caps,
+        'lastSeenAt': lastSeenAt?.toIso8601String(),
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -315,6 +345,15 @@ class DeviceModule {
         firmware: json['firmware'] as String?,
         serial: json['serial'] as String?,
         mac: json['mac'] as String?,
+        apiPort: (json['apiPort'] as num?)?.toInt(),
+        apiVersion: (json['apiVersion'] as num?)?.toInt(),
+        heartbeatPort: (json['heartbeatPort'] as num?)?.toInt(),
+        caps: [
+          for (final c in json['caps'] as List? ?? const []) c as String,
+        ],
+        lastSeenAt: json['lastSeenAt'] == null
+            ? null
+            : DateTime.tryParse(json['lastSeenAt'] as String),
         channels: [
           for (final c in json['channels'] as List? ?? const [])
             ChannelOutput.fromJson((c as Map).cast<String, Object?>()),

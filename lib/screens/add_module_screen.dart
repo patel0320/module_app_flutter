@@ -123,7 +123,10 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   /// Builds a [DeviceModule] from a UDP discovery reply. The family GUID maps
   /// to a device family (relay module / dimmer / PDU ...), which picks the
   /// default module type, channel shape and label; the returned HostPort and
-  /// firmware version are carried over for the status service.
+  /// firmware version are carried over for the status service. Advertised
+  /// additive endpoints (MAC, Control API port, heartbeat port, API version
+  /// and capabilities) are carried over so monitoring uses what the device
+  /// actually advertised (spec §3 endpoint selection).
   DeviceModule _toDeviceModule(DiscoveredModule discovered) {
     final family = discovered.family;
     final type = family?.defaultModuleType ?? ModuleType.relay;
@@ -138,6 +141,11 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       tcpPort: discovered.tcpPort,
       firmware: discovered.version.isEmpty ? null : discovered.version,
       serial: discovered.serial.isEmpty ? null : discovered.serial,
+      mac: discovered.mac,
+      apiPort: discovered.apiPort,
+      apiVersion: discovered.apiVersion,
+      heartbeatPort: discovered.advertisedHeartbeatPort,
+      caps: discovered.caps,
       status: ConnectionStatus.online,
       roomName: AppLocalizations.of(context).unassigned,
       internalTempC: 25,
