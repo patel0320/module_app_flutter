@@ -23,6 +23,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/logger/network_debug_logger.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
@@ -407,9 +408,9 @@ class ModuleStatusService {
     Socket? socket;
     var reachable = false;
     try {
-      socket =
-          await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
+      socket = await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
+      NetworkDebugLogger.outbound('tcp', '${live.ipAddress}:${live.tcpPort}', "AT\r");
       socket.write('AT\r');
 
       final buffer = StringBuffer();
@@ -420,7 +421,9 @@ class ModuleStatusService {
 
       socket.listen(
         (bytes) {
-          buffer.write(utf8.decode(bytes));
+          final text = utf8.decode(bytes);
+          NetworkDebugLogger.inbound('tcp', '${live.ipAddress}:${live.tcpPort}', text);
+          buffer.write(text);
           final raw = buffer.toString().trimRight();
           if (raw.endsWith('\r\nOK') || raw.endsWith('\r\nERROR')) {
             if (!done.isCompleted) done.complete();
@@ -465,9 +468,13 @@ class ModuleStatusService {
       socket = await Socket.connect(module.ipAddress, module.controlApiPort,
           timeout: timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
-      socket.write(
-          const SoleuxJsonRequest(id: 1, action: SoleuxControlApiActions.ping)
-              .encode());
+      const request =
+          SoleuxJsonRequest(id: 1, action: SoleuxControlApiActions.ping);
+      NetworkDebugLogger.outbound(
+          'tcp',
+          '${module.ipAddress}:${module.controlApiPort}',
+          request.encode());
+      socket.write(request.encode());
 
       final done = Completer<void>();
       final timer = Timer(timeout, () {
@@ -476,7 +483,12 @@ class ModuleStatusService {
 
       socket.listen(
         (bytes) {
-          for (final line in splitter.add(utf8.decode(bytes))) {
+          final text = utf8.decode(bytes);
+          NetworkDebugLogger.inbound(
+              'tcp',
+              '${module.ipAddress}:${module.controlApiPort}',
+              text);
+          for (final line in splitter.add(text)) {
             final response = SoleuxJsonResponse.maybeParse(line);
             if (response != null && response.id == 1) {
               reachable = response.ok;

@@ -36,6 +36,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/module_store.dart';
+import '../logger/network_debug_logger.dart';
 import '../soleux/soleux_device_family.dart';
 import 'dcp_discovery.dart' show normalizeMac;
 
@@ -297,7 +298,10 @@ class ModuleDiscovery {
   Future<void> _broadcast(int localTcpPort, Duration timeout) async {
     final udp = await _bindBroadcastSocket();
     final targets = await _broadcastTargets(timeout);
-    final payload = utf8.encode(buildRequestPayload(localTcpPort));
+    final request = buildRequestPayload(localTcpPort);
+    final payload = utf8.encode(request);
+    NetworkDebugLogger.outbound(
+        'udp', 'broadcast:$discoveryPort', request);
 
     for (final target in targets) {
       for (var i = 0; i < _broadcastRepetitions; i++) {
@@ -502,11 +506,14 @@ class ModuleDiscovery {
     socket.listen(
       (chunk) {
         buffer.write(utf8.decode(chunk, allowMalformed: true));
+        final text = buffer.toString();
+        NetworkDebugLogger.inbound('tcp',
+            '${socket.remoteAddress.address}:${socket.remotePort}', text);
         debugPrint('ModuleDiscovery: received identity response from '
             '${socket.remoteAddress.address}:${socket.remotePort}:\n'
-            '${buffer.toString()}');
+            '$text');
         final device = DiscoveredModule.parseIdentityResponse(
-            buffer.toString(), socket.remoteAddress.address);
+            text, socket.remoteAddress.address);
         // Deduplicate by serial number first (fallback: MAC, then GUID+IP). A
         // physical device may answer on more than one interface.
         if (device != null &&

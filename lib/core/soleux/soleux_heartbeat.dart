@@ -32,6 +32,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../logger/network_debug_logger.dart';
 import 'soleux_device_family.dart';
 
 /// A successfully matched `pong` reply.
@@ -158,12 +159,13 @@ class SoleuxHeartbeat {
     final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
     final window = acceptWindow ?? this.acceptWindow;
     try {
-      final payload = utf8.encode(jsonEncode({
+      final wire = jsonEncode({
         'soleux_heartbeat': 1,
         'op': 'ping',
         'nonce': nonceValue,
-      }));
-      socket.send(payload, InternetAddress(host), port);
+      });
+      NetworkDebugLogger.outbound('udp', '$host:$port', wire);
+      socket.send(utf8.encode(wire), InternetAddress(host), port);
 
       final completer = Completer<SoleuxPong>();
 
@@ -176,7 +178,9 @@ class SoleuxHeartbeat {
         if (datagram.address.address != host) return;
         if (strictSourcePort && datagram.port != port) return;
         try {
-          final pong = SoleuxPong.parse(utf8.decode(datagram.data));
+          final text = utf8.decode(datagram.data);
+          NetworkDebugLogger.inbound('udp', '$host:$port', text);
+          final pong = SoleuxPong.parse(text);
           if (pong.nonce == nonceValue && !completer.isCompleted) {
             completer.complete(pong);
           }

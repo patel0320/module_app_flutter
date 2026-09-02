@@ -18,6 +18,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/logger/network_debug_logger.dart';
+
 class ModuleTcpConnection {
   final String host;
   final int port;
@@ -90,7 +92,9 @@ class ModuleTcpConnection {
       _subscription = socket.listen(
         (bytes) {
           _reconnectAttempts = 0;
-          _dataController.add(utf8.decode(bytes));
+          final text = utf8.decode(bytes);
+          NetworkDebugLogger.inbound('tcp', key, text);
+          _dataController.add(text);
         },
         onError: (Object e) {
           debugPrint('ModuleTCP $key socket error: $e');
@@ -138,6 +142,7 @@ class ModuleTcpConnection {
   void write(String data) {
     final socket = _socket;
     if (socket != null && _isConnected) {
+      NetworkDebugLogger.outbound('tcp', key, data);
       socket.write(data);
     }
   }

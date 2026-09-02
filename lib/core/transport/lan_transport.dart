@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../logger/network_debug_logger.dart';
 import 'app_command.dart';
 import 'transport.dart';
 
@@ -44,7 +45,9 @@ class LanTransport implements Transport {
     Socket? socket;
     try {
       socket = await Socket.connect(_host, _port).timeout(effectiveTimeout);
-      socket.write(utf8.encode(command.encode()));
+      final wire = command.encode();
+      NetworkDebugLogger.outbound('tcp', '$_host:$_port', wire);
+      socket.write(utf8.encode(wire));
 
       final response = await utf8
           .decodeStream(socket)
@@ -53,6 +56,7 @@ class LanTransport implements Transport {
         debugPrint('LanTransport: response decode failed: $e');
         return '';
       });
+      NetworkDebugLogger.inbound('tcp', '$_host:$_port', response);
 
       if (response.isNotEmpty) {
         try {
