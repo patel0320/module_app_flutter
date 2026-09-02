@@ -1,6 +1,7 @@
 // Integration tests for SoleuxJsonService: request/response id matching,
 // buffered line routing, legacy event parsing and the legacy AT+ control
-// helper, driven over real loopback sockets.
+// helper, driven over real loopback sockets. The default framing is the
+// Control API envelope (plain JSON lines); legacy `J:` lines are also covered.
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,8 +10,9 @@ import 'package:soleux_device_manager/services/module_status/module_tcp_service.
 import 'package:soleux_device_manager/services/module_status/soleux_json_fetcher.dart';
 import 'package:soleux_device_manager/services/module_status/soleux_json_service.dart';
 
-/// A fake Soleux device: accepts one TCP connection and answers JSON `hello` /
-/// `get_relay_configuration` requests (from a J: line, matched by id) and
+/// A fake Soleux device: accepts one TCP connection and answers JSON
+/// `hello` / `get_relay_configuration` / `set_output_state` requests (from a
+/// plain Control API JSON line or a legacy `J:` line, matched by id) and
 /// legacy `AT+...` commands with `OK`.
 class _FakeSoleuxDevice {
   final ServerSocket server;
@@ -54,8 +56,11 @@ class _FakeSoleuxDevice {
   }
 
   Future<void> _reply(String line, Socket socket) async {
-    if (line.startsWith('J:')) {
-      final request = jsonDecode(line.substring(2)) as Map<String, dynamic>;
+    final legacy = line.startsWith('J:');
+    final jsonBody =
+        legacy ? line.substring(2) : (line.startsWith('{') ? line : null);
+    if (jsonBody != null) {
+      final request = jsonDecode(jsonBody) as Map<String, dynamic>;
       final id = request['id'];
       final action = request['action'];
       Map<String, dynamic> result;
@@ -98,16 +103,32 @@ class _FakeSoleuxDevice {
           ],
           'mapping': [],
         };
+      } else if (action == 'set_output_state') {
+        result = {
+          'channel': request['params']['channel'],
+          'requested_state': request['params']['state'],
+          'actual_state': request['params']['state'],
+          'pending': false,
+        };
+      } else if (action == 'toggle_output') {
+        result = {
+          'channel': request['params']['channel'],
+          'actual_state': true,
+          'pending': false,
+        };
       } else {
         result = {};
       }
       // Send the response in two half-lines to exercise chunked framing.
-      final body = 'J:${jsonEncode({
-            'protocol': 2,
-            'id': id,
-            'ok': true,
-            'result': result,
-          })}\r\n';
+      final envelope = {
+        'protocol': 2,
+        'id': id,
+        'ok': true,
+        'result': result,
+      };
+      final body = legacy
+          ? 'J:${jsonEncode(envelope)}\r\n'
+          : '${jsonEncode(envelope)}\r\n';
       socket.write(body.substring(0, body.length ~/ 2));
       await Future<void>.delayed(const Duration(milliseconds: 20));
       socket.write(body.substring(body.length ~/ 2));
@@ -183,6 +204,79 @@ void main() {
     expect(parsed.outputCount, 4);
     expect(parsed.outputs.single.name, 'Server');
     expect(parsed.outputs.single.state, isTrue);
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('Control API framing: plain JSON lines carry the protocol envelope',
+      () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(connection: connection);
+    await service.connect();
+    expect(service.framing, SoleuxJsonFraming.controlApi);
+
+    await service.hello(timeout: const Duration(seconds: 3));
+    // No J: prefix on the Control API transport; the envelope advertises the
+    // protocol version.
+    expect(fake.received.first, startsWith('{'));
+    expect(fake.received.first, contains('"protocol":2'));
+    expect(fake.received.first, contains('"action":"hello"'));
+    expect(fake.received.every((line) => !line.startsWith('J:')), isTrue);
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('set_output_state and toggle_output replace the AT control commands',
+      () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(connection: connection);
+    await service.connect();
+
+    final on = await service.setOutputState(3, true);
+    expect(on.ok, isTrue);
+    expect(on.result!['channel'], 3);
+    expect(on.result!['requested_state'], isTrue);
+    expect(fake.received.last, contains('"action":"set_output_state"'));
+
+    final off = await service.setOutputState(3, false);
+    expect(off.ok, isTrue);
+    expect(off.result!['requested_state'], isFalse);
+
+    final toggle = await service.toggleOutput(3);
+    expect(toggle.ok, isTrue);
+    expect(fake.received.last, contains('"action":"toggle_output"'));
+
+    await service.disconnect();
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('legacy framings still send J: prefixed lines', () async {
+    final fake = await _FakeSoleuxDevice.start();
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1',
+        port: fake.port,
+        timeout: const Duration(seconds: 2));
+    final service = SoleuxJsonService(
+        connection: connection, framing: SoleuxJsonFraming.legacyJ);
+    await service.connect();
+
+    final hello = await service.hello(timeout: const Duration(seconds: 3));
+    expect(hello.ok, isTrue);
+    expect(fake.received.first, startsWith('J:'));
+    expect(fake.received.first, contains('"protocol":2'));
 
     await service.disconnect();
     service.dispose();

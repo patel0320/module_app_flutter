@@ -16,7 +16,9 @@
 //
 // The worker only reads/writes the locally persisted module list
 // (shared_preferences), so it needs no network beyond the module LAN and no
-// cloud dependency. Each poll is a one-shot connect -> `AT\r` ping -> close.
+// cloud dependency. Each poll is a one-shot connect -> ping -> close: a JSON
+// `ping` on the Control API port (legacy port + 3) for Control API devices,
+// otherwise the legacy `AT\r` ping.
 //
 // `callbackDispatcher` must remain a top-level function: the plugin invokes it
 // by its callback handle from a fresh background isolate.

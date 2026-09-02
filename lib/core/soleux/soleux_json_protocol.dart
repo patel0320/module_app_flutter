@@ -1,16 +1,25 @@
 // lib/core/soleux/soleux_json_protocol.dart
 //
-// Codec for the Soleux TCP JSON protocol (`J:` lines), described in
-// doc/Soleux-Mobile-TCP-Protocol.md §"JSON protocol".
+// Codec for the Soleux Control API / JSON protocol described in
+// doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport and message
+// envelope".
 //
-// Wire contract:
-//   - request and response are each one CRLF-terminated line prefixed `J:`;
-//   - a request carries a unique `id`; the device echoes it in the response,
-//     so clients match responses by `id`, never by arrival order;
+// Wire contract (Control API, the default framing):
+//   - request and response are each one CRLF- or LF-terminated UTF-8 JSON
+//     object per line (no prefix), on the legacy TCP port + 3 (5008 default);
+//   - a request carries the outer `protocol` (2 for the current Relay subset,
+//     the value 3 remains the target catalogue) plus a unique `id`; the device
+//     echoes the `id` in the response, so clients match by `id`, never by
+//     arrival order;
 //   - a successful response has `"ok":true` and a `result` object;
-//   - a failed response has `"ok":false` and an `error` value/object;
-//   - the outer `protocol` field is OPTIONAL (PDU V1.0 may omit it);
+//   - a failed response has `"ok":false` and an `error` object with a stable
+//     `code`;
 //   - unknown response properties must be ignored (forward compatibility).
+//
+// Legacy framing (J: prefix) is kept for older PDU / Soleux devices that
+// predate the Control API. Per the spec the `J:` prefix is NOT accepted on the
+// Control API or on the legacy Relay port; it is only used when talking to a
+// device that was verified to answer the legacy JSON protocol.
 //
 // This file is deliberately networking-free: a pure codec that any transport
 // (persistent socket, tests, mock) can use. Only JSON line framing lives here.
@@ -20,8 +29,26 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-/// The prefix every JSON protocol line starts with on the wire.
+/// The prefix legacy JSON protocol lines start with on the wire. Only used for
+/// pre-Control-API devices; the Control API itself must not send it.
 const String kSoleuxJsonPrefix = 'J:';
+
+/// Negotiated Control API protocol version.
+///
+/// The Relay Module currently implements the protocol 2 command subset; the
+/// version 3 catalogue in the specification remains the target contract.
+abstract final class SoleuxProtocolVersion {
+  SoleuxProtocolVersion._();
+
+  /// Version implemented by the current Relay Module firmware.
+  static const int implemented = 2;
+
+  /// Version targeted by the full command catalogue.
+  static const int target = 3;
+
+  /// Protocol version the app advertises in every request.
+  static const int defaultRequest = implemented;
+}
 
 /// JSON actions common to all supported families
 /// (doc/Soleux-Mobile-TCP-Protocol.md, "Common JSON actions").
@@ -59,6 +86,117 @@ abstract final class SoleuxJsonActions {
   static const String opAdd = 'add';
   static const String opUpdate = 'update';
   static const String opDelete = 'delete';
+}
+
+/// Control API catalogue actions
+/// (doc/Soleux_Control_API_Command_Specification_v0.2.md, "Command catalogue").
+///
+/// Clients must use `hello` and `get_capabilities` data and must not assume
+/// every catalogued action is available on a given firmware yet; unimplemented
+/// actions return the common `unsupported_command` error, at which point the
+/// app falls back to the implemented protocol 2 subset or the legacy AT path.
+abstract final class SoleuxControlApiActions {
+  SoleuxControlApiActions._();
+
+  // Session and protocol (§1).
+  static const String ping = 'ping';
+  static const String authenticate = 'authenticate';
+  static const String getCapabilities = 'get_capabilities';
+  static const String batchExecute = 'batch_execute';
+
+  // Device information and health (§2).
+  static const String getDeviceInfo = 'get_device_info';
+  static const String getDeviceHealth = 'get_device_health';
+  static const String getDeviceState = 'get_device_state';
+  static const String getTemperature = 'get_temperature';
+  static const String getTime = 'get_time';
+  static const String rebootDevice = 'reboot_device';
+
+  // Inputs and virtual inputs (§3).
+  static const String getInputs = 'get_inputs';
+  static const String getInput = 'get_input';
+  static const String setVirtualInputState = 'set_virtual_input_state';
+  static const String triggerVirtualInput = 'trigger_virtual_input';
+
+  // Outputs (§4). These replace ON, OFF, TOGGLE, RESTART and masked AT
+  // operations (spec §4 header).
+  static const String getOutputs = 'get_outputs';
+  static const String getOutput = 'get_output';
+  static const String setOutputState = 'set_output_state';
+  static const String toggleOutput = 'toggle_output';
+  static const String restartOutput = 'restart_output';
+  static const String setMultipleOutputs = 'set_multiple_outputs';
+  static const String toggleMultipleOutputs = 'toggle_multiple_outputs';
+  static const String restartMultipleOutputs = 'restart_multiple_outputs';
+
+  // Input-output mappings (§5).
+  static const String getMappings = 'get_mappings';
+  static const String getInputMapping = 'get_input_mapping';
+  static const String clearMapping = 'clear_mapping';
+  static const String applyHardwareConfiguration =
+      'apply_hardware_configuration';
+
+  // Dimmer control (§6).
+  static const String getDimmerState = 'get_dimmer_state';
+  static const String getDimmerLevels = 'get_dimmer_levels';
+  static const String setDimmerLevel = 'set_dimmer_level';
+  static const String setMultipleDimmerLevels = 'set_multiple_dimmer_levels';
+  static const String dimmerOn = 'dimmer_on';
+  static const String dimmerOff = 'dimmer_off';
+  static const String toggleDimmer = 'toggle_dimmer';
+  static const String getDimmerFrequency = 'get_dimmer_frequency';
+
+  // PDU energy and override (§7).
+  static const String getEnergySummary = 'get_energy_summary';
+  static const String getPowerLimits = 'get_power_limits';
+  static const String getOverrideState = 'get_override_state';
+
+  // Configuration, network and security (§10).
+  static const String getConfiguration = 'get_configuration';
+  static const String setConfiguration = 'set_configuration';
+  static const String scanWifi = 'scan_wifi';
+  static const String testNetwork = 'test_network';
+  static const String testMqtt = 'test_mqtt';
+  static const String getAccessRules = 'get_access_rules';
+  static const String addAccessRule = 'add_access_rule';
+  static const String updateAccessRule = 'update_access_rule';
+  static const String deleteAccessRule = 'delete_access_rule';
+
+  // Schedules and automations (§8).
+  static const String getSchedules = 'get_schedules';
+  static const String getSchedule = 'get_schedule';
+  static const String createSchedule = 'create_schedule';
+  static const String updateSchedule = 'update_schedule';
+  static const String deleteSchedule = 'delete_schedule';
+  static const String enableSchedule = 'enable_schedule';
+  static const String executeSchedule = 'execute_schedule';
+  static const String getAutomations = 'get_automations';
+  static const String createAutomation = 'create_automation';
+  static const String updateAutomation = 'update_automation';
+  static const String deleteAutomation = 'delete_automation';
+  static const String enableAutomation = 'enable_automation';
+
+  // Dimmer scenarios and sequences (§9).
+  static const String getScenarios = 'get_scenarios';
+  static const String createScenario = 'create_scenario';
+  static const String updateScenario = 'update_scenario';
+  static const String deleteScenario = 'delete_scenario';
+  static const String executeScenario = 'execute_scenario';
+  static const String getSequences = 'get_sequences';
+  static const String createSequence = 'create_sequence';
+  static const String updateSequence = 'update_sequence';
+  static const String deleteSequence = 'delete_sequence';
+  static const String startSequence = 'start_sequence';
+  static const String stopSequence = 'stop_sequence';
+
+  // Backup, restore and firmware transfer (§11).
+  static const String uploadBegin = 'upload_begin';
+  static const String uploadChunk = 'upload_chunk';
+  static const String uploadFinish = 'upload_finish';
+  static const String uploadCommit = 'upload_commit';
+  static const String downloadBegin = 'download_begin';
+  static const String downloadChunk = 'download_chunk';
+  static const String downloadFinish = 'download_finish';
 }
 
 /// Common config pages (doc/Soleux-Mobile-TCP-Protocol.md, JSON section).
@@ -104,23 +242,42 @@ extension SoleuxEnergyParameterX on SoleuxEnergyParameter {
       };
 }
 
-/// A single outbound JSON protocol request.
+/// A single outbound Control API / JSON protocol request.
 class SoleuxJsonRequest {
   final int id;
   final String action;
   final Map<String, dynamic> params;
 
-  const SoleuxJsonRequest(
-      {required this.id, required this.action, this.params = const {}});
+  /// Protocol version advertised in the envelope (`2` for the current Relay
+  /// subset; `3` is the target catalogue). See [SoleuxProtocolVersion].
+  final int protocol;
 
-  /// Encodes the request as a single `J:` line terminated with CRLF.
+  /// When true the request is framed as a legacy `J:` line for older Soleux
+  /// devices that answer the legacy JSON protocol (pre-Control-API). The
+  /// Control API framing (plain JSON object, no prefix) is the default and must
+  /// be used on the Control API transport.
+  final bool legacyJPrefix;
+
+  const SoleuxJsonRequest({
+    required this.id,
+    required this.action,
+    this.params = const {},
+    this.protocol = SoleuxProtocolVersion.defaultRequest,
+    this.legacyJPrefix = false,
+  });
+
+  /// Encodes the request as a single CRLF-terminated line. By default it is a
+  /// plain JSON object (Control API envelope); with [legacyJPrefix] it is
+  /// prefixed with [`kSoleuxJsonPrefix`].
   String encode() {
     final body = <String, dynamic>{
+      'protocol': protocol,
       'id': id,
       'action': action,
       'params': params,
     };
-    return '$kSoleuxJsonPrefix${jsonEncode(body)}\r\n';
+    final line = jsonEncode(body);
+    return legacyJPrefix ? '$kSoleuxJsonPrefix$line\r\n' : '$line\r\n';
   }
 }
 
@@ -170,19 +327,15 @@ class SoleuxJsonResponse {
     this.error,
   });
 
-  /// Parses a raw `J:` line (without the prefix) into a response. Throws a
-  /// [FormatException] when the line is not a valid JSON protocol response.
+  /// Parses a raw response body (no J: prefix) into a response. Throws a
+  /// [FormatException] when the body is not a valid JSON protocol response.
   factory SoleuxJsonResponse.parseFromBody(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map) {
       throw const FormatException('Soleux JSON response is not an object');
     }
     final map = decoded;
-    final id = map['id'];
-    if (id is! num) {
-      throw const FormatException(
-          'Soleux JSON response is missing a numeric id');
-    }
+    final id = _parseId(map['id']);
     final ok = map['ok'];
     if (ok is! bool) {
       throw const FormatException('Soleux JSON response is missing a bool ok');
@@ -197,7 +350,7 @@ class SoleuxJsonResponse {
     }
 
     return SoleuxJsonResponse(
-      id: id.toInt(),
+      id: id,
       ok: ok,
       protocol:
           map['protocol'] is num ? (map['protocol'] as num).toInt() : null,
@@ -207,14 +360,24 @@ class SoleuxJsonResponse {
   }
 
   /// Parses a raw wire line (already trimmed of CR/LF). Returns the response
-  /// when the line is a JSON protocol line, or null when it is something else
-  /// (a legacy `AT+...` event, an `OUT:`/`IN:` status, `OK`, ...). Tolerates
-  /// malformed `J:` lines by returning null so one bad frame never kills the
-  /// reader.
+  /// when the line is a JSON protocol line (either the Control API plain JSON
+  /// object framing or a legacy `J:` prefixed line), or null when it is
+  /// something else (a legacy `AT+...` event, an `OUT:`/`IN:` status, `OK`,
+  /// ...). Tolerates malformed JSON by returning null so one bad frame never
+  /// kills the reader.
   static SoleuxJsonResponse? maybeParse(String line) {
-    if (line.length < 2 || line[0] != 'J' || line[1] != ':') return null;
+    final trimmed = line.trim();
+    if (trimmed.isEmpty) return null;
     try {
-      return SoleuxJsonResponse.parseFromBody(line.substring(2));
+      if (trimmed.startsWith(kSoleuxJsonPrefix)) {
+        return SoleuxJsonResponse.parseFromBody(
+            trimmed.substring(kSoleuxJsonPrefix.length));
+      }
+      // Control API transport: a plain JSON object line with no prefix.
+      if (trimmed.startsWith('{')) {
+        return SoleuxJsonResponse.parseFromBody(trimmed);
+      }
+      return null;
     } on FormatException {
       return null;
     }
@@ -256,4 +419,16 @@ class SoleuxLineSplitter {
 
   /// Any partial line currently buffered awaiting its terminator.
   bool get hasPending => _buffer.isNotEmpty;
+}
+
+/// Reads the response `id`, which the Control API allows as `integer|string`
+/// (spec §"Request envelope"). Numeric strings are accepted so a device that
+/// echoes a string id still matches the in-flight integer id.
+int _parseId(Object? raw) {
+  if (raw is num) return raw.toInt();
+  if (raw is String) {
+    final parsed = int.tryParse(raw);
+    if (parsed != null) return parsed;
+  }
+  throw const FormatException('Soleux JSON response is missing a valid id');
 }

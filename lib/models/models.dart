@@ -293,6 +293,20 @@ class DeviceModule {
   int get tcpPort => _tcpPort ?? 5005;
   set tcpPort(int value) => _tcpPort = value;
 
+  /// Control API TCP port used by the JSON Control API transport
+  /// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport
+  /// mapping"): the advertised [apiPort] when present, otherwise the legacy
+  /// TCP port + 3 (`5005 -> 5008`). Per the discovery/heartbeat spec, when
+  /// `API_PORT` is absent a client may probe `PORT + 3` but must complete the
+  /// Control API `hello` exchange before treating the device as Control API.
+  int get controlApiPort => apiPort ?? tcpPort + 3;
+
+  /// Whether the module advertised the Control API transport (via discovery
+  /// `API_PORT`/`API_VER`/`CAPS` or a heartbeat identity). Used to pick the
+  /// Control API port and framing before a hello has been completed.
+  bool get isControlApiAdvertised =>
+      apiPort != null || apiVersion != null || caps.contains('control_api_v3');
+
   ConnectionStatus status;
   String roomName;
 

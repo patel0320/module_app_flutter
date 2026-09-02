@@ -1,5 +1,8 @@
-// Tests for the Soleux TCP JSON `J:` protocol codec
-// (doc/Soleux-Mobile-TCP-Protocol.md §"JSON protocol").
+// Tests for the Soleux Control API / JSON protocol codec
+// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport and
+// message envelope"). The default framing is the Control API envelope (a plain
+// JSON object per line, no J: prefix, with the outer protocol field); the
+// legacy `J:` framing is retained for pre-Control-API devices.
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,9 +10,27 @@ import 'package:soleux_device_manager/core/soleux/soleux_json_protocol.dart';
 
 void main() {
   group('SoleuxJsonRequest.encode', () {
-    test('produces one CRLF-terminated J: line', () {
+    test('produces one CRLF-terminated Control API line (no J: prefix)', () {
       const request = SoleuxJsonRequest(id: 1, action: 'hello', params: {});
-      expect(request.encode(), 'J:{"id":1,"action":"hello","params":{}}\r\n');
+      expect(request.encode(),
+          '{"protocol":2,"id":1,"action":"hello","params":{}}\r\n');
+    });
+
+    test('legacy framing keeps the J: prefix for pre-Control-API devices', () {
+      const request = SoleuxJsonRequest(
+          id: 1, action: 'hello', params: {}, legacyJPrefix: true);
+      expect(request.encode(),
+          'J:{"protocol":2,"id":1,"action":"hello","params":{}}\r\n');
+    });
+
+    test('advertises a custom protocol version when requested', () {
+      const request = SoleuxJsonRequest(
+          id: 1,
+          action: 'hello',
+          params: {},
+          protocol: SoleuxProtocolVersion.target);
+      expect(request.encode(),
+          '{"protocol":3,"id":1,"action":"hello","params":{}}\r\n');
     });
 
     test('carries params verbatim', () {
@@ -19,7 +40,7 @@ void main() {
         'start_date': '2026-08-01',
         'end_date': '2026-08-29',
       });
-      final decoded = jsonDecode(request.encode().substring(2));
+      final decoded = jsonDecode(request.encode());
       expect(decoded['id'], 40);
       expect(decoded['action'], 'get_energy_history');
       expect(decoded['params']['start_date'], '2026-08-01');
@@ -47,6 +68,21 @@ void main() {
       expect(response.result!['device'], 'pdu_v1');
     });
 
+    test('accepts numeric-string ids per the envelope id type', () {
+      final response =
+          SoleuxJsonResponse.parseFromBody('{"protocol":3,"id":"42","ok":false,'
+              '"error":{"code":"invalid_request","message":"bad channel"}}');
+      expect(response.id, 42);
+      expect(response.ok, isFalse);
+    });
+
+    test('rejects a non-numeric id', () {
+      expect(
+          () => SoleuxJsonResponse.parseFromBody(
+              '{"protocol":3,"id":"mobile-1","ok":true,"result":{}}'),
+          throwsFormatException);
+    });
+
     test('failed requests carry error value/object', () {
       final asString = SoleuxJsonResponse.parseFromBody(
           '{"protocol":2,"id":10,"ok":false,"error":"cannot rebind port"}');
@@ -70,21 +106,30 @@ void main() {
   });
 
   group('SoleuxJsonResponse.maybeParse', () {
-    test('returns null for non-J lines (events/legacy)', () {
+    test('returns null for non-JSON lines (events/legacy)', () {
       expect(SoleuxJsonResponse.maybeParse('OUT:0:ON'), isNull);
       expect(SoleuxJsonResponse.maybeParse('OK'), isNull);
       expect(
           SoleuxJsonResponse.maybeParse('Error : Function Disabled'), isNull);
     });
 
-    test('returns null for malformed J: lines instead of throwing', () {
+    test('returns null for malformed JSON instead of throwing', () {
       expect(SoleuxJsonResponse.maybeParse('J:not json'), isNull);
       expect(SoleuxJsonResponse.maybeParse('J:{"id":1}'), isNull);
+      expect(SoleuxJsonResponse.maybeParse('{"id":1'), isNull);
     });
 
-    test('parses valid J: lines and ignores unknown fields', () {
+    test('parses plain Control API lines and ignores unknown fields', () {
       final response = SoleuxJsonResponse.maybeParse(
-          'J:{"protocol":2,"id":7,"ok":true,"future_field":"x","result":{}}');
+          '{"protocol":2,"id":7,"ok":true,"future_field":"x","result":{}}');
+      expect(response, isNotNull);
+      expect(response!.id, 7);
+      expect(response.ok, isTrue);
+    });
+
+    test('still parses legacy J: lines for pre-Control-API devices', () {
+      final response = SoleuxJsonResponse.maybeParse(
+          'J:{"protocol":2,"id":7,"ok":true,"result":{}}');
       expect(response, isNotNull);
       expect(response!.id, 7);
       expect(response.ok, isTrue);

@@ -1,15 +1,19 @@
 // lib/services/module_status/soleux_json_service.dart
 //
-// Persistent JSON-protocol command service for Soleux devices, implemented
+// Persistent Control API / JSON command service for Soleux devices, implemented
 // against the transport/JSON split described in
-// doc/Soleux-Mobile-TCP-Protocol.md §"Transport" and §"JSON protocol".
+// doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport and message
+// envelope".
 //
 //   - one persistent, auto-reconnecting socket per device (reused via
 //     [ModuleTcpConnection]);
 //   - a buffered CR/LF line reader (never assume one read == one message);
 //   - JSON responses matched by `id`, never by arrival order; a unique `id`
 //     guards every outstanding request;
-//   - non-`J:` lines (welcome status dump, unsolicited `OUT:`/`IN:` state,
+//   - the Control API framing (a plain JSON object per line, no `J:` prefix,
+//     with the outer `protocol` field) is the default. [SoleuxJsonFraming.legacyJ]
+//     selects the legacy `J:` framing for pre-Control-API devices;
+//   - non-JSON lines (welcome status dump, unsolicited `OUT:`/`IN:` state,
 //     `OVERRIDE:`, `GETENERGY:`, `OK`, `Error : Function Disabled`, ...) are
 //     routed to [eventStream] as parsed [SoleuxLegacyEvent]s.
 //
@@ -22,7 +26,19 @@ import 'package:flutter/foundation.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import 'module_tcp_service.dart';
 
-/// One in-flight JSON request waiting for its `J:` response.
+/// Framing used on the wire for JSON protocol requests.
+enum SoleuxJsonFraming {
+  /// The Control API transport: one plain JSON object per line (no `J:`
+  /// prefix), carrying the outer `protocol` field. Used on the Control API
+  /// port (legacy TCP port + 3).
+  controlApi,
+
+  /// Legacy pre-Control-API framing: `J:`-prefixed JSON lines on the legacy
+  /// TCP port.
+  legacyJ,
+}
+
+/// One in-flight JSON request waiting for its response.
 class _JsonPending {
   final Completer<SoleuxJsonResponse> completer;
   final Timer timer;
@@ -115,9 +131,13 @@ class SoleuxLegacyEvent {
   }
 }
 
-/// Persistent JSON-protocol command service for one Soleux device.
+/// Persistent JSON protocol command service for one Soleux device.
 class SoleuxJsonService {
   final ModuleTcpConnection _connection;
+
+  /// Wire framing selected at construction ([SoleuxJsonFraming.controlApi] is
+  /// the default).
+  final SoleuxJsonFraming framing;
 
   final StreamController<SoleuxLegacyEvent> _events =
       StreamController<SoleuxLegacyEvent>.broadcast(sync: true);
@@ -132,17 +152,23 @@ class SoleuxJsonService {
   /// Parsed legacy/event lines from the device.
   Stream<SoleuxLegacyEvent> get eventStream => _events.stream;
 
-  /// Unsolicited (no pending request) `J:` lines, e.g. pushed configuration
+  /// Unsolicited (no pending request) JSON lines, e.g. pushed configuration
   /// updates, decoded as raw maps.
   Stream<Map<String, dynamic>> get jsonEventStream => _jsonEvents.stream;
 
   /// Connection up/down transitions, forwarded from [ModuleTcpConnection].
   Stream<bool> get connectionStateStream => _connection.connectionStateStream;
 
+  /// The underlying transport (exposes `port`/`key` for callers that probe
+  /// different endpoints).
+  ModuleTcpConnection get connection => _connection;
+
   bool get isConnected => _connection.isConnected;
 
-  SoleuxJsonService({required ModuleTcpConnection connection})
-      : _connection = connection {
+  SoleuxJsonService({
+    required ModuleTcpConnection connection,
+    this.framing = SoleuxJsonFraming.controlApi,
+  }) : _connection = connection {
     _dataSubscription = _connection.dataStream.listen(_handleData);
   }
 
@@ -206,8 +232,13 @@ class SoleuxJsonService {
       }
     });
     _pending[id] = _JsonPending(completer: completer, timer: timer);
-    _connection.write(
-        SoleuxJsonRequest(id: id, action: action, params: params).encode());
+    _connection.write(SoleuxJsonRequest(
+      id: id,
+      action: action,
+      params: params,
+      protocol: SoleuxProtocolVersion.defaultRequest,
+      legacyJPrefix: framing == SoleuxJsonFraming.legacyJ,
+    ).encode());
     return completer.future;
   }
 
@@ -302,11 +333,172 @@ class SoleuxJsonService {
         'end_date': endDate,
       });
 
-  /// Sends a raw legacy `AT+...` line (required for simple live control) and
-  /// returns the accumulated response text up to (and including) the
-  /// `OK`/`ERROR` terminator, or everything received before [timeout] elapses.
+  // ---------------------------------------------------------------------------
+  // Control API catalogue commands (doc/...Specification_v0.2.md). These replace
+  // the legacy AT+ control operations: set_output_state / toggle_output /
+  // restart_output replace ON/OFF/TOGGLE/RESTART and masked AT operations,
+  // set_dimmer_level replaces the dimmer brightness command, and ping replaces
+  // `AT\r`. Unimplemented catalogue actions return the common
+  // `unsupported_command` error, which the caller can use to fall back to the
+  // implemented subset.
+  // ---------------------------------------------------------------------------
+
+  /// `ping` - reachability + round-trip estimate (§1.2). Result carries
+  /// `server_time` and `uptime_ms`.
+  Future<SoleuxJsonResponse> ping({
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.ping, const {}, timeout: timeout);
+
+  /// `get_capabilities` - supported commands, events and limits (§1.4).
+  Future<SoleuxJsonResponse> capabilities({
+    bool includeSchemas = false,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getCapabilities,
+          {'include_schemas': includeSchemas},
+          timeout: timeout);
+
+  /// `set_output_state` - set one output on/off (spec §4.3). Replaces
+  /// `AT+ON`/`AT+OFF`.
+  Future<SoleuxJsonResponse> setOutputState(
+    int channel,
+    bool state, {
+    int? transitionMs,
+    String? source,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.setOutputState,
+          {
+            'channel': channel,
+            'state': state,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+            if (source != null) 'source': source,
+          },
+          timeout: timeout);
+
+  /// `toggle_output` - invert one output state (spec §4.4). Replaces
+  /// `AT+TOGGLE`.
+  Future<SoleuxJsonResponse> toggleOutput(
+    int channel, {
+    int? transitionMs,
+    String? source,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.toggleOutput,
+          {
+            'channel': channel,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+            if (source != null) 'source': source,
+          },
+          timeout: timeout);
+
+  /// `restart_output` - cycle one output off and back on (spec §4.5).
+  /// Replaces `AT+RESTART`.
+  Future<SoleuxJsonResponse> restartOutput(
+    int channel, {
+    int? offTimeMs,
+    String? restoreMode,
+    String? source,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.restartOutput,
+          {
+            'channel': channel,
+            if (offTimeMs != null) 'off_time_ms': offTimeMs,
+            if (restoreMode != null) 'restore_mode': restoreMode,
+            if (source != null) 'source': source,
+          },
+          timeout: timeout);
+
+  /// `get_outputs` - read all output states (spec §4.1).
+  Future<SoleuxJsonResponse> getOutputs({
+    bool includeConfiguration = true,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getOutputs,
+          {'include_configuration': includeConfiguration},
+          timeout: timeout);
+
+  /// `get_inputs` - read all physical and virtual inputs (spec §3.1).
+  Future<SoleuxJsonResponse> getInputs({
+    bool includeConfiguration = true,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getInputs,
+          {'include_configuration': includeConfiguration},
+          timeout: timeout);
+
+  /// `get_device_state` - complete synchronization snapshot (spec §2.3).
+  Future<SoleuxJsonResponse> getDeviceState({
+    List<String> include = const ['inputs', 'outputs', 'sensors'],
+    bool includeConfiguration = false,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.getDeviceState,
+          {
+            'include': include,
+            'include_configuration': includeConfiguration,
+          },
+          timeout: timeout);
+
+  /// `set_dimmer_level` - set one dimmer brightness level (spec §6.3).
+  /// Replaces the legacy dimmer brightness AT command.
+  Future<SoleuxJsonResponse> setDimmerLevel(
+    int channel,
+    double level, {
+    int? transitionMs,
+    bool? turnOn,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.setDimmerLevel,
+          {
+            'channel': channel,
+            'level': level,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+            if (turnOn != null) 'turn_on': turnOn,
+          },
+          timeout: timeout);
+
+  /// `set_multiple_outputs` - set several outputs deterministically
+  /// (spec §4.6). `targets` holds `{channel, state, transition_ms?}` maps.
+  Future<SoleuxJsonResponse> setMultipleOutputs(
+    List<Map<String, dynamic>> targets, {
+    String? execution,
+    int? intervalMs,
+    bool stopOnError = false,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.setMultipleOutputs,
+          {
+            'outputs': targets,
+            if (execution != null) 'execution': execution,
+            if (intervalMs != null) 'interval_ms': intervalMs,
+            'stop_on_error': stopOnError,
+          },
+          timeout: timeout);
+
+  /// `get_mappings` - read the input-output mapping matrix (spec §5.1).
+  Future<SoleuxJsonResponse> getMappings({
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getMappings, const {}, timeout: timeout);
+
+  /// Sends a raw legacy `AT+...` line and returns the accumulated response text
+  /// up to (and including) the `OK`/`ERROR` terminator, or everything received
+  /// before [timeout] elapses.
   ///
-  /// Requests are CRLF-terminated per the protocol
+  /// This helper is only meaningful on the legacy path (a pre-Control-API
+  /// device, or the AT-only legacy port). Modern live control uses the Control
+  /// API catalogue commands ([setOutputState], [toggleOutput], [setDimmerLevel], ...).
+  ///
+  /// Requests are CRLF-terminated per the legacy protocol
   /// (doc/Soleux-Mobile-TCP-Protocol.md §"Transport").
   Future<String> legacy(String command,
       {Duration timeout = const Duration(seconds: 5)}) async {

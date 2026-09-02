@@ -15,15 +15,22 @@ the physical hardware (Stage 3 of doc/description.md).
 Implemented services:
 
   1. UDP broadcast discovery on port 8000 with a TCP callback response
-     (section 1 of the discovery doc).
+     (section 1 of the discovery doc). Advertises the Control API port.
   2. Soleux DCP / Layer-2 commissioning over raw Ethernet frames with
      EtherType 0x88B5 (section 2). Raw sockets require Linux with
      root/CAP_NET_RAW; the server disables DCP gracefully elsewhere.
   3. Unicast UDP heartbeat on `HostPort + 2` (default 5007, section 3).
-  4. A persistent TCP command server (default 5005) that accepts both the
-     `J:` JSON protocol (hello, get_relay_configuration, pages, mappings,
-     dimmer PWM, PDU energy history, file-transfer, ...) and the legacy
-     `AT+...` protocol for simple live control.
+  4. A persistent legacy TCP command server (default 5005) that answers the
+     legacy `AT+...` protocol (AT-only, per the Control API spec: the J:
+     prefix is not accepted on the legacy port).
+  5. A persistent Control API TCP server on `HostPort + 3` (default 5008)
+     that answers the plain-JSON Control API envelope
+     (doc/Soleux_Control_API_Command_Specification_v0.2.md): the catalogue
+     actions (ping, set_output_state, toggle_output, restart_output,
+     set_dimmer_level, get_outputs, get_inputs, get_device_state,
+     get_capabilities, get_mappings) plus the implemented protocol 2 subset
+     (relay/page/transfer actions). The Control API does not use the J:
+     prefix.
 
 Usage:
 
@@ -59,6 +66,9 @@ DISCOVERY_REQUEST_GUID = "8C93472D-2EF0-4B82-BE96-4FBBED57783F"
 DISCOVERY_PROTOCOL_VERSION = "2.0"
 DISCOVERY_PORT = 8000
 DEFAULT_TCP_PORT = 5005
+CONTROL_API_PORT = DEFAULT_TCP_PORT + 3  # legacy port + 3 (spec v0.2)
+CONTROL_API_VERSION = 3                  # target catalogue version
+HEARTBEAT_PORT = DEFAULT_TCP_PORT + 2    # legacy port + 2
 ETHER_TYPE_L2 = 0x88B5
 ETH_MIN_FRAME = 60  # without FCS
 
@@ -272,6 +282,62 @@ def relay_config_result(state):
     }
 
 
+def uptime_ms():
+    return int((time.time() - start_time) * 1000)
+
+
+# Control API response envelope (plain JSON line, no J: prefix), echoing the
+# negotiated protocol version from the request.
+def ctrl_json(state, req_id, protocol, result=None, ok=True, error=None):
+    body = {"protocol": protocol, "id": req_id, "ok": ok}
+    if ok:
+        body["result"] = result if result is not None else {}
+    else:
+        body["error"] = error if error is not None else {"code": "error"}
+    return json.dumps(body, ensure_ascii=False) + "\r\n"
+
+
+def control_api_hello(state, req_id):
+    p = state.profile
+    return {
+        "protocol": 2, "device": p["json_device"], "name": state.name,
+        "input_count": p["input_count"],
+        "virtual_input_count": p["virtual_input_count"],
+        "output_count": p["output_count"],
+        "api_port": CONTROL_API_PORT, "session_id": f"session-{req_id}",
+        "authentication_required": False,
+    }
+
+
+def outputs_payload(state):
+    p = state.profile
+    outs = []
+    for ch, out in enumerate(state.outputs):
+        entry = {
+            "channel": ch, "name": out["name"], "enabled": True,
+            "state": out["state"], "pending": False,
+            "changed_at": now_str(),
+        }
+        if p["is_dimmer"]:
+            entry["requested_level"] = float(out.get("pwm", 0))
+            entry["actual_level"] = float(out.get("pwm", 0))
+        outs.append(entry)
+    return outs
+
+
+def inputs_payload(state):
+    return [
+        {"kind": "physical", "channel": ch, "name": inp["name"],
+         "enabled": bool(inp["enabled"]), "state": inp["state"]}
+        for ch, inp in enumerate(state.inputs)
+    ]
+
+
+# Legacy numeric mapping-code -> control behaviour name (spec §5.1).
+CODE_TO_BEHAVIOR = {0: "none", 1: "on", 2: "off", 3: "toggle",
+                    4: "continuous_on", 5: "continuous_off"}
+
+
 def build_page(state, page):
     p = state.profile
     common = {
@@ -328,7 +394,8 @@ def _validate_delay_runtime(params):
 
 def _channel_output(state, channel):
     if not (0 <= channel < state.profile["output_count"]):
-        raise RequestError(f"channel {channel} out of range")
+        raise RequestError(f"channel {channel} out of range",
+                           "invalid_channel")
     return state.outputs[channel]
 
 
@@ -478,6 +545,127 @@ def handle_json_action(state, action, params, req_id):
         }
 
     raise RequestError(f"action '{action}' not supported")
+
+
+# ─── Control API actions (spec v0.2 catalogue + implemented subset) ──────────
+
+# Implemented protocol 2 subset also served on the Control API port
+# (relay state/configuration operations, page configuration and actions,
+# file-transfer operations).
+CONTROL_API_IMPLEMENTED_SUBSET = (RELAY_ACTIONS | COMMON_ACTIONS |
+                                  {"set_dimmer_frequency", "get_energy_history"})
+
+# Catalogue actions replacing the legacy AT+ control commands.
+CONTROL_API_CATALOGUE = {
+    "ping", "set_output_state", "toggle_output", "restart_output",
+    "set_dimmer_level", "get_outputs", "get_inputs", "get_device_state",
+    "get_capabilities", "get_mappings",
+}
+
+CONTROL_API_ACTIONS = CONTROL_API_IMPLEMENTED_SUBSET | CONTROL_API_CATALOGUE
+
+
+def handle_control_api_action(state, action, params, req_id):
+    p = state.profile
+
+    if action == "ping":
+        return {"server_time": now_str(), "uptime_ms": uptime_ms()}
+
+    if action == "set_output_state":
+        ch = int(params.get("channel", -1))
+        out = _channel_output(state, ch)
+        st = params.get("state")
+        if not isinstance(st, bool):
+            raise RequestError("missing/invalid 'state'", "invalid_parameter")
+        out["state"] = st
+        if p["is_dimmer"]:
+            out["pwm"] = 100 if st else 0
+        broadcast_output_change(state, ch)
+        return {"channel": ch, "requested_state": st,
+                "actual_state": out["state"], "pending": False, "revision": 1}
+
+    if action == "toggle_output":
+        ch = int(params.get("channel", -1))
+        out = _channel_output(state, ch)
+        out["state"] = not out["state"]
+        if p["is_dimmer"]:
+            out["pwm"] = 100 if out["state"] else 0
+        broadcast_output_change(state, ch)
+        return {"channel": ch, "actual_state": out["state"],
+                "pending": False, "revision": 1}
+
+    if action == "restart_output":
+        ch = int(params.get("channel", -1))
+        _channel_output(state, ch)
+        out = state.outputs[ch]
+        if out["restart_disable"]:
+            raise RequestError("restart disabled", "output_disabled")
+        out["state"] = False
+        if p["is_dimmer"]:
+            out["pwm"] = 0
+        broadcast_output_change(state, ch)
+        return {"channel": ch, "accepted": True, "off_time_ms": 100,
+                "operation_id": f"restart-{req_id}"}
+
+    if action == "set_dimmer_level":
+        if not p["is_dimmer"]:
+            raise RequestError("dimmer level not supported",
+                               "unsupported_command")
+        ch = int(params.get("channel", -1))
+        out = _channel_output(state, ch)
+        level = float(params.get("level", -1))
+        if not (0.0 <= level <= 100.0):
+            raise RequestError("level must be between 0 and 100",
+                               "invalid_level")
+        out["pwm"] = int(round(level))
+        out["state"] = out["pwm"] > 0
+        broadcast_output_change(state, ch)
+        return {"channel": ch, "requested_level": level,
+                "actual_level": float(out["pwm"]), "transitioning": False,
+                "operation_id": None}
+
+    if action == "get_outputs":
+        return {"outputs": outputs_payload(state), "revision": 1}
+
+    if action == "get_inputs":
+        return {"inputs": inputs_payload(state), "virtual_inputs": [],
+                "revision": 1}
+
+    if action == "get_device_state":
+        return {"revision": 1, "captured_at": now_str(),
+                "inputs": inputs_payload(state),
+                "outputs": outputs_payload(state),
+                "sensors": [], "faults": []}
+
+    if action == "get_capabilities":
+        return {
+            "commands": [
+                {"action": a, "permission": "control" if a in
+                 ("set_output_state", "toggle_output", "restart_output",
+                  "set_dimmer_level") else "read"}
+                for a in sorted(CONTROL_API_ACTIONS)
+            ],
+            "events": [], "features": ["dimmer"] if p["is_dimmer"] else [],
+            "transports": {"tcp": True, "http": True, "https": False},
+            "limits": {"max_request_bytes": 1048576, "max_batch": 16},
+        }
+
+    if action == "get_mappings":
+        return {
+            "inputs": p["input_count"], "outputs": p["output_count"],
+            "mappings": [
+                {"input": i, "output": o,
+                 "behavior": CODE_TO_BEHAVIOR.get(c, "none"), "legacy_code": c}
+                for (i, o), c in sorted(state.mapping.items())
+            ],
+            "behavior_codes": dict(CODE_TO_BEHAVIOR),
+        }
+
+    if action == "hello":
+        return control_api_hello(state, req_id)
+
+    # Implemented protocol 2 subset (relay/page/transfer actions).
+    return handle_json_action(state, action, params, req_id)
 
 
 # ─── TCP client registry + broadcast ─────────────────────────────────────────
@@ -863,61 +1051,75 @@ def handle_at_command(state, sock, line):
     at_error(sock, "ERROR")
 
 
-# ─── TCP command server (JSON + legacy AT+) ──────────────────────────────────
+# ─── TCP command servers (legacy AT-only + Control API) ─────────────────────
 
 
 def handle_line(state, sock, line):
     if line.startswith("J:"):
-        body = line[2:]
-        try:
-            req = json.loads(body)
-            if not isinstance(req, dict):
-                raise ValueError("request is not an object")
-        except ValueError:
-            send_tcp(sock, json_response(state, 0, ok=False,
-                                         error={"code": "bad_request",
-                                                "message": "malformed JSON"}))
-            return
-        req_id = req.get("id", 0)
-        action = req.get("action")
-        params = req.get("params") or {}
-        if not isinstance(params, dict):
-            params = {}
-        if action not in state.profile["json_actions"]:
-            send_tcp(sock, json_response(
-                state, req_id, ok=False,
-                error={"code": "unsupported_action",
-                       "message": f"action '{action}' not supported"}))
-            return
-        try:
-            result = handle_json_action(state, action, params, req_id)
-            send_tcp(sock, json_response(state, req_id, result=result))
-        except RequestError as exc:
-            send_tcp(sock, json_response(
-                state, req_id, ok=False,
-                error={"code": exc.code, "message": exc.message}))
-        except Exception as exc:  # defensive: never drop the connection
-            send_tcp(sock, json_response(
-                state, req_id, ok=False,
-                error={"code": "internal_error", "message": str(exc)}))
+        # Per the Control API spec the J: prefix is not accepted on the legacy
+        # Relay port (which is AT-only).
+        send_tcp(sock, "ERROR: J: prefix not accepted on legacy port\r\n")
         return
-
     result = handle_at_command(state, sock, line)
     if result == "EXIT":
         return result
 
 
-def tcp_client_handler(state, client_sock, addr):
-    client_id = f"{addr[0]}:{addr[1]}"
-    print(f"[TCP] connection from {addr}")
+def handle_line_ctrl(state, sock, line):
     try:
-        greeting = [f"DEVICE:{state.profile['label']}",
-                    f"VER:{state.firmware}", f"SN:{state.serial}"]
-        for ch, out in enumerate(state.outputs):
-            greeting.append(f"OUT:{ch}:{'ON' if out['state'] else 'OFF'}")
-        send_tcp(client_sock, "\r\n".join(greeting) + "\r\n")
-    except Exception:
-        pass
+        req = json.loads(line)
+        if not isinstance(req, dict):
+            raise ValueError("request is not an object")
+    except (ValueError, UnicodeDecodeError):
+        send_tcp(sock, ctrl_json(state, None, 2, ok=False,
+                                 error={"code": "invalid_request",
+                                        "message": "malformed JSON"}))
+        return
+    protocol = req.get("protocol")
+    if not isinstance(protocol, int) or not (1 <= protocol <= 3):
+        send_tcp(sock, ctrl_json(state, req.get("id"), 2, ok=False,
+                                 error={"code": "unsupported_protocol",
+                                        "message": "protocol not supported"}))
+        return
+    req_id = req.get("id")
+    action = req.get("action")
+    params = req.get("params") or {}
+    if not isinstance(params, dict):
+        params = {}
+    if action not in CONTROL_API_ACTIONS:
+        send_tcp(sock, ctrl_json(state, req_id, protocol, ok=False,
+                                 error={"code": "unknown_action",
+                                        "message":
+                                            f"action '{action}' not supported"}))
+        return
+    try:
+        result = handle_control_api_action(state, action, params, req_id)
+        send_tcp(sock, ctrl_json(state, req_id, protocol, result=result))
+    except RequestError as exc:
+        send_tcp(sock, ctrl_json(state, req_id, protocol, ok=False,
+                                 error={"code": exc.code,
+                                        "message": exc.message}))
+    except Exception as exc:  # defensive: never drop the connection
+        send_tcp(sock, ctrl_json(
+            state, req_id, protocol, ok=False,
+            error={"code": "internal_error", "message": str(exc)}))
+
+
+def tcp_client_handler(state, client_sock, addr, control_api=False):
+    client_id = f"{addr[0]}:{addr[1]}"
+    print(f"[TCP] connection from {addr}"
+          + (" (Control API)" if control_api else ""))
+    if not control_api:
+        # Legacy port greeting (the AT-only legacy dump). The Control API port
+        # answers only JSON responses, so it sends no unsolicited greeting.
+        try:
+            greeting = [f"DEVICE:{state.profile['label']}",
+                        f"VER:{state.firmware}", f"SN:{state.serial}"]
+            for ch, out in enumerate(state.outputs):
+                greeting.append(f"OUT:{ch}:{'ON' if out['state'] else 'OFF'}")
+            send_tcp(client_sock, "\r\n".join(greeting) + "\r\n")
+        except Exception:
+            pass
 
     with tcp_clients_lock:
         old = tcp_clients.pop(client_id, None)
@@ -941,7 +1143,8 @@ def tcp_client_handler(state, client_sock, addr):
                 if not line.strip():
                     continue
                 print(f"[TCP] < {line}")
-                if handle_line(state, client_sock, line) == "EXIT":
+                handler = handle_line_ctrl if control_api else handle_line
+                if handler(state, client_sock, line) == "EXIT":
                     return
     except (ConnectionResetError, BrokenPipeError, OSError):
         pass
@@ -952,16 +1155,18 @@ def tcp_client_handler(state, client_sock, addr):
         print(f"[TCP] disconnected {addr}")
 
 
-def tcp_server(state, host, port):
+def tcp_server(state, host, port, control_api=False):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
     server.listen(8)
-    print(f"[TCP ] JSON+AT HostPort {host}:{port}")
+    label = "Control API" if control_api else "AT-only legacy"
+    print(f"[TCP ] {label} HostPort {host}:{port}")
     while True:
         client_sock, addr = server.accept()
         threading.Thread(target=tcp_client_handler,
-                         args=(state, client_sock, addr), daemon=True).start()
+                         args=(state, client_sock, addr, control_api),
+                         daemon=True).start()
 
 
 # ─── UDP discovery server (section 1) ────────────────────────────────────────
@@ -1001,6 +1206,11 @@ def udp_discovery_server(state, host, port):
                         f"PORT:{DEFAULT_TCP_PORT}\r\n"
                         f"SN:{state.serial}\r\n"
                         f"NAME:{state.name}\r\n"
+                        f"MAC:{mac_text(state.mac)}\r\n"
+                        f"API_PORT:{CONTROL_API_PORT}\r\n"
+                        f"HEARTBEAT_PORT:{HEARTBEAT_PORT}\r\n"
+                        f"API_VER:{CONTROL_API_VERSION}\r\n"
+                        f"CAPS:control_api_v3,heartbeat,l2\r\n"
                     ).encode("utf-8"))
                     s.close()
                     print(f"[UDP ] discovery response -> {ip}:{cb_port}")
@@ -1038,6 +1248,9 @@ def udp_heartbeat_server(state, host, port):
             pong = {
                 "soleux_heartbeat": 1, "op": "pong", "nonce": nonce,
                 "tcp_port": DEFAULT_TCP_PORT, "name": state.name,
+                "api_port": CONTROL_API_PORT,
+                "api_version": CONTROL_API_VERSION,
+                "device_id": state.serial,
             }
             sock.sendto(json.dumps(pong).encode("utf-8"), addr)
             print(f"[UDP ] heartbeat pong -> {addr[0]}:{addr[1]}")
@@ -1067,6 +1280,8 @@ def l2_identity(state, nonce, requester_mac):
         "name": state.name, "serial": state.serial,
         "firmware": state.firmware, "port": DEFAULT_TCP_PORT,
         "ip": state.ip, "mask": state.mask, "gateway": state.gateway,
+        "api_port": CONTROL_API_PORT, "heartbeat_port": HEARTBEAT_PORT,
+        "api_version": CONTROL_API_VERSION,
     }
 
 
@@ -1211,19 +1426,24 @@ def main():
 
     print("=" * 62)
     print(f"  Soleux {profile['label']} dummy server")
-    print(f"  JSON device : {profile['json_device']}")
-    print(f"  GUID        : {profile['guid']}")
-    print(f"  NAME        : {state.name}")
-    print(f"  SN          : {state.serial}")
-    print(f"  IP/MAC      : {state.ip} / {mac_text(state.mac)}")
-    print(f"  TCP HostPort: {args.tcp_port}")
-    print(f"  UDP discover: {args.discover_port}")
+    print(f"  JSON device  : {profile['json_device']}")
+    print(f"  GUID         : {profile['guid']}")
+    print(f"  NAME         : {state.name}")
+    print(f"  SN           : {state.serial}")
+    print(f"  IP/MAC       : {state.ip} / {mac_text(state.mac)}")
+    print(f"  Legacy  HostPort (AT-only) : {args.tcp_port}")
+    print(f"  Control API  (legacy + 3)  : {args.tcp_port + 3}")
+    print(f"  UDP discover : {args.discover_port}")
     print(f"  UDP heartbeat: {state.heartbeat_port}")
     print("=" * 62)
 
     threads = [
         threading.Thread(target=tcp_server,
-                         args=(state, args.bind, args.tcp_port), daemon=True),
+                         args=(state, args.bind, args.tcp_port, False),
+                         daemon=True),
+        threading.Thread(target=tcp_server,
+                         args=(state, args.bind, args.tcp_port + 3, True),
+                         daemon=True),
         threading.Thread(target=udp_discovery_server,
                          args=(state, args.bind, args.discover_port),
                          daemon=True),
