@@ -269,6 +269,7 @@
   "systemStatusNoIssues": "Nu s-au raportat probleme.",
 
   "manualDimDefaultLabel": "Ieșire dimare",
+  "refreshTooltip": "Actualizează",
   "relayRefreshTooltip": "Actualizează",
   "relayOutputsHeader": "Ieșiri ({count})",
   "relayPhysicalInputs": "Intrări fizice",

@@ -295,6 +295,7 @@
   "systemStatusNoIssues": "No issues reported.",
 
   "manualDimDefaultLabel": "Dimmer output",
+  "refreshTooltip": "Refresh",
   "relayRefreshTooltip": "Refresh",
   "relayOutputsHeader": "Outputs ({count})",
   "@relayOutputsHeader": {"placeholders": {"count": {"type": "int"}}},
