@@ -10,6 +10,7 @@ import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 import '../data/mock_data.dart';
 import '../models/models.dart';
 import '../services/module_store.dart';
+import '../services/room_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/action_picker.dart';
 import '../widgets/common_widgets.dart';
@@ -38,7 +39,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   late int _sliderValue = widget.scenario?.sliderValue ?? 50;
 
   List<DeviceModule> _modules = const [];
-  final List<Room> _rooms = mockRooms();
+  List<Room> _rooms = const [];
 
   List<String> get _dimmerTargets => [
         for (final m in _modules.where((m) =>
@@ -52,6 +53,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     ModuleStore.shared.init().then((_) {
       if (!mounted) return;
       setState(() => _modules = ModuleStore.shared.modules);
+    });
+    RoomStore.shared.init().then((_) {
+      if (!mounted) return;
+      setState(() => _rooms = RoomStore.shared.rooms);
     });
   }
 
