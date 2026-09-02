@@ -113,12 +113,18 @@ class ModuleHeartbeatService {
     if (targets.isNotEmpty) _monitor.refreshTargets(targets);
   }
 
-  /// Every valid pong refreshes the module's `lastSeenAt` (spec §4.2) and is
-  /// persisted with a short debounce so the 5 s cadence does not hammer disk.
+  /// Every valid pong refreshes the module's `lastSeenAt` (spec §4.2) and
+  /// re-asserts it online: a successful heartbeat is authoritative reachability
+  /// evidence, so the module stays online even if another layer (e.g. a
+  /// transient TCP disconnect) flipped it offline meanwhile. Persisted with a
+  /// short debounce so the 5 s cadence does not hammer disk.
   void _onPong(HeartbeatTarget target, SoleuxPong pong) {
     final module = store.byId(target.key);
     if (module == null) return;
     module.lastSeenAt = DateTime.now();
+    if (module.status != ConnectionStatus.online) {
+      module.status = ConnectionStatus.online;
+    }
     _scheduleCommit();
   }
 

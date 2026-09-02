@@ -140,6 +140,49 @@ void main() {
     service.stop();
   });
 
+  test('a module stays online while pongs succeed, even if other layers '
+      'flip it offline', () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final store = ModuleStore.forTesting();
+    await store.init();
+
+    await store.upsert(DeviceModule(
+      id: 'relay-4',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      tcpPort: serverPort - 2,
+      status: ConnectionStatus.offline,
+      roomName: 'Cabin',
+      internalTempC: 25,
+    ));
+
+    final service = ModuleHeartbeatService.forTesting(
+      store: store,
+      monitor: SoleuxHeartbeatMonitor(
+        interval: const Duration(milliseconds: 150),
+        acceptWindow: const Duration(milliseconds: 300),
+        jitter: false,
+      ),
+    );
+
+    await service.start();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final module = store.byId('relay-4')!;
+    expect(module.status, ConnectionStatus.online);
+
+    // Simulate another layer (e.g. a TCP session disconnect) flipping the
+    // module offline while the heartbeat keeps succeeding.
+    module.status = ConnectionStatus.offline;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+
+    expect(store.byId('relay-4')!.status, ConnectionStatus.online);
+
+    service.stop();
+    server.close();
+  });
+
   test('removing a module stops its heartbeat targets', () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Relay');
