@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
+import '../logger/network_debug_logger.dart';
 import 'app_command.dart';
 import 'transport.dart';
 
@@ -42,12 +45,18 @@ class LanTransport implements Transport {
     Socket? socket;
     try {
       socket = await Socket.connect(_host, _port).timeout(effectiveTimeout);
-      socket.write(utf8.encode(command.encode()));
+      final wire = command.encode();
+      NetworkDebugLogger.outbound('tcp', '$_host:$_port', wire);
+      socket.write(utf8.encode(wire));
 
       final response = await utf8
           .decodeStream(socket)
           .timeout(effectiveTimeout)
-          .catchError((Object _) => '');
+          .catchError((Object e) {
+        debugPrint('LanTransport: response decode failed: $e');
+        return '';
+      });
+      NetworkDebugLogger.inbound('tcp', '$_host:$_port', response);
 
       if (response.isNotEmpty) {
         try {
@@ -55,14 +64,19 @@ class LanTransport implements Transport {
           if (decoded is Map<String, dynamic>) {
             _inbound.add(decoded);
           }
-        } catch (_) {/* ignore malformed response */}
+        } catch (e, st) {
+          debugPrint('LanTransport: ignoring malformed response: $e\n$st');
+        }
       }
       return const TransportResult(usedTransport: 'lan', success: true);
     } on SocketException catch (e) {
+      debugPrint('LanTransport: send to $_host:$_port failed: $e');
       return TransportResult(usedTransport: 'lan', success: false, error: e);
     } on TimeoutException catch (e) {
+      debugPrint('LanTransport: send to $_host:$_port timed out: $e');
       return TransportResult(usedTransport: 'lan', success: false, error: e);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('LanTransport: send to $_host:$_port failed: $e\n$st');
       return TransportResult(usedTransport: 'lan', success: false, error: e);
     } finally {
       socket?.destroy();

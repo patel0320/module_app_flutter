@@ -2,7 +2,7 @@ name: soleux_device_manager
 description: "Relay, PDU, AC Dimmer and DC Dimmer configuration and monitoring."
 publish_to: 'none'
 
-version: 1.0.2+1
+version: 1.0.3+1
 
 environment:
   sdk: ^3.5.4
@@ -71,17 +71,17 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "icon.png"
+  image_path: "assets/icons/icon.png"
   min_sdk_android: 21
   remove_alpha_ios: true
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "icon.png"
+  adaptive_icon_foreground: "assets/icons/icon.png"
   web:
     generate: true
-    image_path: "icon.png"
+    image_path: "assets/icons/icon.png"
     background_color: "#FFFFFF"
     theme_color: "#E48623"
   windows:
     generate: true
-    image_path: "icon.png"
+    image_path: "assets/icons/icon.png"
     icon_size: 256

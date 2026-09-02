@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 import '../../core/config/app_config.dart';
+import '../logger/network_debug_logger.dart';
 import 'app_command.dart';
 import 'transport.dart';
 
@@ -59,9 +61,13 @@ class MqttTransport implements Transport {
         final payload = event.payload;
         if (payload is MqttPublishMessage) {
           final text = String.fromCharCodes(payload.payload.message);
+          NetworkDebugLogger.inbound('mqtt', event.topic, text);
           try {
             _inbound.add(jsonDecode(text) as Map<String, dynamic>);
-          } catch (_) {/* ignore malformed */}
+          } catch (e, st) {
+            debugPrint('MqttTransport: ignoring malformed inbound message: '
+                '$e\n$st');
+          }
         }
       }
     });
@@ -82,8 +88,10 @@ class MqttTransport implements Transport {
     }
     final builder = MqttClientPayloadBuilder();
     builder.addString(command.encode());
+    final dest = topic(command.moduleId, 'control');
+    NetworkDebugLogger.outbound('mqtt', dest, command.encode());
     client.publishMessage(
-      topic(command.moduleId, 'control'),
+      dest,
       MqttQos.atLeastOnce,
       builder.payload!,
     );

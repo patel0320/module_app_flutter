@@ -54,14 +54,14 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              l10n.splashAppName,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
+            // Text(
+            //   l10n.splashAppName,
+            //   style: Theme.of(context)
+            //       .textTheme
+            //       .headlineSmall
+            //       ?.copyWith(fontWeight: FontWeight.w800),
+            // ),
+            // const SizedBox(height: 8),
             Text(
               l10n.splashTagline,
               style: TextStyle(color: onSurface.withValues(alpha: 0.6)),

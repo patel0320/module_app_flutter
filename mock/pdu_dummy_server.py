@@ -36,6 +36,10 @@ SOCKETIO_PORT = 8081
 
 DISCOVERY_REQUEST_GUID = "8481fba0-f387-11ea-adc1-0242ac120002"
 PDU_RESPONSE_GUID = "24d9b67e-f38d-11ea-adc1-0242ac120002"
+CONTROL_API_PORT_OFFSET = 3
+HEARTBEAT_PORT_OFFSET = 2
+HEARTBEAT_PORT = TCP_PORT + HEARTBEAT_PORT_OFFSET
+PDU_MAC = "AA:BB:CC:DD:EE:01"
 
 IP_WHITELIST = set()
 
@@ -524,7 +528,7 @@ def udp_server():
                 print(f"[UDP] Unknown GUID from {client_addr}")
                 continue
 
-            client_port = msg.get("Port")
+            client_port = msg.get("PORT", msg.get("Port", msg.get("port")))
             if not isinstance(client_port, int):
                 try:
                     client_port = int(client_port)
@@ -545,6 +549,11 @@ def udp_server():
                         f"PORT:{TCP_PORT}\r\n"
                         f"SN:{device_info['SN']}\r\n"
                         f"NAME:{network_info['APP_NAME']}\r\n"
+                        f"MAC:{PDU_MAC}\r\n"
+                        f"API_PORT:{TCP_PORT + CONTROL_API_PORT_OFFSET}\r\n"
+                        f"HEARTBEAT_PORT:{HEARTBEAT_PORT}\r\n"
+                        f"API_VER:3\r\n"
+                        f"CAPS:control_api_v3,heartbeat,l2\r\n"
                     )
                     send_tcp(resp_sock, response)
                     resp_sock.close()
@@ -560,6 +569,44 @@ def udp_server():
 
         except Exception as e:
             print(f"[UDP] Error: {e}")
+
+
+# ─── UDP Heartbeat Server (spec §4: ping -> pong) ───────────────────────────
+
+
+def heartbeat_server():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((UDP_HOST, HEARTBEAT_PORT))
+    print(f"[HB] Heartbeat listening on {UDP_HOST}:{HEARTBEAT_PORT}")
+
+    while True:
+        try:
+            data, addr = sock.recvfrom(UDP_BUFFER_SIZE)
+            try:
+                msg = json.loads(data.decode())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            if msg.get("soleux_heartbeat") != 1 or msg.get("op") != "ping":
+                continue
+            nonce = msg.get("nonce", "")
+            if not nonce or len(nonce) > 64:
+                continue
+            reply = json.dumps({
+                "soleux_heartbeat": 1,
+                "op": "pong",
+                "nonce": nonce,
+                "tcp_port": TCP_PORT,
+                "name": network_info["APP_NAME"],
+                "api_port": TCP_PORT + CONTROL_API_PORT_OFFSET,
+                "api_version": 3,
+                "device_id": device_info["SN"],
+                "boot_id": "dummy-boot",
+            })
+            sock.sendto(reply.encode(), addr)
+            print(f"[HB] pong -> {addr[0]}:{addr[1]} nonce={nonce}")
+        except Exception as e:
+            print(f"[HB] Error: {e}")
 
 
 # ─── Socket.IO Server ────────────────────────────────────────────────────────
@@ -821,12 +868,14 @@ def main():
     print("  PDU Dummy Server")
     print(f"  TCP ASCII : {TCP_HOST}:{TCP_PORT}")
     print(f"  UDP Discov: {UDP_HOST}:{UDP_PORT}")
+    print(f"  UDP Heart : {UDP_HOST}:{HEARTBEAT_PORT} (TCP_PORT+2)")
     print(f"  Socket.IO : {SOCKETIO_HOST}:{SOCKETIO_PORT}")
     print("=" * 60)
 
     threads = [
         threading.Thread(target=tcp_server, daemon=True),
         threading.Thread(target=udp_server, daemon=True),
+        threading.Thread(target=heartbeat_server, daemon=True),
         threading.Thread(target=socketio_server, daemon=True),
         #threading.Thread(target=dummy_state_changer, daemon=True),
     ]

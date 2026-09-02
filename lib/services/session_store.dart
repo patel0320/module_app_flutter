@@ -36,7 +36,8 @@ class SessionStore extends ChangeNotifier {
     try {
       _prefs = await SharedPreferences.getInstance();
       _signedIn = _prefs!.getBool(_kKeySignedIn) ?? false;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('SessionStore: loading session failed: $e\n$st');
       // Keep defaults if preferences are unavailable.
     }
     _loaded = true;

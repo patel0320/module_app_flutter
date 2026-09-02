@@ -267,20 +267,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     _SectionLabel(l10n.homeSectionRooms),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 56,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _rooms.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final room = _rooms[index];
-                          return _RoomChip(
-                              room: room,
-                              onTap: () => _showRoomScenarios(room));
-                        },
+                    if (_rooms.isEmpty)
+                      EmptyState(
+                        icon: Icons.meeting_room_outlined,
+                        message: l10n.roomsEmpty,
+                      )
+                    else
+                      SizedBox(
+                        height: 56,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _rooms.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 10),
+                          itemBuilder: (context, index) {
+                            final room = _rooms[index];
+                            return _RoomChip(
+                                room: room,
+                                onTap: () => _showRoomScenarios(room));
+                          },
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 24),
                     Row(
                       children: [

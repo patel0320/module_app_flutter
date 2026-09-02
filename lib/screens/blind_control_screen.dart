@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
+import '../services/module_status/module_status_service.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -41,6 +43,15 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
     if (saved) setState(() {});
   }
 
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    await ModuleStatusService.shared
+        .refreshOne(ModuleStore.shared.byId(widget.module.id) ?? widget.module)
+        .then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final module = widget.module;
@@ -49,6 +60,10 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
       appBar: AppBar(
         title: Text(module.name),
         actions: [
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: l10n.refreshTooltip,
+              onPressed: _refresh),
           IconButton(
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],

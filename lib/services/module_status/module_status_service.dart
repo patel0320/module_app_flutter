@@ -23,11 +23,15 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/logger/network_debug_logger.dart';
+import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
 import 'module_command_service.dart';
 import 'module_status_fetcher.dart';
 import 'module_tcp_service.dart';
+import 'soleux_json_fetcher.dart';
+import 'soleux_json_service.dart';
 
 /// Outcome of a single status pass over the fleet.
 class ModuleStatusResult {
@@ -58,6 +62,9 @@ class ModuleStatusService {
   /// Persistent per-module command/status units (transport + parsing).
   final Map<String, ModuleCommandService> _units = {};
 
+  /// Persistent per-module JSON command/status units (Soleux J: protocol).
+  final Map<String, SoleuxJsonService> _jsonUnits = {};
+
   ModuleStatusService({required this.store, this.timeout = defaultTimeout});
 
   /// Shared service wired to the shared store, used by the launch path.
@@ -82,6 +89,202 @@ class ModuleStatusService {
   /// type is unsupported or its unit has not been created yet.
   ModuleCommandService? commandServiceFor(String moduleId) => _units[moduleId];
 
+  /// The live Soleux JSON unit driving [moduleId], or null when the device is
+  /// not JSON-capable (or not yet probed).
+  SoleuxJsonService? jsonCommandServiceFor(String moduleId) =>
+      _jsonUnits[moduleId];
+
+  /// Sends a raw legacy `AT+...` control command through the legacy AT unit
+  /// (or the legacy JSON unit's AT helper for pre-Control-API devices). Returns
+  /// true when the device acknowledged with `OK`.
+  ///
+  /// Modern live control should use the Control API catalogue commands instead
+  /// ([setOutputState], [toggleOutput], [setDimmerLevel], ...); this method is
+  /// the fallback for legacy devices and for catalogue actions the firmware has
+  /// not implemented yet.
+  Future<bool> sendLegacyCommand(String moduleId, String command) async {
+    final jsonUnit = _jsonUnits[moduleId];
+    if (jsonUnit != null && jsonUnit.isConnected) {
+      try {
+        final raw = await jsonUnit.legacy(command);
+        return raw.endsWith('OK');
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: legacy command "$command" on '
+            '$moduleId failed: $e\n$st');
+        return false;
+      }
+    }
+    final atUnit = _units[moduleId];
+    if (atUnit != null) {
+      return atUnit.command(command);
+    }
+    return false;
+  }
+
+  /// Turns an output on (zero-based channel). Uses the Control API
+  /// `set_output_state` for JSON-capable devices (replacing `AT+ON`), falling
+  /// back to the legacy AT command when the catalogue action is unavailable.
+  Future<bool> turnOnOutput(String moduleId, int index) =>
+      _setOutputState(moduleId, index, true);
+
+  /// Turns an output off (zero-based channel). Uses the Control API
+  /// `set_output_state` for JSON-capable devices (replacing `AT+OFF`), falling
+  /// back to the legacy AT command when the catalogue action is unavailable.
+  Future<bool> turnOffOutput(String moduleId, int index) =>
+      _setOutputState(moduleId, index, false);
+
+  /// Inverts one output (zero-based channel). Uses the Control API
+  /// `toggle_output` (replacing `AT+TOGGLE`) when available.
+  Future<bool> toggleOutput(String moduleId, int index) async {
+    final unit = _jsonUnits[moduleId];
+    if (unit != null && unit.isConnected) {
+      try {
+        final response = await unit.toggleOutput(index);
+        if (response.ok) {
+          // Reflect the inverted state deterministically instead of trusting a
+          // possibly-stale `actual_state` (the device may acknowledge the
+          // toggle before the output actually settles), so the screen updates
+          // on the first press.
+          final current = _channelState(moduleId, index);
+          if (current != null) {
+            _applyOutputState(moduleId, index, !current);
+          }
+          return true;
+        }
+        final code = response.error?.code;
+        if (code != null && _catalogueFallbackCodes.contains(code)) {
+          return await _toggleOutputLegacy(moduleId, index);
+        }
+        return false;
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: toggle_output on $moduleId failed: '
+            '$e\n$st');
+        return await _toggleOutputLegacy(moduleId, index);
+      }
+    }
+    return await _toggleOutputLegacy(moduleId, index);
+  }
+
+  /// AT+ fallback for [toggleOutput], reflecting the inverted state on success.
+  Future<bool> _toggleOutputLegacy(String moduleId, int index) async {
+    final ok = await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
+    if (ok) {
+      final current = _channelState(moduleId, index);
+      if (current != null) _applyOutputState(moduleId, index, !current);
+    }
+    return ok;
+  }
+
+  /// Cycles one output off and back on. Uses the Control API `restart_output`
+  /// (replacing `AT+RESTART`) when available.
+  Future<bool> restartOutput(String moduleId, int index) async {
+    final unit = _jsonUnits[moduleId];
+    if (unit != null && unit.isConnected) {
+      try {
+        final response = await unit.restartOutput(index);
+        if (response.ok) return true;
+        final code = response.error?.code;
+        if (code != null && _catalogueFallbackCodes.contains(code)) {
+          return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
+        }
+        return false;
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: restart_output on $moduleId failed: '
+            '$e\n$st');
+        return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
+      }
+    }
+    return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
+  }
+
+  /// Sets one dimmer brightness percentage (0-100). Uses the Control API
+  /// `set_dimmer_level` (replacing the legacy dimmer AT command) when
+  /// available.
+  Future<bool> setDimmerLevel(
+      String moduleId, int index, int brightnessPct) async {
+    final unit = _jsonUnits[moduleId];
+    if (unit != null && unit.isConnected) {
+      try {
+        final response = await unit.setDimmerLevel(
+            index, brightnessPct.toDouble().clamp(0, 100));
+        if (response.ok) return true;
+        final code = response.error?.code;
+        if (code != null && _catalogueFallbackCodes.contains(code)) {
+          return await sendLegacyCommand(
+              moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
+        }
+        return false;
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: set_dimmer_level on $moduleId '
+            'failed: $e\n$st');
+        return await sendLegacyCommand(
+            moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
+      }
+    }
+    return await sendLegacyCommand(
+        moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
+  }
+
+  static const Set<String> _catalogueFallbackCodes = {
+    'unsupported_command',
+    'unknown_action',
+  };
+
+  Future<bool> _setOutputState(String moduleId, int index, bool state) async {
+    final unit = _jsonUnits[moduleId];
+    if (unit != null && unit.isConnected) {
+      try {
+        final response = await unit.setOutputState(index, state);
+        if (response.ok) {
+          // Reflect the requested state - not the device's possibly-stale
+          // `actual_state` - so the very first press flips the UI immediately
+          // even when the device acknowledges before the output settles.
+          _applyOutputState(moduleId, index, state);
+          return true;
+        }
+        final code = response.error?.code;
+        if (code != null && _catalogueFallbackCodes.contains(code)) {
+          return await _setOutputStateLegacy(moduleId, index, state);
+        }
+        return false;
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: set_output_state on $moduleId failed: '
+            '$e\n$st');
+        return await _setOutputStateLegacy(moduleId, index, state);
+      }
+    }
+    return await _setOutputStateLegacy(moduleId, index, state);
+  }
+
+  /// AT+ fallback for [_setOutputState], reflecting the new state on success.
+  Future<bool> _setOutputStateLegacy(String moduleId, int index, bool state) async {
+    final ok = await sendLegacyCommand(
+        moduleId, state ? 'AT+ON:$index\r' : 'AT+OFF:$index\r');
+    if (ok) _applyOutputState(moduleId, index, state);
+    return ok;
+  }
+
+  /// The live channel's current ON/OFF state, or null when unavailable.
+  bool? _channelState(String moduleId, int index) {
+    final live = store.byId(moduleId);
+    if (live == null) return null;
+    if (index < 0 || index >= live.channels.length) return null;
+    return live.channels[index].isOn;
+  }
+
+  /// Applies a successful control command's outcome to the live module in the
+  /// store so screens reflect the (requested/actual) output state immediately,
+  /// without depending on an unsolicited device broadcast arriving in time.
+  void _applyOutputState(String moduleId, int index, bool state) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    if (index < 0 || index >= live.channels.length) return;
+    final channel = live.channels[index];
+    if (channel.isOn == state) return;
+    channel.isOn = state;
+    _scheduleCommit();
+  }
+
   /// Ensures every module is connected and re-asks it for a fresh status dump,
   /// committing the fleet once. Concurrent calls are coalesced.
   Future<ModuleStatusResult> refreshAll() async {
@@ -103,6 +306,9 @@ class ModuleStatusService {
 
       await store.commit();
       _lastResult = ModuleStatusResult(online: online, offline: offline);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: refreshAll failed: $e\n$st');
+      rethrow;
     } finally {
       _refreshing = false;
     }
@@ -122,6 +328,7 @@ class ModuleStatusService {
   /// counts reflect exactly the modules that remain.
   void removeModule(String moduleId) {
     _units.remove(moduleId)?.dispose();
+    _disposeJsonUnit(moduleId);
   }
 
   /// Closes every persistent socket (and stops each unit's auto-reconnect)
@@ -130,6 +337,9 @@ class ModuleStatusService {
   /// where keeping sockets open wastes battery.
   Future<void> suspendAll() async {
     for (final unit in _units.values) {
+      await unit.disconnect();
+    }
+    for (final unit in _jsonUnits.values) {
       await unit.disconnect();
     }
   }
@@ -144,14 +354,20 @@ class ModuleStatusService {
       if (unit != null) {
         await unit.connect();
       }
+      final jsonUnit = _jsonUnits[module.id];
+      if (jsonUnit != null) {
+        await jsonUnit.connect();
+      }
     }
     return refreshAll();
   }
 
-  /// Lightweight background poll: for every module, opens a one-shot TCP
-  /// socket, sends an `AT\r` ping, awaits the `OK` terminator and closes it
-  /// again - no persistent connection is kept. Each module's online/offline
-  /// slot is updated in the store and committed once at the end.
+  /// Lightweight background poll: for every module, opens a one-shot socket,
+  /// pings it and closes it again - no persistent connection is kept. Control
+  /// API devices are pinged with a JSON `ping` on the Control API port (legacy
+  /// port + 3); everything else answers the legacy `AT\r` ping on the legacy
+  /// TCP port. Each module's online/offline slot is updated in the store and
+  /// committed once at the end.
   Future<ModuleStatusResult> pollAll() async {
     await store.init();
     final modules = store.modules;
@@ -178,12 +394,24 @@ class ModuleStatusService {
       return false;
     }
 
+    // Control API devices (discovery advertised the Control API endpoint) are
+    // pinged over the JSON envelope on legacy port + 3 (plain JSON `ping`)
+    // per the spec transport mapping. Everything else - AT-only and legacy
+    // `J:` devices - still answers the legacy `AT\r` ping on the legacy TCP
+    // port during migration.
+    if (live.isControlApiAdvertised) {
+      final reachable = await _pollJsonPing(live);
+      live.status =
+          reachable ? ConnectionStatus.online : ConnectionStatus.offline;
+      return reachable;
+    }
+
     Socket? socket;
     var reachable = false;
     try {
-      socket =
-          await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
+      socket = await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
+      NetworkDebugLogger.outbound('tcp', '${live.ipAddress}:${live.tcpPort}', "AT\r");
       socket.write('AT\r');
 
       final buffer = StringBuffer();
@@ -194,7 +422,9 @@ class ModuleStatusService {
 
       socket.listen(
         (bytes) {
-          buffer.write(utf8.decode(bytes));
+          final text = utf8.decode(bytes);
+          NetworkDebugLogger.inbound('tcp', '${live.ipAddress}:${live.tcpPort}', text);
+          buffer.write(text);
           final raw = buffer.toString().trimRight();
           if (raw.endsWith('\r\nOK') || raw.endsWith('\r\nERROR')) {
             if (!done.isCompleted) done.complete();
@@ -211,16 +441,83 @@ class ModuleStatusService {
       await done.future;
       timer.cancel();
       reachable = buffer.toString().trimRight().endsWith('\r\nOK');
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: polling ${live.ipAddress}:'
+          '${live.tcpPort} failed: $e\n$st');
       reachable = false;
     } finally {
       try {
         socket?.destroy();
-      } catch (_) {/* ignore */}
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: socket destroy failed: $e\n$st');
+      }
     }
 
     live.status =
         reachable ? ConnectionStatus.online : ConnectionStatus.offline;
+    return reachable;
+  }
+
+  /// One-shot JSON `ping` on the Control API port. Opens a temporary socket,
+  /// sends the Control API `ping` request (plain JSON envelope), waits for a
+  /// matching `ok:true` response and closes it immediately.
+  Future<bool> _pollJsonPing(DeviceModule module) async {
+    Socket? socket;
+    var reachable = false;
+    final splitter = SoleuxLineSplitter();
+    try {
+      socket = await Socket.connect(module.ipAddress, module.controlApiPort,
+          timeout: timeout);
+      socket.setOption(SocketOption.tcpNoDelay, true);
+      const request =
+          SoleuxJsonRequest(id: 1, action: SoleuxControlApiActions.ping);
+      NetworkDebugLogger.outbound(
+          'tcp',
+          '${module.ipAddress}:${module.controlApiPort}',
+          request.encode());
+      socket.write(request.encode());
+
+      final done = Completer<void>();
+      final timer = Timer(timeout, () {
+        if (!done.isCompleted) done.complete();
+      });
+
+      socket.listen(
+        (bytes) {
+          final text = utf8.decode(bytes);
+          NetworkDebugLogger.inbound(
+              'tcp',
+              '${module.ipAddress}:${module.controlApiPort}',
+              text);
+          for (final line in splitter.add(text)) {
+            final response = SoleuxJsonResponse.maybeParse(line);
+            if (response != null && response.id == 1) {
+              reachable = response.ok;
+              if (!done.isCompleted) done.complete();
+            }
+          }
+        },
+        onDone: () {
+          if (!done.isCompleted) done.complete();
+        },
+        onError: (Object _) {
+          if (!done.isCompleted) done.complete();
+        },
+      );
+
+      await done.future;
+      timer.cancel();
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: JSON ping ${module.ipAddress}:'
+          '${module.controlApiPort} failed: $e\n$st');
+      reachable = false;
+    } finally {
+      try {
+        socket?.destroy();
+      } catch (e, st) {
+        debugPrint('ModuleStatusService: socket destroy failed: $e\n$st');
+      }
+    }
     return reachable;
   }
 
@@ -242,6 +539,26 @@ class ModuleStatusService {
     // module is only flipped back to online once the full dump is acknowledged.
     live.status = ConnectionStatus.offline;
 
+    // Soleux JSON path first (the recommended protocol for new mobile
+    // clients): the Control API on legacy port + 3 (plain JSON envelope) and
+    // the legacy `J:` protocol for pre-Control-API devices. Falls back to the
+    // legacy AT+ dump when neither answers.
+    final jsonOk = await _probeSoleuxJson(live);
+    if (jsonOk == true) {
+      live.status = ConnectionStatus.online;
+      // A JSON-capable device must not keep a duplicate legacy AT+ unit (and
+      // its second socket) around.
+      _units.remove(live.id)?.dispose();
+      return true;
+    }
+    if (jsonOk == false) {
+      // Connected but the JSON protocol was rejected - the device is not a
+      // current Soleux JSON device; report unreachable/unsupported so the AT
+      // path is not silently closed over.
+      return false;
+    }
+
+    // Legacy AT+ path.
     final unit = _ensureUnit(live, fetcher);
     unit.attach(live);
 
@@ -263,6 +580,105 @@ class ModuleStatusService {
       return false;
     }
   }
+
+  /// Probes a module for the Soleux JSON protocol using both framings and
+  /// ports, then fetches the configuration to build the live module state.
+  ///
+  /// Probe order (per the Control API spec v0.2 transport mapping):
+  ///   1. Control API on `legacy port + 3` (plain JSON envelope, no `J:`
+  ///      prefix) - the modern Relay transport;
+  ///   2. legacy `J:` protocol on the legacy TCP port - pre-Control-API
+  ///      devices;
+  ///   3. otherwise the module is a legacy AT+ device.
+  ///
+  /// Returns:
+  ///   - `true`  when a JSON protocol answered `hello` and the dump was
+  ///             fetched;
+  ///   - `false` when the JSON protocol was definitively rejected (connected
+  ///             but no `ok` hello, or the sockets are unreachable);
+  ///   - `null`  when the TCP path is fine but no JSON `hello` arrived in time
+  ///             - a legacy AT+ device, so the caller falls back to AT+.
+  Future<bool?> _probeSoleuxJson(DeviceModule live) async {
+    // 1) Control API (plain JSON on legacy port + 3). Skipped when the ports
+    // coincide so a single-socket legacy device is not double-probed.
+    final controlPort = live.controlApiPort;
+    if (controlPort != live.tcpPort) {
+      final controlUnit = _ensureJsonUnit(live,
+          port: controlPort, framing: SoleuxJsonFraming.controlApi);
+      final controlOk = await _tryJsonHello(controlUnit, live);
+      if (controlOk == true) {
+        await _fetchRelayConfiguration(controlUnit, live);
+        return true;
+      }
+      if (controlOk == false) {
+        _disposeJsonUnit(live.id);
+      }
+      // controlOk == null: socket alive but no hello in time - try legacy.
+    }
+
+    // 2) Legacy `J:` framing on the legacy TCP port.
+    final legacyUnit = _ensureJsonUnit(live,
+        port: live.tcpPort, framing: SoleuxJsonFraming.legacyJ);
+    final legacyOk = await _tryJsonHello(legacyUnit, live);
+    if (legacyOk == true) {
+      await _fetchRelayConfiguration(legacyUnit, live);
+      return true;
+    }
+    if (legacyOk == false) {
+      _disposeJsonUnit(live.id);
+      return false;
+    }
+
+    // 3) No JSON `hello` within the window - a legacy AT+ device; drop the
+    // JSON unit and let the AT+ path take over.
+    debugPrint('Module ${live.name} (${live.id}) did not answer a JSON hello; '
+        'falling back to legacy AT+');
+    _disposeJsonUnit(live.id);
+    return null;
+  }
+
+  /// Connects [unit] and sends `hello`. Returns:
+  ///   - `true`  when the device answered with `ok:true`;
+  ///   - `false` when the connection failed or the hello was rejected;
+  ///   - `null`  when the socket is alive but no hello arrived in time.
+  Future<bool?> _tryJsonHello(SoleuxJsonService unit, DeviceModule live) async {
+    await unit.connect();
+    if (!unit.isConnected) return false;
+    try {
+      final hello = await unit.hello(timeout: _jsonHelloTimeout);
+      if (!hello.ok) return false;
+      const fetcher = SoleuxJsonFetcher();
+      fetcher.apply(live, SoleuxHelloData.fromResult(hello.result ?? {}));
+      return true;
+    } on TimeoutException {
+      return null;
+    } catch (e, st) {
+      debugPrint('Module ${live.name} (${live.id}) JSON hello failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// Fetches the implemented Relay configuration dump (the currently available
+  /// "relay state/configuration operations" subset) and applies it to [live].
+  Future<void> _fetchRelayConfiguration(
+      SoleuxJsonService unit, DeviceModule live) async {
+    try {
+      final config =
+          await unit.getRelayConfiguration(timeout: const Duration(seconds: 3));
+      if (config.ok) {
+        const fetcher = SoleuxJsonFetcher();
+        fetcher.applyConfiguration(
+            live, SoleuxRelayConfiguration.fromResult(config.result ?? {}));
+        _scheduleCommit();
+      }
+    } catch (e, st) {
+      debugPrint('Module ${live.name} (${live.id}) relay configuration fetch '
+          'failed: $e\n$st');
+    }
+  }
+
+  /// Per-module timeout for a JSON `hello` round-trip.
+  static const Duration _jsonHelloTimeout = Duration(seconds: 2);
 
   /// Gets the persistent unit for [module], creating (and wiring) it the first
   /// time. Its live streams are routed into the store on creation only.
@@ -293,6 +709,60 @@ class ModuleStatusService {
     return unit;
   }
 
+  /// Gets the persistent Soleux JSON unit for [module], creating (and wiring)
+  /// it the first time for the given [port]/[framing]. When an existing unit
+  /// targets a different endpoint or framing (e.g. the probe moved from the
+  /// Control API port to the legacy port), the old unit is disposed and
+  /// replaced so the module never holds two JSON sockets. Its live event lines
+  /// are folded into the module's channel state and its connect/disconnect
+  /// transitions flip the online status.
+  SoleuxJsonService _ensureJsonUnit(DeviceModule module,
+      {required int port, required SoleuxJsonFraming framing}) {
+    final existing = _jsonUnits[module.id];
+    if (existing != null &&
+        existing.connection.port == port &&
+        existing.framing == framing) {
+      return existing;
+    }
+    if (existing != null) existing.dispose();
+
+    final unit = SoleuxJsonService(
+      connection: ModuleTcpConnection(
+        host: module.ipAddress,
+        port: port,
+        timeout: timeout,
+      ),
+      framing: framing,
+    );
+    // Unsolicited `OUT:`/`IN:` state pushes keep the channel list live.
+    unit.eventStream.listen((event) {
+      final live = store.byId(module.id);
+      if (live == null) return;
+      if (event.channel != null &&
+          event.state != null &&
+          event.channel! >= 0 &&
+          event.channel! < live.channels.length) {
+        live.channels[event.channel!].isOn = event.state!;
+        _scheduleCommit();
+      }
+    });
+    // Connect/disconnect -> flip the module's online status.
+    unit.connectionStateStream.listen((connected) {
+      final live = store.byId(module.id);
+      if (live == null) return;
+      live.status =
+          connected ? ConnectionStatus.online : ConnectionStatus.offline;
+      _scheduleCommit();
+    });
+
+    _jsonUnits[module.id] = unit;
+    return unit;
+  }
+
+  void _disposeJsonUnit(String moduleId) {
+    _jsonUnits.remove(moduleId)?.dispose();
+  }
+
   /// Coalesces the frequent, unsolicited stream updates into a single delayed
   /// store commit instead of persisting on every byte burst.
   void _scheduleCommit() {
@@ -308,5 +778,9 @@ class ModuleStatusService {
       unit.dispose();
     }
     _units.clear();
+    for (final unit in _jsonUnits.values) {
+      unit.dispose();
+    }
+    _jsonUnits.clear();
   }
 }

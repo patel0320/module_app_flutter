@@ -39,7 +39,8 @@ class AutomationStore extends ChangeNotifier {
     try {
       _repo = await AutomationRepository.load();
       _automations = _repo!.fetch();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('AutomationStore: loading automations failed: $e\n$st');
       _automations = [];
     }
     _loaded = true;

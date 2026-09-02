@@ -97,7 +97,8 @@ class SettingsStore extends ChangeNotifier {
           _prefs!.getDouble(_kKeyDefaultTempThreshold) ?? 65;
       _outputOnThresholdHours =
           _prefs!.getInt(_kKeyOutputOnThresholdHours) ?? 12;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('SettingsStore: loading preferences failed: $e\n$st');
       // Keep defaults if preferences are unavailable.
     }
     _loaded = true;

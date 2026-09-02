@@ -64,7 +64,8 @@ class EventLogStore extends ChangeNotifier {
     try {
       _repo = await EventLogRepository.load();
       _entries = _repo!.fetch();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('EventLogStore: loading history failed: $e\n$st');
       _entries = [];
     }
     _loaded = true;

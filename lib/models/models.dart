@@ -240,6 +240,13 @@ class DeviceModule {
     this.tempMinC = 0,
     this.tempMaxC = 60,
     this.firmware,
+    this.serial,
+    this.mac,
+    this.apiPort,
+    this.apiVersion,
+    this.heartbeatPort,
+    this.caps = const [],
+    this.lastSeenAt,
     List<ChannelOutput>? channels,
     List<PhysicalInput>? inputs,
   })  : _tcpPort = tcpPort,
@@ -254,11 +261,51 @@ class DeviceModule {
   /// Firmware/build reported by the module (e.g. `AT+VER` → `VER:`).
   String? firmware;
 
+  /// Device serial number (identifies an individual physical device).
+  String? serial;
+
+  /// Ethernet MAC address (authoritative when reported by DCP).
+  String? mac;
+
+  /// Control API v3 TCP port when advertised by discovery (normally 5008).
+  int? apiPort;
+
+  /// Highest advertised/negotiated Control API version (current 3).
+  int? apiVersion;
+
+  /// Advertised UDP heartbeat port (normally 5007). Null means the monitor
+  /// derives it from [tcpPort] (`tcpPort + 2`).
+  int? heartbeatPort;
+
+  /// Advertised compact capability identifiers (`control_api_v3`, etc.).
+  final List<String> caps;
+
+  /// Last time the module answered a heartbeat pong (spec §4.2 `last_seen_at`).
+  DateTime? lastSeenAt;
+
+  /// UDP port heartbeat pings are directed at: advertised when present,
+  /// otherwise the derived legacy `tcpPort + 2` (spec §3 endpoint selection).
+  int get effectiveHeartbeatPort => heartbeatPort ?? tcpPort + 2;
+
   /// TCP port the module listens on (default 5005). Backed by a nullable
   /// field so legacy persisted JSON (or any null) degrades to the default.
   int? _tcpPort;
   int get tcpPort => _tcpPort ?? 5005;
   set tcpPort(int value) => _tcpPort = value;
+
+  /// Control API TCP port used by the JSON Control API transport
+  /// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport
+  /// mapping"): the advertised [apiPort] when present, otherwise the legacy
+  /// TCP port + 3 (`5005 -> 5008`). Per the discovery/heartbeat spec, when
+  /// `API_PORT` is absent a client may probe `PORT + 3` but must complete the
+  /// Control API `hello` exchange before treating the device as Control API.
+  int get controlApiPort => apiPort ?? tcpPort + 3;
+
+  /// Whether the module advertised the Control API transport (via discovery
+  /// `API_PORT`/`API_VER`/`CAPS` or a heartbeat identity). Used to pick the
+  /// Control API port and framing before a hello has been completed.
+  bool get isControlApiAdvertised =>
+      apiPort != null || apiVersion != null || caps.contains('control_api_v3');
 
   ConnectionStatus status;
   String roomName;
@@ -287,6 +334,13 @@ class DeviceModule {
         'tempMinC': tempMinC,
         'tempMaxC': tempMaxC,
         'firmware': firmware,
+        'serial': serial,
+        'mac': mac,
+        'apiPort': apiPort,
+        'apiVersion': apiVersion,
+        'heartbeatPort': heartbeatPort,
+        'caps': caps,
+        'lastSeenAt': lastSeenAt?.toIso8601String(),
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -303,6 +357,17 @@ class DeviceModule {
         tempMinC: (json['tempMinC'] as num?)?.toDouble() ?? 0,
         tempMaxC: (json['tempMaxC'] as num?)?.toDouble() ?? 60,
         firmware: json['firmware'] as String?,
+        serial: json['serial'] as String?,
+        mac: json['mac'] as String?,
+        apiPort: (json['apiPort'] as num?)?.toInt(),
+        apiVersion: (json['apiVersion'] as num?)?.toInt(),
+        heartbeatPort: (json['heartbeatPort'] as num?)?.toInt(),
+        caps: [
+          for (final c in json['caps'] as List? ?? const []) c as String,
+        ],
+        lastSeenAt: json['lastSeenAt'] == null
+            ? null
+            : DateTime.tryParse(json['lastSeenAt'] as String),
         channels: [
           for (final c in json['channels'] as List? ?? const [])
             ChannelOutput.fromJson((c as Map).cast<String, Object?>()),

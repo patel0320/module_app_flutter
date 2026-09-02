@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:soleux_device_manager/core/transport/app_command.dart';
 import 'package:soleux_device_manager/core/transport/transport.dart';
 import 'package:soleux_device_manager/data/models/channel.dart';
@@ -38,7 +39,8 @@ abstract class BaseModuleDriver implements ModuleDriver {
     Channel current;
     try {
       current = _channelFor(message['channel']);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('BaseModuleDriver: channel lookup failed: $e\n$st');
       return;
     }
     final temp = message['temperature'];

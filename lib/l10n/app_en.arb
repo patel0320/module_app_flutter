@@ -211,7 +211,10 @@
   "@addModuleChannel": {"placeholders": {"number": {"type": "int"}}},
   "addModuleTempThresholdDefault": "Default: {value}\u00b0C",
   "@addModuleTempThresholdDefault": {"placeholders": {"value": {"type": "int"}}},
-  "tempThresholdLabel": "Temperature threshold (\u00b0C)"
+  "tempThresholdLabel": "Temperature threshold (\u00b0C)",
+  "addModuleFamilyMeta": "{family} \u00b7 FW {version}",
+  "@addModuleFamilyMeta": {"placeholders": {"family": {"type": "String"}, "version": {"type": "String"}}},
+  "addModuleDcpHint": "No network devices. To commission a device without an IP address, use the Windows Soleux tool (DCP) to assign a static IPv4 address."
 
   ,"roomsTitle": "Rooms",
   "roomsNew": "New room",
@@ -292,6 +295,7 @@
   "systemStatusNoIssues": "No issues reported.",
 
   "manualDimDefaultLabel": "Dimmer output",
+  "refreshTooltip": "Refresh",
   "relayRefreshTooltip": "Refresh",
   "relayOutputsHeader": "Outputs ({count})",
   "@relayOutputsHeader": {"placeholders": {"count": {"type": "int"}}},

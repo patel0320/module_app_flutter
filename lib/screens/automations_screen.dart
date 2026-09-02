@@ -69,8 +69,9 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
         return Scaffold(
           appBar: AppBar(title: Text(l10n.automationsTitle)),
           body: automations.isEmpty
-              ? EmptyState(
-                  icon: Icons.rule_outlined, message: l10n.automationsEmpty)
+              ? Center(
+                  child: EmptyState(
+                      icon: Icons.rule_outlined, message: l10n.automationsEmpty))
               : ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.outerPadding),
                   itemCount: automations.length,

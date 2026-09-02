@@ -40,7 +40,8 @@ class RoomStore extends ChangeNotifier {
     try {
       _repo = await RoomRepository.load();
       _rooms = _repo!.fetch();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('RoomStore: loading rooms failed: $e\n$st');
       _rooms = [];
     }
     _loaded = true;
