@@ -17,12 +17,13 @@ class _FakeDevice {
   final ServerSocket server;
   final List<String> received = [];
   final Map<int, bool> outputs = {};
+  final bool staleActual;
 
-  _FakeDevice._(this.server);
+  _FakeDevice._(this.server, {this.staleActual = false});
 
-  static Future<_FakeDevice> start() async {
+  static Future<_FakeDevice> start({bool staleActual = false}) async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final device = _FakeDevice._(server);
+    final device = _FakeDevice._(server, staleActual: staleActual);
     server.listen((socket) => device._handle(socket));
     return device;
   }
@@ -93,11 +94,15 @@ class _FakeDevice {
     } else if (action == 'set_output_state') {
       final ch = request['params']['channel'] as int;
       final st = request['params']['state'] as bool;
+      // A device whose `actual_state` lags the requested state: it acknowledges
+      // the command with the state *before* the output settles (the scenario
+      // that used to force a second press before the relay screen updated).
+      final actual = staleActual ? (outputs[ch] ?? false) : st;
       outputs[ch] = st;
       result = {
         'channel': ch,
         'requested_state': st,
-        'actual_state': st,
+        'actual_state': actual,
         'pending': false,
         'revision': 1,
       };
@@ -156,6 +161,73 @@ void main() {
 
     // Unrelated channels are untouched.
     expect(store.byId('m1')!.channels[1].isOn, isFalse);
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('ON command reflects immediately even when the device reports a stale '
+      'actual_state (no second press required)', () async {
+    final fake = await _FakeDevice.start(staleActual: true);
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-stale',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+    expect(store.byId('m-stale')!.channels[0].isOn, isFalse);
+
+    // The device acked while still reporting the OLD state; the store must
+    // still reflect the requested ON on this very first press.
+    expect(await service.turnOnOutput('m-stale', 0), isTrue);
+    await _flush();
+    expect(store.byId('m-stale')!.channels[0].isOn, isTrue,
+        reason: 'first press must flip the relay ON despite a stale actual_state');
+
+    expect(await service.turnOffOutput('m-stale', 0), isTrue);
+    await _flush();
+    expect(store.byId('m-stale')!.channels[0].isOn, isFalse,
+        reason: 'first press must flip the relay OFF despite a stale actual_state');
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('toggle_output reflects the inverted local state on the first call',
+      () async {
+    final fake = await _FakeDevice.start(staleActual: true);
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-tgl',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+    expect(store.byId('m-tgl')!.channels[0].isOn, isFalse);
+
+    expect(await service.toggleOutput('m-tgl', 0), isTrue);
+    await _flush();
+    expect(store.byId('m-tgl')!.channels[0].isOn, isTrue,
+        reason: 'toggle must invert the local state on the first call');
 
     service.dispose();
     await fake.server.close();

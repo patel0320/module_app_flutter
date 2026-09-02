@@ -141,14 +141,13 @@ class ModuleStatusService {
       try {
         final response = await unit.toggleOutput(index);
         if (response.ok) {
-          final actual = response.result?['actual_state'];
-          if (actual is bool) {
-            _applyOutputState(moduleId, index, actual);
-          } else {
-            final current = _channelState(moduleId, index);
-            if (current != null) {
-              _applyOutputState(moduleId, index, !current);
-            }
+          // Reflect the inverted state deterministically instead of trusting a
+          // possibly-stale `actual_state` (the device may acknowledge the
+          // toggle before the output actually settles), so the screen updates
+          // on the first press.
+          final current = _channelState(moduleId, index);
+          if (current != null) {
+            _applyOutputState(moduleId, index, !current);
           }
           return true;
         }
@@ -237,8 +236,10 @@ class ModuleStatusService {
       try {
         final response = await unit.setOutputState(index, state);
         if (response.ok) {
-          final actual = response.result?['actual_state'];
-          _applyOutputState(moduleId, index, actual is bool ? actual : state);
+          // Reflect the requested state - not the device's possibly-stale
+          // `actual_state` - so the very first press flips the UI immediately
+          // even when the device acknowledges before the output settles.
+          _applyOutputState(moduleId, index, state);
           return true;
         }
         final code = response.error?.code;
