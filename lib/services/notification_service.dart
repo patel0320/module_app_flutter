@@ -15,7 +15,6 @@
 // initialized from the app entry point AND from the background status worker
 // isolate, so alerts can surface even while the app is suspended.
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -28,7 +27,7 @@ import 'settings_store.dart';
 
 /// Thin wrapper around `flutter_local_notifications` that maps app events to
 /// localized OS notifications, honouring the notification preferences.
-class LocalNotificationService {
+class LocalNotificationService with WidgetsBindingObserver {
   LocalNotificationService._();
 
   /// App-wide shared instance used by the launch path, screens and the
@@ -56,9 +55,33 @@ class LocalNotificationService {
   /// True once [initialize] has completed on this platform.
   bool get initialized => _initialized;
 
+  /// True while the app is visible and focused on the foreground on this
+  /// isolate. While true, the [show*] methods suppress OS notifications - the
+  /// user is already looking at the app. Only the main isolate observes
+  /// lifecycle changes; background worker isolates never see an update here,
+  /// so their alerts (raised while the app is suspended) still surface.
+  bool _appInForeground = false;
+  bool get appInForeground => _appInForeground;
+
   /// Local notifications are only meaningful on mobile.
   static bool get _nativeSupported =>
       !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+  /// Starts observing [AppLifecycleState] so in-foreground alerts are
+  /// suppressed. Only call from the app's main isolate (see `main()`); the
+  /// background worker isolate must not run this, otherwise its alerts would
+  /// be muted too.
+  void startForegroundMonitoring() {
+    if (!_nativeSupported) return;
+    WidgetsBinding.instance.addObserver(this);
+    _appInForeground =
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appInForeground = state == AppLifecycleState.resumed;
+  }
 
   /// Initializes the plugin and requests notification permission. Idempotent.
   /// Safe to call from the background worker isolate as well.
@@ -198,6 +221,9 @@ class LocalNotificationService {
     required String body,
   }) async {
     if (!_initialized || !_nativeSupported) return;
+    // The app is on screen, so an OS banner would be redundant (and annoying);
+    // the event is still reflected live in the app's own UI.
+    if (_appInForeground) return;
     final details = NotificationDetails(
       android: AndroidNotificationDetails(channel, _channelName(channel),
           importance: Importance.high, priority: Priority.high),

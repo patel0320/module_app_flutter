@@ -12,6 +12,7 @@ import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../core/discovery/module_discovery.dart';
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -93,8 +94,13 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     });
     List<DeviceModule> found;
     try {
+      await ModuleStore.shared.init();
+      final existing = ModuleStore.shared.modules;
       final results = await _discovery.discover();
-      found = [for (final d in results) _toDeviceModule(d)];
+      found = [
+        for (final d in results)
+          if (!_alreadyAdded(_toDeviceModule(d), existing)) _toDeviceModule(d),
+      ];
     } catch (e, st) {
       debugPrint('AddModuleScreen: discovery scan failed: $e\n$st');
       found = const [];
@@ -104,6 +110,30 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
       _scanning = false;
       _discovered = found;
     });
+  }
+
+  /// True when [candidate] matches an already-added module in the fleet, so
+  /// rediscovered devices are not offered for duplicate addition. Matches on
+  /// stable identity first (id / MAC / serial), then on the endpoint the user
+  /// may have added manually (IP + TCP port).
+  bool _alreadyAdded(DeviceModule candidate, List<DeviceModule> existing) {
+    for (final m in existing) {
+      if (m.id == candidate.id) return true;
+      if (m.mac != null &&
+          candidate.mac != null &&
+          m.mac == candidate.mac) {
+        return true;
+      }
+      if (m.serial != null &&
+          candidate.serial != null &&
+          m.serial == candidate.serial) {
+        return true;
+      }
+      if (m.ipAddress == candidate.ipAddress && m.tcpPort == candidate.tcpPort) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void _refreshDiscovery() {

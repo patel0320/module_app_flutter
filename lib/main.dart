@@ -62,7 +62,11 @@ void main() {
   // Initialise local notifications and start watching the module store so
   // offline/online, temperature and output-duration alerts fire while the app
   // is open (the background worker raises them while it is suspended).
+  // The foreground observer is only registered on this (main) isolate, so
+  // alerts never pop a banner while the app is visible; they still surface as
+  // OS notifications once the app is backgrounded.
   LocalNotificationService.shared.initialize().ignore();
+  LocalNotificationService.shared.startForegroundMonitoring();
   NotificationMonitor.shared.start();
   runApp(const AutomationApp());
 }
