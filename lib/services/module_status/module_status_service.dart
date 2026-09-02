@@ -139,19 +139,40 @@ class ModuleStatusService {
     if (unit != null && unit.isConnected) {
       try {
         final response = await unit.toggleOutput(index);
-        if (response.ok) return true;
+        if (response.ok) {
+          final actual = response.result?['actual_state'];
+          if (actual is bool) {
+            _applyOutputState(moduleId, index, actual);
+          } else {
+            final current = _channelState(moduleId, index);
+            if (current != null) {
+              _applyOutputState(moduleId, index, !current);
+            }
+          }
+          return true;
+        }
         final code = response.error?.code;
         if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
+          return await _toggleOutputLegacy(moduleId, index);
         }
         return false;
       } catch (e, st) {
         debugPrint('ModuleStatusService: toggle_output on $moduleId failed: '
             '$e\n$st');
-        return await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
+        return await _toggleOutputLegacy(moduleId, index);
       }
     }
-    return await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
+    return await _toggleOutputLegacy(moduleId, index);
+  }
+
+  /// AT+ fallback for [toggleOutput], reflecting the inverted state on success.
+  Future<bool> _toggleOutputLegacy(String moduleId, int index) async {
+    final ok = await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
+    if (ok) {
+      final current = _channelState(moduleId, index);
+      if (current != null) _applyOutputState(moduleId, index, !current);
+    }
+    return ok;
   }
 
   /// Cycles one output off and back on. Uses the Control API `restart_output`
@@ -214,22 +235,52 @@ class ModuleStatusService {
     if (unit != null && unit.isConnected) {
       try {
         final response = await unit.setOutputState(index, state);
-        if (response.ok) return true;
+        if (response.ok) {
+          final actual = response.result?['actual_state'];
+          _applyOutputState(moduleId, index, actual is bool ? actual : state);
+          return true;
+        }
         final code = response.error?.code;
         if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await sendLegacyCommand(
-              moduleId, state ? 'AT+ON:$index\r' : 'AT+OFF:$index\r');
+          return await _setOutputStateLegacy(moduleId, index, state);
         }
         return false;
       } catch (e, st) {
         debugPrint('ModuleStatusService: set_output_state on $moduleId failed: '
             '$e\n$st');
-        return await sendLegacyCommand(
-            moduleId, state ? 'AT+ON:$index\r' : 'AT+OFF:$index\r');
+        return await _setOutputStateLegacy(moduleId, index, state);
       }
     }
-    return await sendLegacyCommand(
+    return await _setOutputStateLegacy(moduleId, index, state);
+  }
+
+  /// AT+ fallback for [_setOutputState], reflecting the new state on success.
+  Future<bool> _setOutputStateLegacy(String moduleId, int index, bool state) async {
+    final ok = await sendLegacyCommand(
         moduleId, state ? 'AT+ON:$index\r' : 'AT+OFF:$index\r');
+    if (ok) _applyOutputState(moduleId, index, state);
+    return ok;
+  }
+
+  /// The live channel's current ON/OFF state, or null when unavailable.
+  bool? _channelState(String moduleId, int index) {
+    final live = store.byId(moduleId);
+    if (live == null) return null;
+    if (index < 0 || index >= live.channels.length) return null;
+    return live.channels[index].isOn;
+  }
+
+  /// Applies a successful control command's outcome to the live module in the
+  /// store so screens reflect the (requested/actual) output state immediately,
+  /// without depending on an unsolicited device broadcast arriving in time.
+  void _applyOutputState(String moduleId, int index, bool state) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    if (index < 0 || index >= live.channels.length) return;
+    final channel = live.channels[index];
+    if (channel.isOn == state) return;
+    channel.isOn = state;
+    _scheduleCommit();
   }
 
   /// Ensures every module is connected and re-asks it for a fresh status dump,
