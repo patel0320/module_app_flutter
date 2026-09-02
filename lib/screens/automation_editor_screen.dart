@@ -6,8 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
-import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/action_picker.dart';
 import '../widgets/common_widgets.dart';
@@ -33,17 +33,29 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
     minute: widget.automation?.effectiveScheduleMinute ?? 0,
   );
   late bool _deviceTurnsOn = widget.automation?.watchState ?? true;
-  late String _deviceChannelName = widget.automation?.watchChannelName ??
-      (_channelNames.isNotEmpty ? _channelNames.first : '');
   late final List<ScenarioAction> _actions =
       List.of(widget.automation?.actions ?? const []);
-
-  final List<DeviceModule> _modules = mockModules();
+  List<DeviceModule> _modules = const [];
+  late String _deviceChannelName = widget.automation?.watchChannelName ?? '';
 
   List<String> get _channelNames => [
-        for (final m in mockModules())
+        for (final m in _modules)
           for (final c in m.channels) c.name,
       ];
+
+  @override
+  void initState() {
+    super.initState();
+    ModuleStore.shared.init().then((_) {
+      if (!mounted) return;
+      setState(() {
+        _modules = ModuleStore.shared.modules;
+        _deviceChannelName = _channelNames.isNotEmpty
+            ? _deviceChannelName
+            : _channelNames.first;
+      });
+    });
+  }
 
   @override
   void dispose() {
