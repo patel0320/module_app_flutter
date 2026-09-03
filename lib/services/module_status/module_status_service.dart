@@ -6,10 +6,20 @@
 //
 // Restructured around the reference architecture (`at_command_service.dart` +
 // `tcp_service.dart`): instead of opening a fresh socket per refresh and
-// closing it again, each module keeps a persistent, auto-reconnecting
-// [ModuleCommandService] (transport + command/status, mirroring the AT
-// service) alive for the app's lifetime. The service holds one such unit per
-// module and routes their live streams into the store:
+// closing it again, each module keeps a persistent, auto-reconnecting session
+// alive for the app's lifetime.
+//
+// Which wire protocol a module speaks is decided by [ModuleProtocolSelector]
+// from its firmware version (doc/Soleux_Control_API_Command_Specification_v0.2.md):
+//
+//   - firmware >= 7.12              -> Control API (JSON) on legacy port + 3;
+//   - firmware <  7.12              -> legacy TCP AT (doc/PROTOCOLS.md §1);
+//   - firmware unknown/advertised   -> probed, falling back to the transport
+//     the device really answers (Control API -> legacy `J:` -> AT).
+//
+// Live control is always issued through the [ModuleCommandProtocol] facade for
+// the module's active session, so screens / scenario runner never depend on the
+// wire details. One such session is held per module:
 //
 //   - on connect the module pushes its full status dump; it is parsed
 //     continuously and streamed into the store,
@@ -27,7 +37,11 @@ import '../../core/logger/network_debug_logger.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
+import 'control_api_command_protocol.dart';
+import 'legacy_at_command_protocol.dart';
+import 'module_command_protocol.dart';
 import 'module_command_service.dart';
+import 'module_protocol_selector.dart';
 import 'module_status_fetcher.dart';
 import 'module_tcp_service.dart';
 import 'soleux_json_fetcher.dart';
@@ -53,19 +67,29 @@ class ModuleStatusService {
 
   final ModuleStore store;
   final Duration timeout;
+
+  /// Decides, from the module's firmware, which TCP command protocol to use.
+  final ModuleProtocolSelector _protocolSelector;
+
   final ModuleStatusFetcherRegistry _fetchers = ModuleStatusFetcherRegistry();
 
   bool _refreshing = false;
   ModuleStatusResult? _lastResult;
   Timer? _commitDebounce;
 
-  /// Persistent per-module command/status units (transport + parsing).
+  /// Persistent per-module legacy AT command/status units (transport + parsing).
   final Map<String, ModuleCommandService> _units = {};
 
-  /// Persistent per-module JSON command/status units (Soleux J: protocol).
+  /// Persistent per-module Soleux JSON command/status units (Control API or
+  /// legacy `J:` framing).
   final Map<String, SoleuxJsonService> _jsonUnits = {};
 
-  ModuleStatusService({required this.store, this.timeout = defaultTimeout});
+  ModuleStatusService({
+    required this.store,
+    this.timeout = defaultTimeout,
+    ModuleProtocolSelector moduleProtocolSelector =
+        const ModuleProtocolSelector(),
+  }) : _protocolSelector = moduleProtocolSelector;
 
   /// Shared service wired to the shared store, used by the launch path.
   static ModuleStatusService? _shared;
@@ -85,8 +109,8 @@ class ModuleStatusService {
   void registerFetcher(ModuleStatusFetcher fetcher) =>
       _fetchers.register(fetcher);
 
-  /// The live command/status unit driving [moduleId], or null when the module
-  /// type is unsupported or its unit has not been created yet.
+  /// The live legacy AT command/status unit driving [moduleId], or null when
+  /// the module uses the JSON protocol (or has no unit yet).
   ModuleCommandService? commandServiceFor(String moduleId) => _units[moduleId];
 
   /// The live Soleux JSON unit driving [moduleId], or null when the device is
@@ -94,17 +118,42 @@ class ModuleStatusService {
   SoleuxJsonService? jsonCommandServiceFor(String moduleId) =>
       _jsonUnits[moduleId];
 
-  /// Sends a raw legacy `AT+...` control command through the legacy AT unit
-  /// (or the legacy JSON unit's AT helper for pre-Control-API devices). Returns
-  /// true when the device acknowledged with `OK`.
+  /// The command protocol facade for the module's *active* session, or null
+  /// when the module has no live unit (never refreshed / offline).
   ///
-  /// Modern live control should use the Control API catalogue commands instead
-  /// ([setOutputState], [toggleOutput], [setDimmerLevel], ...); this method is
+  /// Control commands go through this facade so the underlying wire protocol
+  /// (Control API vs legacy AT) is an implementation detail.
+  ModuleCommandProtocol? commandProtocolFor(String moduleId) {
+    final jsonUnit = _jsonUnits[moduleId];
+    if (jsonUnit != null && jsonUnit.isConnected) {
+      return ControlApiCommandProtocol(jsonUnit);
+    }
+    final atUnit = _units[moduleId];
+    if (atUnit != null && atUnit.isConnected) {
+      return LegacyAtCommandProtocol(atUnit);
+    }
+    return null;
+  }
+
+  /// Sends a raw legacy `AT+...` control command through the legacy AT unit (or
+  /// a `J:` device's legacy helper on the legacy port). Returns true when the
+  /// device acknowledged with `OK`.
+  ///
+  /// Modern live control should use the Control API catalogue commands
+  /// ([turnOnOutput], [toggleOutput], [setDimmerLevel], ...); this method is
   /// the fallback for legacy devices and for catalogue actions the firmware has
-  /// not implemented yet.
+  /// not implemented yet. AT lines are only sent to ports that accept them
+  /// (the legacy TCP port; never the Control API port, which is JSON-only).
   Future<bool> sendLegacyCommand(String moduleId, String command) async {
     final jsonUnit = _jsonUnits[moduleId];
     if (jsonUnit != null && jsonUnit.isConnected) {
+      if (jsonUnit.framing != SoleuxJsonFraming.legacyJ) {
+        // Control API port accepts JSON only (spec compatibility rule); the
+        // AT protocol, if present, is served on the legacy port instead.
+        final atUnit = _units[moduleId];
+        if (atUnit != null) return atUnit.command(command);
+        return false;
+      }
       try {
         final raw = await jsonUnit.legacy(command);
         return raw.endsWith('OK');
@@ -121,147 +170,85 @@ class ModuleStatusService {
     return false;
   }
 
-  /// Turns an output on (zero-based channel). Uses the Control API
-  /// `set_output_state` for JSON-capable devices (replacing `AT+ON`), falling
-  /// back to the legacy AT command when the catalogue action is unavailable.
+  /// Turns an output on (zero-based channel) through the module's active
+  /// protocol (`set_output_state` on the Control API, `AT+ON` on legacy AT).
   Future<bool> turnOnOutput(String moduleId, int index) =>
       _setOutputState(moduleId, index, true);
 
-  /// Turns an output off (zero-based channel). Uses the Control API
-  /// `set_output_state` for JSON-capable devices (replacing `AT+OFF`), falling
-  /// back to the legacy AT command when the catalogue action is unavailable.
+  /// Turns an output off (zero-based channel) through the module's active
+  /// protocol (`set_output_state` on the Control API, `AT+OFF` on legacy AT).
   Future<bool> turnOffOutput(String moduleId, int index) =>
       _setOutputState(moduleId, index, false);
 
-  /// Inverts one output (zero-based channel). Uses the Control API
-  /// `toggle_output` (replacing `AT+TOGGLE`) when available.
+  /// Inverts one output (zero-based channel) through the module's active
+  /// protocol (`toggle_output` on the Control API, `AT+TOGGLE` on legacy AT).
   Future<bool> toggleOutput(String moduleId, int index) async {
-    final unit = _jsonUnits[moduleId];
-    if (unit != null && unit.isConnected) {
-      try {
-        final response = await unit.toggleOutput(index);
-        if (response.ok) {
-          // Reflect the inverted state deterministically instead of trusting a
-          // possibly-stale `actual_state` (the device may acknowledge the
-          // toggle before the output actually settles), so the screen updates
-          // on the first press.
-          final current = _channelState(moduleId, index);
-          if (current != null) {
-            _applyOutputState(moduleId, index, !current);
-          }
-          return true;
-        }
-        final code = response.error?.code;
-        if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await _toggleOutputLegacy(moduleId, index);
-        }
-        return false;
-      } catch (e, st) {
-        debugPrint('ModuleStatusService: toggle_output on $moduleId failed: '
-            '$e\n$st');
-        return await _toggleOutputLegacy(moduleId, index);
+    final protocol = commandProtocolFor(moduleId);
+    if (protocol == null) return false;
+    try {
+      final ok = await protocol.toggleOutput(index);
+      if (ok) {
+        // Reflect the inverted state deterministically instead of trusting a
+        // possibly-stale `actual_state` (the device may acknowledge the toggle
+        // before the output actually settles), so the screen updates on the
+        // first press.
+        final current = _channelState(moduleId, index);
+        if (current != null) _applyOutputState(moduleId, index, !current);
       }
+      return ok;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: toggle_output on $moduleId failed: '
+          '$e\n$st');
+      return false;
     }
-    return await _toggleOutputLegacy(moduleId, index);
   }
 
-  /// AT+ fallback for [toggleOutput], reflecting the inverted state on success.
-  Future<bool> _toggleOutputLegacy(String moduleId, int index) async {
-    final ok = await sendLegacyCommand(moduleId, 'AT+TOGGLE:$index\r');
-    if (ok) {
-      final current = _channelState(moduleId, index);
-      if (current != null) _applyOutputState(moduleId, index, !current);
-    }
-    return ok;
-  }
-
-  /// Cycles one output off and back on. Uses the Control API `restart_output`
-  /// (replacing `AT+RESTART`) when available.
+  /// Cycles one output off and back on through the module's active protocol
+  /// (`restart_output` on the Control API, `AT+RESTART` on legacy AT).
   Future<bool> restartOutput(String moduleId, int index) async {
-    final unit = _jsonUnits[moduleId];
-    if (unit != null && unit.isConnected) {
-      try {
-        final response = await unit.restartOutput(index);
-        if (response.ok) return true;
-        final code = response.error?.code;
-        if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
-        }
-        return false;
-      } catch (e, st) {
-        debugPrint('ModuleStatusService: restart_output on $moduleId failed: '
-            '$e\n$st');
-        return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
-      }
+    final protocol = commandProtocolFor(moduleId);
+    if (protocol == null) return false;
+    try {
+      return await protocol.restartOutput(index);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: restart_output on $moduleId failed: '
+          '$e\n$st');
+      return false;
     }
-    return await sendLegacyCommand(moduleId, 'AT+RESTART:$index\r');
   }
 
-  /// Sets one dimmer brightness percentage (0-100). Uses the Control API
-  /// `set_dimmer_level` (replacing the legacy dimmer AT command) when
-  /// available.
+  /// Sets one dimmer brightness percentage (0-100) through the module's active
+  /// protocol (`set_dimmer_level` on the Control API, `AT+BRIGH` on legacy AT).
   Future<bool> setDimmerLevel(
       String moduleId, int index, int brightnessPct) async {
-    final unit = _jsonUnits[moduleId];
-    if (unit != null && unit.isConnected) {
-      try {
-        final response = await unit.setDimmerLevel(
-            index, brightnessPct.toDouble().clamp(0, 100));
-        if (response.ok) return true;
-        final code = response.error?.code;
-        if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await sendLegacyCommand(
-              moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
-        }
-        return false;
-      } catch (e, st) {
-        debugPrint('ModuleStatusService: set_dimmer_level on $moduleId '
-            'failed: $e\n$st');
-        return await sendLegacyCommand(
-            moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
-      }
+    final protocol = commandProtocolFor(moduleId);
+    if (protocol == null) return false;
+    try {
+      return await protocol.setDimmerLevel(index, brightnessPct);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_dimmer_level on $moduleId failed: '
+          '$e\n$st');
+      return false;
     }
-    return await sendLegacyCommand(
-        moduleId, 'AT+BRIGH:$index:$brightnessPct\r');
   }
-
-  static const Set<String> _catalogueFallbackCodes = {
-    'unsupported_command',
-    'unknown_action',
-  };
 
   Future<bool> _setOutputState(String moduleId, int index, bool state) async {
-    final unit = _jsonUnits[moduleId];
-    if (unit != null && unit.isConnected) {
-      try {
-        final response = await unit.setOutputState(index, state);
-        if (response.ok) {
-          // Reflect the requested state - not the device's possibly-stale
-          // `actual_state` - so the very first press flips the UI immediately
-          // even when the device acknowledges before the output settles.
-          _applyOutputState(moduleId, index, state);
-          return true;
-        }
-        final code = response.error?.code;
-        if (code != null && _catalogueFallbackCodes.contains(code)) {
-          return await _setOutputStateLegacy(moduleId, index, state);
-        }
-        return false;
-      } catch (e, st) {
-        debugPrint('ModuleStatusService: set_output_state on $moduleId failed: '
-            '$e\n$st');
-        return await _setOutputStateLegacy(moduleId, index, state);
+    final protocol = commandProtocolFor(moduleId);
+    if (protocol == null) return false;
+    try {
+      final ok = await protocol.setOutputState(index, state);
+      if (ok) {
+        // Reflect the requested state - not the device's possibly-stale
+        // `actual_state` - so the very first press flips the UI immediately
+        // even when the device acknowledges before the output settles.
+        _applyOutputState(moduleId, index, state);
       }
+      return ok;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_output_state on $moduleId failed: '
+          '$e\n$st');
+      return false;
     }
-    return await _setOutputStateLegacy(moduleId, index, state);
-  }
-
-  /// AT+ fallback for [_setOutputState], reflecting the new state on success.
-  Future<bool> _setOutputStateLegacy(String moduleId, int index, bool state) async {
-    final ok = await sendLegacyCommand(
-        moduleId, state ? 'AT+ON:$index\r' : 'AT+OFF:$index\r');
-    if (ok) _applyOutputState(moduleId, index, state);
-    return ok;
   }
 
   /// The live channel's current ON/OFF state, or null when unavailable.
@@ -363,11 +350,14 @@ class ModuleStatusService {
   }
 
   /// Lightweight background poll: for every module, opens a one-shot socket,
-  /// pings it and closes it again - no persistent connection is kept. Control
-  /// API devices are pinged with a JSON `ping` on the Control API port (legacy
-  /// port + 3); everything else answers the legacy `AT\r` ping on the legacy
-  /// TCP port. Each module's online/offline slot is updated in the store and
-  /// committed once at the end.
+  /// pings it and closes it again - no persistent connection is kept. Each
+  /// module's online/offline slot is updated in the store and committed once
+  /// at the end.
+  ///
+  /// The ping follows the same firmware-driven protocol selection as a full
+  /// refresh: a Control API module is pinged with a JSON `ping` on the Control
+  /// API port (legacy port + 3); a legacy module answers `AT\r` on the legacy
+  /// TCP port.
   Future<ModuleStatusResult> pollAll() async {
     await store.init();
     final modules = store.modules;
@@ -384,9 +374,9 @@ class ModuleStatusService {
     return _lastResult!;
   }
 
-  /// Opens a temporary socket to [module] and pings it for a single `OK`,
-  /// closing it immediately after. Returns whether it answered. Unsupported
-  /// module types are treated as offline.
+  /// Opens a temporary socket to [module] and pings it for a single success
+  /// response, closing it immediately after. Returns whether it answered.
+  /// Unsupported module types are treated as offline.
   Future<bool> _pollConnectivity(DeviceModule module) async {
     final live = store.byId(module.id) ?? module;
     if (_fetchers.forType(module.type) == null) {
@@ -394,24 +384,41 @@ class ModuleStatusService {
       return false;
     }
 
-    // Control API devices (discovery advertised the Control API endpoint) are
-    // pinged over the JSON envelope on legacy port + 3 (plain JSON `ping`)
-    // per the spec transport mapping. Everything else - AT-only and legacy
-    // `J:` devices - still answers the legacy `AT\r` ping on the legacy TCP
-    // port during migration.
-    if (live.isControlApiAdvertised) {
-      final reachable = await _pollJsonPing(live);
+    // Firmware-pinned protocol: ping exactly the transport the firmware speaks.
+    final decision = _protocolSelector.decide(live);
+    if (decision.pinned) {
+      final reachable = decision.kind == ModuleCommandProtocolKind.controlApi
+          ? await _pollJsonPing(live)
+          : await _pollAtPing(live);
       live.status =
           reachable ? ConnectionStatus.online : ConnectionStatus.offline;
       return reachable;
     }
 
+    // Unknown firmware: Control API devices (discovery advertised the Control
+    // API endpoint) are pinged over the JSON envelope on legacy port + 3.
+    // Everything else - AT-only and legacy `J:` devices - still answers the
+    // legacy `AT\r` ping on the legacy TCP port during migration.
+    final reachable = live.isControlApiAdvertised
+        ? await _pollJsonPing(live)
+        : await _pollAtPing(live);
+    live.status =
+        reachable ? ConnectionStatus.online : ConnectionStatus.offline;
+    return reachable;
+  }
+
+  /// One-shot legacy `AT\r` ping on the legacy TCP port. Opens a temporary
+  /// socket, sends `AT\r`, waits for a single `OK`/`ERROR` terminator and
+  /// closes it immediately.
+  Future<bool> _pollAtPing(DeviceModule module) async {
     Socket? socket;
     var reachable = false;
     try {
-      socket = await Socket.connect(live.ipAddress, live.tcpPort, timeout: timeout);
+      socket = await Socket.connect(module.ipAddress, module.tcpPort,
+          timeout: timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
-      NetworkDebugLogger.outbound('tcp', '${live.ipAddress}:${live.tcpPort}', "AT\r");
+      NetworkDebugLogger.outbound(
+          'tcp', '${module.ipAddress}:${module.tcpPort}', 'AT\r');
       socket.write('AT\r');
 
       final buffer = StringBuffer();
@@ -423,7 +430,8 @@ class ModuleStatusService {
       socket.listen(
         (bytes) {
           final text = utf8.decode(bytes);
-          NetworkDebugLogger.inbound('tcp', '${live.ipAddress}:${live.tcpPort}', text);
+          NetworkDebugLogger.inbound(
+              'tcp', '${module.ipAddress}:${module.tcpPort}', text);
           buffer.write(text);
           final raw = buffer.toString().trimRight();
           if (raw.endsWith('\r\nOK') || raw.endsWith('\r\nERROR')) {
@@ -442,8 +450,8 @@ class ModuleStatusService {
       timer.cancel();
       reachable = buffer.toString().trimRight().endsWith('\r\nOK');
     } catch (e, st) {
-      debugPrint('ModuleStatusService: polling ${live.ipAddress}:'
-          '${live.tcpPort} failed: $e\n$st');
+      debugPrint('ModuleStatusService: polling ${module.ipAddress}:'
+          '${module.tcpPort} failed: $e\n$st');
       reachable = false;
     } finally {
       try {
@@ -452,9 +460,6 @@ class ModuleStatusService {
         debugPrint('ModuleStatusService: socket destroy failed: $e\n$st');
       }
     }
-
-    live.status =
-        reachable ? ConnectionStatus.online : ConnectionStatus.offline;
     return reachable;
   }
 
@@ -471,10 +476,8 @@ class ModuleStatusService {
       socket.setOption(SocketOption.tcpNoDelay, true);
       const request =
           SoleuxJsonRequest(id: 1, action: SoleuxControlApiActions.ping);
-      NetworkDebugLogger.outbound(
-          'tcp',
-          '${module.ipAddress}:${module.controlApiPort}',
-          request.encode());
+      NetworkDebugLogger.outbound('tcp',
+          '${module.ipAddress}:${module.controlApiPort}', request.encode());
       socket.write(request.encode());
 
       final done = Completer<void>();
@@ -486,9 +489,7 @@ class ModuleStatusService {
         (bytes) {
           final text = utf8.decode(bytes);
           NetworkDebugLogger.inbound(
-              'tcp',
-              '${module.ipAddress}:${module.controlApiPort}',
-              text);
+              'tcp', '${module.ipAddress}:${module.controlApiPort}', text);
           for (final line in splitter.add(text)) {
             final response = SoleuxJsonResponse.maybeParse(line);
             if (response != null && response.id == 1) {
@@ -539,10 +540,20 @@ class ModuleStatusService {
     // module is only flipped back to online once the full dump is acknowledged.
     live.status = ConnectionStatus.offline;
 
-    // Soleux JSON path first (the recommended protocol for new mobile
-    // clients): the Control API on legacy port + 3 (plain JSON envelope) and
-    // the legacy `J:` protocol for pre-Control-API devices. Falls back to the
-    // legacy AT+ dump when neither answers.
+    // Firmware-pinned protocol (>= 7.12 -> Control API, < 7.12 -> legacy AT):
+    // drive exactly the transport the firmware speaks, without cross-protocol
+    // probing. Unknown firmware falls through to the probe below.
+    final decision = _protocolSelector.decide(live);
+    if (decision.pinned) {
+      return decision.kind == ModuleCommandProtocolKind.controlApi
+          ? _refreshControlApi(live)
+          : _refreshLegacyAt(live, fetcher);
+    }
+
+    // Soleux JSON path first for unknown-firmware modules (the recommended
+    // protocol for new mobile clients): the Control API on legacy port + 3
+    // (plain JSON envelope) and the legacy `J:` protocol for pre-Control-API
+    // devices. Falls back to the legacy AT+ dump when neither answers.
     final jsonOk = await _probeSoleuxJson(live);
     if (jsonOk == true) {
       live.status = ConnectionStatus.online;
@@ -559,26 +570,67 @@ class ModuleStatusService {
     }
 
     // Legacy AT+ path.
+    return _refreshLegacyAt(live, fetcher);
+  }
+
+  /// Refreshes a legacy module (firmware below 7.12, or the AT fallback of a
+  /// probe) over the legacy TCP AT protocol.
+  Future<bool> _refreshLegacyAt(
+      DeviceModule live, ModuleStatusFetcher fetcher) async {
     final unit = _ensureUnit(live, fetcher);
     unit.attach(live);
 
     try {
       await unit.connect();
-      debugPrint('Module ${module.name} (${module.id}) connected');
+      debugPrint('Module ${live.name} (${live.id}) connected');
       if (!unit.isConnected) {
+        live.status = ConnectionStatus.offline;
         return false;
       }
-      debugPrint('Module ${module.name} (${module.id}) connected, fetching...');
+      debugPrint('Module ${live.name} (${live.id}) connected, fetching...');
       final allOk = await unit.run(fetcher.fetchCommands);
-      debugPrint('Module ${module.name} (${module.id}) refresh: $allOk');
-      live.status = allOk ? ConnectionStatus.online : ConnectionStatus.offline;
-      return allOk;
+      debugPrint('Module ${live.name} (${live.id}) refresh: $allOk');
+      if (!allOk) {
+        live.status = ConnectionStatus.offline;
+        return false;
+      }
+      // A status dump may newly reveal >= 7.12 firmware (e.g. an OTA update):
+      // upgrade the session to the Control API immediately so the module is
+      // driven over the new command model from now on.
+      final decision = _protocolSelector.decide(live);
+      if (decision.pinned &&
+          decision.kind == ModuleCommandProtocolKind.controlApi) {
+        return await _refreshControlApi(live);
+      }
+      live.status = ConnectionStatus.online;
+      return true;
     } catch (e) {
-      debugPrint('Module ${module.name} (${module.id}) refresh failed: $e');
+      debugPrint('Module ${live.name} (${live.id}) refresh failed: $e');
       // Socket / protocol / timeout - module unreachable.
       live.status = ConnectionStatus.offline;
       return false;
     }
+  }
+
+  /// Refreshes a Control API module (firmware >= 7.12) over the JSON Control
+  /// API on the Control API port (legacy port + 3). Because the firmware pins
+  /// the Control API, no legacy AT probing is performed.
+  Future<bool> _refreshControlApi(DeviceModule live) async {
+    final unit = _ensureJsonUnit(live,
+        port: live.controlApiPort, framing: SoleuxJsonFraming.controlApi);
+    final ok = await _tryJsonHello(unit, live);
+    if (ok == true) {
+      await _fetchRelayConfiguration(unit, live);
+      // A Control API device must not keep a duplicate legacy AT+ unit around.
+      _units.remove(live.id)?.dispose();
+      live.status = ConnectionStatus.online;
+      return true;
+    }
+    if (ok == false) {
+      _disposeJsonUnit(live.id);
+    }
+    live.status = ConnectionStatus.offline;
+    return false;
   }
 
   /// Probes a module for the Soleux JSON protocol using both framings and
@@ -647,6 +699,13 @@ class ModuleStatusService {
     try {
       final hello = await unit.hello(timeout: _jsonHelloTimeout);
       if (!hello.ok) return false;
+      // A successful Control API hello pins the module to the Control API
+      // transport for subsequent polling (spec: rely on hello/capability data
+      // instead of a fixed port or assumptions). Legacy `J:` devices are left
+      // unadvertised so polling keeps using the legacy ping path.
+      if (unit.framing == SoleuxJsonFraming.controlApi) {
+        live.apiVersion ??= SoleuxProtocolVersion.implemented;
+      }
       const fetcher = SoleuxJsonFetcher();
       fetcher.apply(live, SoleuxHelloData.fromResult(hello.result ?? {}));
       return true;

@@ -93,10 +93,8 @@ class ScenarioRunner {
     final channel = module.channels[index];
 
     final service = ModuleStatusService.shared;
-    final connected = (service.commandServiceFor(module.id)?.isConnected ??
-            service.jsonCommandServiceFor(module.id)?.isConnected) ??
-        false;
-    if (!connected) {
+    final protocol = service.commandProtocolFor(module.id);
+    if (protocol == null || !protocol.isConnected) {
       return ScenarioActionResult(
         description: description,
         success: false,

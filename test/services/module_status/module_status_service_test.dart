@@ -120,7 +120,8 @@ class _FakeDevice {
 }
 
 /// Lets the debounced store commit (`_scheduleCommit`) run its course.
-Future<void> _flush() => Future<void>.delayed(const Duration(milliseconds: 300));
+Future<void> _flush() =>
+    Future<void>.delayed(const Duration(milliseconds: 300));
 
 void main() {
   test('successful ON/OFF command reflects in the store without a broadcast',
@@ -166,7 +167,8 @@ void main() {
     await fake.server.close();
   });
 
-  test('ON command reflects immediately even when the device reports a stale '
+  test(
+      'ON command reflects immediately even when the device reports a stale '
       'actual_state (no second press required)', () async {
     final fake = await _FakeDevice.start(staleActual: true);
     final store = ModuleStore.forTesting();
@@ -192,12 +194,14 @@ void main() {
     expect(await service.turnOnOutput('m-stale', 0), isTrue);
     await _flush();
     expect(store.byId('m-stale')!.channels[0].isOn, isTrue,
-        reason: 'first press must flip the relay ON despite a stale actual_state');
+        reason:
+            'first press must flip the relay ON despite a stale actual_state');
 
     expect(await service.turnOffOutput('m-stale', 0), isTrue);
     await _flush();
     expect(store.byId('m-stale')!.channels[0].isOn, isFalse,
-        reason: 'first press must flip the relay OFF despite a stale actual_state');
+        reason:
+            'first press must flip the relay OFF despite a stale actual_state');
 
     service.dispose();
     await fake.server.close();
@@ -232,4 +236,135 @@ void main() {
     service.dispose();
     await fake.server.close();
   });
+
+  test(
+      'a module pinned to the Control API (firmware >= 7.12) is refreshed '
+      'directly over JSON without probing or an AT unit', () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-712',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3, // controlApiPort resolves to the fake server
+      firmware: '7.12 Build :1',
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    expect(store.byId('m-712')!.channels, hasLength(2));
+    // A successful hello pins the Control API version for later polling.
+    expect(store.byId('m-712')!.apiVersion, isNotNull);
+    expect(service.jsonCommandServiceFor('m-712'), isNotNull);
+    expect(service.commandServiceFor('m-712'), isNull,
+        reason: 'a pinned Control API module must not carry an AT unit');
+    // Control commands flow over the Control API.
+    expect(await service.turnOnOutput('m-712', 0), isTrue);
+    await _flush();
+    expect(store.byId('m-712')!.channels[0].isOn, isTrue);
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test(
+      'a module pinned to legacy (firmware < 7.12) is refreshed and '
+      'controlled over the TCP AT protocol only', () async {
+    final fake = await _FakeAtDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-at',
+      name: 'Legacy',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 0,
+      tcpPort: fake.port,
+      firmware: '7.10 Build :1',
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    expect(store.byId('m-at')!.status, ConnectionStatus.online);
+    expect(store.byId('m-at')!.firmware, '7.10 Build :1');
+    expect(store.byId('m-at')!.channels, hasLength(2));
+    expect(store.byId('m-at')!.channels[1].isOn, isTrue);
+    // A pinned legacy module is never probed with JSON.
+    expect(service.jsonCommandServiceFor('m-at'), isNull,
+        reason: 'a pinned legacy module must not create a JSON unit');
+    // Live control goes over the legacy AT path.
+    expect(await service.turnOffOutput('m-at', 1), isTrue);
+    await _flush();
+    expect(store.byId('m-at')!.channels[1].isOn, isFalse);
+
+    service.dispose();
+    await fake.server.close();
+  });
+}
+
+/// Fake legacy PDU (doc/PROTOCOLS.md §1): answers the relay fetch commands
+/// with `KEY:value` lines terminated by `\r\nOK\r\n` and acknowledges control
+/// commands (`AT+ON`/`AT+OFF`/...) with a bare `OK`.
+class _FakeAtDevice {
+  final ServerSocket server;
+  final List<String> received = [];
+
+  _FakeAtDevice._(this.server);
+
+  static Future<_FakeAtDevice> start() async {
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final device = _FakeAtDevice._(server);
+    server.listen((socket) => device._handle(socket));
+    return device;
+  }
+
+  int get port => server.port;
+
+  void _handle(Socket socket) {
+    final buffer = StringBuffer();
+    socket.listen((bytes) {
+      buffer.write(utf8.decode(bytes));
+      var text = buffer.toString();
+      var idx = text.indexOf('\r');
+      while (idx >= 0) {
+        final command = text.substring(0, idx);
+        text = text.substring(idx + 1);
+        buffer.clear();
+        buffer.write(text);
+        received.add(command);
+        _reply(command, socket);
+        idx = text.indexOf('\r');
+      }
+    }, onDone: () => socket.destroy());
+  }
+
+  void _reply(String command, Socket socket) {
+    String body;
+    switch (command) {
+      case 'AT+VER':
+        body = 'DEVICE:Soleux PDU\r\nVER:7.10 Build :1\r\nRELAY_COUNT:2';
+      case 'AT+TEMP':
+        body = 'SYSTEMP:25';
+      case 'AT+OUTSTAT':
+        body = 'OUT:0:OFF\r\nOUT:1:ON';
+      case 'AT+INSTAT':
+      case 'AT+CHNAMES':
+        body = '';
+      default:
+        body = '';
+    }
+    final response = '${body.isEmpty ? '' : '$body\r\n'}\r\nOK\r\n';
+    socket.write(response);
+  }
 }
