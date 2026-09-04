@@ -2,12 +2,17 @@
 //
 // Brief section III "Settings Section": account, notifications, language
 // and appearance, plus a reminder that the architecture is multi-location
-// ready even though v1 manages a single location (brief section 4.2).
+// ready even though v1 manages a single location (brief section 4.2). The
+// "Command protocol" section picks the Control API transport the app uses to
+// talk to modules: the persistent TCP session on port 5008 or the stateless
+// HTTP/HTTPS POST /api/v1/command endpoint
+// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport mapping").
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/event_log_store.dart';
 import '../services/session_store.dart';
+import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'appearance_settings_screen.dart';
@@ -126,6 +131,53 @@ class SettingsScreen extends StatelessWidget {
               leading: const Icon(Icons.other_houses_outlined),
               title: Text(l10n.settingsHome),
               subtitle: Text(l10n.settingsSingleLocation),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SectionHeader(l10n.settingsCommandProtocol),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              l10n.settingsCommandProtocolHint,
+              style: TextStyle(
+                color: onSurface.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
+            ),
+          ),
+          ListenableBuilder(
+            listenable: SettingsStore.shared,
+            builder: (context, _) => Card(
+              child: RadioGroup<CommandTransportMode>(
+                groupValue: SettingsStore.shared.commandTransport,
+                onChanged: (v) {
+                  if (v != null) SettingsStore.shared.setCommandTransport(v);
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<CommandTransportMode>(
+                      value: CommandTransportMode.tcp,
+                      title: Text(l10n.settingsCommandProtocolTcp),
+                      subtitle: Text(l10n.settingsCommandProtocolTcpHint),
+                      secondary: const Icon(Icons.dns_outlined),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<CommandTransportMode>(
+                      value: CommandTransportMode.http,
+                      title: Text(l10n.settingsCommandProtocolHttp),
+                      subtitle: Text(l10n.settingsCommandProtocolHttpHint),
+                      secondary: const Icon(Icons.http_outlined),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<CommandTransportMode>(
+                      value: CommandTransportMode.https,
+                      title: Text(l10n.settingsCommandProtocolHttps),
+                      subtitle: Text(l10n.settingsCommandProtocolHttpsHint),
+                      secondary: const Icon(Icons.https_outlined),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 24),

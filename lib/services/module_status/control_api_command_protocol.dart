@@ -2,8 +2,10 @@
 //
 // [ModuleCommandProtocol] implementation over the Soleux Control API
 // (doc/Soleux_Control_API_Command_Specification_v0.2.md), used for modules whose
-// firmware is at or above 7.12. Commands are one JSON object per line on the
-// legacy TCP port + 3 and responses are matched by `id`.
+// firmware is at or above 7.12. Commands use the transport-neutral Control API
+// envelope: one JSON object per line on the legacy TCP port + 3, or the same
+// envelope POSTed to /api/v1/command over HTTP/HTTPS ([SoleuxHttpService]);
+// responses are matched by `id` on TCP and by the common envelope on HTTP.
 //
 // Control mapping (spec "Outputs" §4 and "Dimmer control" §6):
 //   - set on/off   -> set_output_state    (§4.3, replaces AT+ON/AT+OFF)
@@ -25,10 +27,11 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/soleux/soleux_json_protocol.dart';
 import 'module_command_protocol.dart';
+import 'soleux_control_api_service.dart';
 import 'soleux_json_service.dart';
 
 class ControlApiCommandProtocol implements ModuleCommandProtocol {
-  final SoleuxJsonService _service;
+  final SoleuxControlApiService _service;
 
   ControlApiCommandProtocol(this._service);
 
@@ -122,14 +125,17 @@ class ControlApiCommandProtocol implements ModuleCommandProtocol {
   }
 
   /// Sends a legacy AT line, but only when the session is on the legacy TCP
-  /// port (`legacyJ` framing). The Control API port accepts JSON only, so the
-  /// fallback is a no-op there (spec compatibility rule).
+  /// port (`legacyJ` framing). The Control API port and the HTTP/HTTPS
+  /// endpoint accept JSON only, so the fallback is a no-op there (spec
+  /// compatibility rule).
   Future<bool> _sendLegacyAt(String command) async {
-    if (_service.framing != SoleuxJsonFraming.legacyJ) {
+    final service = _service;
+    if (service is! SoleuxJsonService) return false;
+    if (service.framing != SoleuxJsonFraming.legacyJ) {
       return false;
     }
     try {
-      final raw = await _service.legacy(command);
+      final raw = await service.legacy(command);
       return raw.trimRight().endsWith('OK');
     } catch (e, st) {
       debugPrint('ControlApiCommandProtocol: AT fallback "$command" failed: '

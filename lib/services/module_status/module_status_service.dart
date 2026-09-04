@@ -37,6 +37,7 @@ import '../../core/logger/network_debug_logger.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
+import '../settings_store.dart';
 import 'control_api_command_protocol.dart';
 import 'legacy_at_command_protocol.dart';
 import 'module_command_protocol.dart';
@@ -44,8 +45,15 @@ import 'module_command_service.dart';
 import 'module_protocol_selector.dart';
 import 'module_status_fetcher.dart';
 import 'module_tcp_service.dart';
+import 'soleux_control_api_service.dart';
+import 'soleux_http_service.dart';
 import 'soleux_json_fetcher.dart';
 import 'soleux_json_service.dart';
+
+/// Resolves the app's chosen Control API command transport (TCP 5008 vs
+/// HTTP/HTTPS POST /api/v1/command) at call time, so a Settings change is
+/// picked up by the next refresh without restarting the service.
+typedef CommandTransportResolver = CommandTransportMode Function();
 
 /// Outcome of a single status pass over the fleet.
 class ModuleStatusResult {
@@ -71,6 +79,10 @@ class ModuleStatusService {
   /// Decides, from the module's firmware, which TCP command protocol to use.
   final ModuleProtocolSelector _protocolSelector;
 
+  /// Resolves the Control API command transport (TCP 5008, HTTP 80 or HTTPS
+  /// 443) at call time from the app settings.
+  final CommandTransportResolver _commandTransport;
+
   final ModuleStatusFetcherRegistry _fetchers = ModuleStatusFetcherRegistry();
 
   bool _refreshing = false;
@@ -80,16 +92,25 @@ class ModuleStatusService {
   /// Persistent per-module legacy AT command/status units (transport + parsing).
   final Map<String, ModuleCommandService> _units = {};
 
-  /// Persistent per-module Soleux JSON command/status units (Control API or
-  /// legacy `J:` framing).
-  final Map<String, SoleuxJsonService> _jsonUnits = {};
+  /// Persistent per-module Soleux Control API units. A unit is either a
+  /// [SoleuxJsonService] (persistent TCP socket) or a [SoleuxHttpService]
+  /// (stateless HTTP/HTTPS `POST /api/v1/command`), per the app's
+  /// [SettingsStore.commandTransport] selection.
+  final Map<String, SoleuxControlApiService> _jsonUnits = {};
 
   ModuleStatusService({
     required this.store,
     this.timeout = defaultTimeout,
     ModuleProtocolSelector moduleProtocolSelector =
         const ModuleProtocolSelector(),
-  }) : _protocolSelector = moduleProtocolSelector;
+    CommandTransportResolver commandTransport = _defaultCommandTransport,
+  })  : _protocolSelector = moduleProtocolSelector,
+        _commandTransport = commandTransport;
+
+  /// The default resolver reads the app preference (TCP 5008 unless the user
+  /// picked HTTP/HTTPS in Settings).
+  static CommandTransportMode _defaultCommandTransport() =>
+      SettingsStore.shared.commandTransport;
 
   /// Shared service wired to the shared store, used by the launch path.
   static ModuleStatusService? _shared;
@@ -113,9 +134,11 @@ class ModuleStatusService {
   /// the module uses the JSON protocol (or has no unit yet).
   ModuleCommandService? commandServiceFor(String moduleId) => _units[moduleId];
 
-  /// The live Soleux JSON unit driving [moduleId], or null when the device is
-  /// not JSON-capable (or not yet probed).
-  SoleuxJsonService? jsonCommandServiceFor(String moduleId) =>
+  /// The live Soleux Control API unit driving [moduleId] (a [SoleuxJsonService]
+/// for the persistent TCP transport or a [SoleuxHttpService] for the
+/// HTTP/HTTPS transport), or null when the module has no live Control API unit
+/// (legacy AT device / not yet probed).
+  SoleuxControlApiService? jsonCommandServiceFor(String moduleId) =>
       _jsonUnits[moduleId];
 
   /// The command protocol facade for the module's *active* session, or null
@@ -143,25 +166,29 @@ class ModuleStatusService {
   /// ([turnOnOutput], [toggleOutput], [setDimmerLevel], ...); this method is
   /// the fallback for legacy devices and for catalogue actions the firmware has
   /// not implemented yet. AT lines are only sent to ports that accept them
-  /// (the legacy TCP port; never the Control API port, which is JSON-only).
+  /// (the legacy TCP port; never the Control API port or the HTTP/HTTPS
+  /// endpoint, which are JSON-only).
   Future<bool> sendLegacyCommand(String moduleId, String command) async {
     final jsonUnit = _jsonUnits[moduleId];
     if (jsonUnit != null && jsonUnit.isConnected) {
-      if (jsonUnit.framing != SoleuxJsonFraming.legacyJ) {
-        // Control API port accepts JSON only (spec compatibility rule); the
-        // AT protocol, if present, is served on the legacy port instead.
-        final atUnit = _units[moduleId];
-        if (atUnit != null) return atUnit.command(command);
-        return false;
+      // Only a legacy `J:` device on the legacy TCP port accepts raw AT lines
+      // (its legacy helper). The Control API port and the HTTP/HTTPS endpoint
+      // accept JSON only (spec compatibility rule); the AT protocol, if
+      // present, is served on the legacy TCP port instead.
+      if (jsonUnit is SoleuxJsonService &&
+          jsonUnit.framing == SoleuxJsonFraming.legacyJ) {
+        try {
+          final raw = await jsonUnit.legacy(command);
+          return raw.endsWith('OK');
+        } catch (e, st) {
+          debugPrint('ModuleStatusService: legacy command "$command" on '
+              '$moduleId failed: $e\n$st');
+          return false;
+        }
       }
-      try {
-        final raw = await jsonUnit.legacy(command);
-        return raw.endsWith('OK');
-      } catch (e, st) {
-        debugPrint('ModuleStatusService: legacy command "$command" on '
-            '$moduleId failed: $e\n$st');
-        return false;
-      }
+      final atUnit = _units[moduleId];
+      if (atUnit != null) return atUnit.command(command);
+      return false;
     }
     final atUnit = _units[moduleId];
     if (atUnit != null) {
@@ -376,19 +403,25 @@ class ModuleStatusService {
 
   /// Opens a temporary socket to [module] and pings it for a single success
   /// response, closing it immediately after. Returns whether it answered.
-  /// Unsupported module types are treated as offline.
+  /// Unsupported module types are treated as offline. The ping honours the
+  /// app's Control API transport choice: a TCP mode module is pinged with a
+  /// JSON `ping` on legacy port + 3, an HTTP/HTTPS mode module with a JSON
+  /// `ping` POSTed to /api/v1/command.
   Future<bool> _pollConnectivity(DeviceModule module) async {
     final live = store.byId(module.id) ?? module;
     if (_fetchers.forType(module.type) == null) {
       live.status = ConnectionStatus.offline;
       return false;
     }
+    final mode = _commandTransport();
 
     // Firmware-pinned protocol: ping exactly the transport the firmware speaks.
     final decision = _protocolSelector.decide(live);
     if (decision.pinned) {
       final reachable = decision.kind == ModuleCommandProtocolKind.controlApi
-          ? await _pollJsonPing(live)
+          ? (mode == CommandTransportMode.tcp
+              ? await _pollJsonPing(live)
+              : await _pollHttpPing(live, mode))
           : await _pollAtPing(live);
       live.status =
           reachable ? ConnectionStatus.online : ConnectionStatus.offline;
@@ -396,11 +429,14 @@ class ModuleStatusService {
     }
 
     // Unknown firmware: Control API devices (discovery advertised the Control
-    // API endpoint) are pinged over the JSON envelope on legacy port + 3.
+    // API endpoint) are pinged over the JSON envelope on the configured
+    // transport (TCP legacy port + 3, or HTTP/HTTPS /api/v1/command).
     // Everything else - AT-only and legacy `J:` devices - still answers the
     // legacy `AT\r` ping on the legacy TCP port during migration.
     final reachable = live.isControlApiAdvertised
-        ? await _pollJsonPing(live)
+        ? (mode == CommandTransportMode.tcp
+            ? await _pollJsonPing(live)
+            : await _pollHttpPing(live, mode))
         : await _pollAtPing(live);
     live.status =
         reachable ? ConnectionStatus.online : ConnectionStatus.offline;
@@ -522,6 +558,23 @@ class ModuleStatusService {
     return reachable;
   }
 
+  /// Stateless HTTP/HTTPS `ping` on the Control API command endpoint
+  /// (`POST /api/v1/command`, spec §"HTTP transport"). No persistent connection
+  /// is kept; the configured port follows the app's transport setting (80 for
+  /// HTTP, 443 for HTTPS).
+  Future<bool> _pollHttpPing(
+      DeviceModule module, CommandTransportMode mode) async {
+    final unit = _ensureHttpUnit(module, mode);
+    try {
+      final response = await unit.ping(timeout: timeout);
+      return response.ok;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: HTTP ping '
+          '${controlApiHttpEndpoint(module, mode)} failed: $e\n$st');
+      return false;
+    }
+  }
+
   Future<bool> _refreshOne(DeviceModule module) async {
     // The store may hold a newer instance of the same module; operate on that
     // live object so mutations propagate to every screen.
@@ -551,9 +604,31 @@ class ModuleStatusService {
     }
 
     // Soleux JSON path first for unknown-firmware modules (the recommended
-    // protocol for new mobile clients): the Control API on legacy port + 3
-    // (plain JSON envelope) and the legacy `J:` protocol for pre-Control-API
-    // devices. Falls back to the legacy AT+ dump when neither answers.
+    // protocol for new mobile clients). The probe follows the app's Control API
+    // transport setting:
+    //   - TCP mode (default): the Control API on legacy port + 3 (plain JSON
+    //     envelope) then the legacy `J:` protocol for pre-Control-API devices;
+    //   - HTTP/HTTPS mode: the Control API endpoint POST /api/v1/command.
+    // Either way it falls back to the legacy AT+ dump when nothing answers.
+    final mode = _commandTransport();
+    if (mode != CommandTransportMode.tcp) {
+      final httpOk = await _probeHttp(live, mode);
+      if (httpOk == true) {
+        live.status = ConnectionStatus.online;
+        // A Control API device must not keep a duplicate legacy AT+ unit (and
+        // its second socket) around.
+        _units.remove(live.id)?.dispose();
+        return true;
+      }
+      if (httpOk == false) {
+        // The endpoint answered but rejected the Control API hello - not a
+        // current Soleux HTTP Control API device; the AT path is not closed.
+        return false;
+      }
+      // Unreachable / no hello in time - a legacy device; fall back to AT+.
+      return _refreshLegacyAt(live, fetcher);
+    }
+
     final jsonOk = await _probeSoleuxJson(live);
     if (jsonOk == true) {
       live.status = ConnectionStatus.online;
@@ -612,12 +687,12 @@ class ModuleStatusService {
     }
   }
 
-  /// Refreshes a Control API module (firmware >= 7.12) over the JSON Control
-  /// API on the Control API port (legacy port + 3). Because the firmware pins
-  /// the Control API, no legacy AT probing is performed.
+  /// Refreshes a Control API module (firmware >= 7.12) over the app's
+  /// configured Control API transport: the TCP session on the Control API port
+  /// (legacy port + 3) or the stateless HTTP/HTTPS command endpoint. Because
+  /// the firmware pins the Control API, no legacy AT probing is performed.
   Future<bool> _refreshControlApi(DeviceModule live) async {
-    final unit = _ensureJsonUnit(live,
-        port: live.controlApiPort, framing: SoleuxJsonFraming.controlApi);
+    final unit = _ensureControlApiUnit(live);
     final ok = await _tryJsonHello(unit, live);
     if (ok == true) {
       await _fetchRelayConfiguration(unit, live);
@@ -689,11 +764,37 @@ class ModuleStatusService {
     return null;
   }
 
+  /// Probes a module for the Soleux Control API over the HTTP/HTTPS command
+  /// endpoint (`POST /api/v1/command`), then fetches the configuration.
+  ///
+  /// Returns:
+  ///   - `true`  when the endpoint answered `hello` ok and the dump was
+  ///             fetched;
+  ///   - `false` when the endpoint answered but rejected the hello (not a
+  ///             Control API HTTP device);
+  ///   - `null`  when the endpoint was unreachable or no hello arrived in time
+  ///             - a legacy device, so the caller falls back to AT+.
+  Future<bool?> _probeHttp(
+      DeviceModule live, CommandTransportMode mode) async {
+    final unit = _ensureHttpUnit(live, mode);
+    final ok = await _tryJsonHello(unit, live);
+    if (ok == true) {
+      await _fetchRelayConfiguration(unit, live);
+      return true;
+    }
+    final reached = unit.isConnected;
+    _disposeJsonUnit(live.id);
+    if (ok == false && reached) return false;
+    // Unreachable or timed out - not an HTTP Control API device.
+    return null;
+  }
+
   /// Connects [unit] and sends `hello`. Returns:
   ///   - `true`  when the device answered with `ok:true`;
   ///   - `false` when the connection failed or the hello was rejected;
   ///   - `null`  when the socket is alive but no hello arrived in time.
-  Future<bool?> _tryJsonHello(SoleuxJsonService unit, DeviceModule live) async {
+  Future<bool?> _tryJsonHello(
+      SoleuxControlApiService unit, DeviceModule live) async {
     await unit.connect();
     if (!unit.isConnected) return false;
     try {
@@ -720,7 +821,7 @@ class ModuleStatusService {
   /// Fetches the implemented Relay configuration dump (the currently available
   /// "relay state/configuration operations" subset) and applies it to [live].
   Future<void> _fetchRelayConfiguration(
-      SoleuxJsonService unit, DeviceModule live) async {
+      SoleuxControlApiService unit, DeviceModule live) async {
     try {
       final config =
           await unit.getRelayConfiguration(timeout: const Duration(seconds: 3));
@@ -771,14 +872,15 @@ class ModuleStatusService {
   /// Gets the persistent Soleux JSON unit for [module], creating (and wiring)
   /// it the first time for the given [port]/[framing]. When an existing unit
   /// targets a different endpoint or framing (e.g. the probe moved from the
-  /// Control API port to the legacy port), the old unit is disposed and
-  /// replaced so the module never holds two JSON sockets. Its live event lines
-  /// are folded into the module's channel state and its connect/disconnect
-  /// transitions flip the online status.
+  /// Control API port to the legacy port, or the app switched from HTTP to
+  /// TCP), the old unit is disposed and replaced so the module never holds two
+  /// Control API sessions. Its live event lines are folded into the module's
+  /// channel state and its connect/disconnect transitions flip the online
+  /// status.
   SoleuxJsonService _ensureJsonUnit(DeviceModule module,
       {required int port, required SoleuxJsonFraming framing}) {
     final existing = _jsonUnits[module.id];
-    if (existing != null &&
+    if (existing is SoleuxJsonService &&
         existing.connection.port == port &&
         existing.framing == framing) {
       return existing;
@@ -793,6 +895,47 @@ class ModuleStatusService {
       ),
       framing: framing,
     );
+    _wireJsonUnit(module, unit);
+    _jsonUnits[module.id] = unit;
+    return unit;
+  }
+
+  /// Gets the persistent Control API unit for [module] per the app's configured
+  /// transport: a [SoleuxJsonService] over the Control API TCP port in TCP
+  /// mode, or a [SoleuxHttpService] on the HTTP/HTTPS command endpoint.
+  /// Switching the Settings transport while the app runs replaces the existing
+  /// unit on the next refresh.
+  SoleuxControlApiService _ensureControlApiUnit(DeviceModule module) {
+    final mode = _commandTransport();
+    if (mode != CommandTransportMode.tcp) {
+      return _ensureHttpUnit(module, mode);
+    }
+    return _ensureJsonUnit(module,
+        port: module.controlApiPort, framing: SoleuxJsonFraming.controlApi);
+  }
+
+  /// Gets the persistent HTTP/HTTPS Control API unit for [module]
+  /// (`POST /api/v1/command`). No persistent socket is kept; `connect` is a
+  /// reachability probe. When an existing unit targets a different endpoint
+  /// (or the module changed IP / the transport setting changed), the old unit
+  /// is disposed and replaced.
+  SoleuxHttpService _ensureHttpUnit(DeviceModule module,
+      CommandTransportMode mode) {
+    final baseUri = controlApiHttpEndpoint(module, mode);
+    final existing = _jsonUnits[module.id];
+    if (existing is SoleuxHttpService && existing.baseUri == baseUri) {
+      return existing;
+    }
+    if (existing != null) existing.dispose();
+
+    final unit = SoleuxHttpService(baseUri: baseUri, timeout: timeout);
+    _wireHttpUnit(module, unit);
+    _jsonUnits[module.id] = unit;
+    return unit;
+  }
+
+  /// Wires the shared TCP unit streams (live state pushes + connectivity).
+  void _wireJsonUnit(DeviceModule module, SoleuxJsonService unit) {
     // Unsolicited `OUT:`/`IN:` state pushes keep the channel list live.
     unit.eventStream.listen((event) {
       final live = store.byId(module.id);
@@ -813,9 +956,33 @@ class ModuleStatusService {
           connected ? ConnectionStatus.online : ConnectionStatus.offline;
       _scheduleCommit();
     });
+  }
 
-    _jsonUnits[module.id] = unit;
-    return unit;
+  /// Wires the HTTP/HTTPS unit's reachability transitions to the module's
+  /// online status (the endpoint keeps no socket, so no event stream exists).
+  void _wireHttpUnit(DeviceModule module, SoleuxHttpService unit) {
+    unit.connectionStateStream.listen((connected) {
+      final live = store.byId(module.id);
+      if (live == null) return;
+      live.status =
+          connected ? ConnectionStatus.online : ConnectionStatus.offline;
+      _scheduleCommit();
+    });
+  }
+
+  /// The Control API command endpoint for [module] per the app's HTTP/HTTPS
+  /// transport choice (spec §"Transport mapping"): HTTP port 80, HTTPS port
+  /// 443, path `/api/v1/command`. [DeviceModule.apiHttpPort] overrides the
+  /// port when set (development / non-standard deployments).
+  static Uri controlApiHttpEndpoint(
+      DeviceModule module, CommandTransportMode mode) {
+    final https = mode == CommandTransportMode.https;
+    return Uri(
+      scheme: https ? 'https' : 'http',
+      host: module.ipAddress,
+      port: module.apiHttpPort ?? (https ? 443 : 80),
+      path: '/api/v1/command',
+    );
   }
 
   void _disposeJsonUnit(String moduleId) {

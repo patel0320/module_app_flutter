@@ -33,6 +33,19 @@ import 'package:flutter/foundation.dart';
 /// pre-Control-API devices; the Control API itself must not send it.
 const String kSoleuxJsonPrefix = 'J:';
 
+/// Framing used on the wire for JSON protocol requests.
+enum SoleuxJsonFraming {
+  /// The Control API transport: one plain JSON object per line (no `J:`
+  /// prefix), carrying the outer `protocol` field. Used on the Control API
+  /// port (legacy TCP port + 3) and by the HTTP/HTTPS transport, which sends
+  /// the same envelope as a `POST /api/v1/command` body.
+  controlApi,
+
+  /// Legacy pre-Control-API framing: `J:`-prefixed JSON lines on the legacy
+  /// TCP port.
+  legacyJ,
+}
+
 /// Negotiated Control API protocol version.
 ///
 /// The Relay Module currently implements the protocol 2 command subset; the
@@ -266,17 +279,22 @@ class SoleuxJsonRequest {
     this.legacyJPrefix = false,
   });
 
+  /// The protocol envelope as a JSON map. Shared by the newline-delimited TCP
+  /// encoding ([encode]) and the HTTP/HTTPS `POST /api/v1/command` transport,
+  /// which sends the same object as its request body
+  /// (doc/...Specification_v0.2.md §"Request envelope").
+  Map<String, dynamic> toMap() => {
+        'protocol': protocol,
+        'id': id,
+        'action': action,
+        'params': params,
+      };
+
   /// Encodes the request as a single CRLF-terminated line. By default it is a
   /// plain JSON object (Control API envelope); with [legacyJPrefix] it is
   /// prefixed with [`kSoleuxJsonPrefix`].
   String encode() {
-    final body = <String, dynamic>{
-      'protocol': protocol,
-      'id': id,
-      'action': action,
-      'params': params,
-    };
-    final line = jsonEncode(body);
+    final line = jsonEncode(toMap());
     return legacyJPrefix ? '$kSoleuxJsonPrefix$line\r\n' : '$line\r\n';
   }
 }

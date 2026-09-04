@@ -243,6 +243,7 @@ class DeviceModule {
     this.serial,
     this.mac,
     this.apiPort,
+    this.apiHttpPort,
     this.apiVersion,
     this.heartbeatPort,
     this.caps = const [],
@@ -269,6 +270,12 @@ class DeviceModule {
 
   /// Control API v3 TCP port when advertised by discovery (normally 5008).
   int? apiPort;
+
+  /// Optional override of the Control API HTTP/HTTPS endpoint port
+  /// (`POST /api/v1/command`). Defaults to 80 over HTTP and 443 over HTTPS per
+  /// the Control API spec §"Transport mapping"; set it for development,
+  /// testing or non-standard deployments.
+  int? apiHttpPort;
 
   /// Highest advertised/negotiated Control API version (current 3).
   int? apiVersion;
@@ -337,6 +344,7 @@ class DeviceModule {
         'serial': serial,
         'mac': mac,
         'apiPort': apiPort,
+        'apiHttpPort': apiHttpPort,
         'apiVersion': apiVersion,
         'heartbeatPort': heartbeatPort,
         'caps': caps,
@@ -360,6 +368,7 @@ class DeviceModule {
         serial: json['serial'] as String?,
         mac: json['mac'] as String?,
         apiPort: (json['apiPort'] as num?)?.toInt(),
+        apiHttpPort: (json['apiHttpPort'] as num?)?.toInt(),
         apiVersion: (json['apiVersion'] as num?)?.toInt(),
         heartbeatPort: (json['heartbeatPort'] as num?)?.toInt(),
         caps: [

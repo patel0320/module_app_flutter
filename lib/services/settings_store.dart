@@ -6,23 +6,62 @@
 //   - Language: the active Locale (en / ro).
 //   - Appearance: the active ThemeMode (light / dark / system) and the
 //     Home theme palette (HomeThemeId).
+//   - Command protocol: whether Control API commands use the persistent TCP
+//     session (legacy port + 3, 5008 by default) or the stateless HTTP/HTTPS
+//     POST /api/v1/command endpoint
+//     (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport
+//     mapping").
 //
 // The theme / locale / palette values are also mirrored onto the global
 // ValueNotifiers (themeModeNotifier, appLocaleNotifier, homeThemeIdNotifier)
 // so MaterialApp and every screen rebuild immediately. Notification toggles
-// are exposed here as a ChangeNotifier so the Notifications screen can bind
-// to them instead of local widget state.
+// and the command protocol are exposed here as a ChangeNotifier so the
+// Settings screens can bind to them instead of local widget state.
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/theme_palettes.dart';
 
+/// How the app talks to the Soleux Control API on the wire
+/// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport mapping").
+enum CommandTransportMode {
+  /// Persistent JSON TCP session on the Control API port (legacy port + 3,
+  /// 5008 by default). Receives pushed state changes on the same socket.
+  tcp,
+
+  /// Stateless `POST /api/v1/command` over HTTP port 80.
+  http,
+
+  /// Stateless `POST /api/v1/command` over HTTPS port 443 (SSL enabled).
+  https,
+}
+
+extension CommandTransportModeX on CommandTransportMode {
+  /// Short stable identifier for logs and diagnostics.
+  String get label => switch (this) {
+        CommandTransportMode.tcp => 'tcp',
+        CommandTransportMode.http => 'http',
+        CommandTransportMode.https => 'https',
+      };
+
+  /// Human-readable summary of the endpoint the mode drives.
+  String get description => switch (this) {
+        CommandTransportMode.tcp => 'TCP port 5008',
+        CommandTransportMode.http => 'HTTP port 80',
+        CommandTransportMode.https => 'HTTPS port 443',
+      };
+}
+
 class SettingsStore extends ChangeNotifier {
   SettingsStore._();
 
   /// App-wide shared instance used by the launch path and Settings screens.
   static SettingsStore shared = SettingsStore._();
+
+  /// Creates an isolated store for tests (backed by the same persistence).
+  @visibleForTesting
+  static SettingsStore forTesting() => SettingsStore._();
 
   SharedPreferences? _prefs;
   bool _loaded = false;
@@ -33,6 +72,9 @@ class SettingsStore extends ChangeNotifier {
   bool _outputLeftOn = true;
   bool _temperature = true;
   bool _automationTriggered = false;
+
+  /// Which Control API command transport the app uses (TCP 5008 by default).
+  CommandTransportMode _commandTransport = CommandTransportMode.tcp;
 
   /// Default temperature alert threshold (°C) applied to newly added
   /// modules. Configured on the Settings -> Notifications screen.
@@ -49,6 +91,10 @@ class SettingsStore extends ChangeNotifier {
   bool get outputLeftOn => _outputLeftOn;
   bool get temperature => _temperature;
   bool get automationTriggered => _automationTriggered;
+
+  /// The Control API command transport in use (TCP 5008 default; HTTP/HTTPS
+  /// POST /api/v1/command selectable in Settings).
+  CommandTransportMode get commandTransport => _commandTransport;
 
   /// The default temperature alert threshold (°C) for new modules.
   double get defaultTemperatureThreshold => _defaultTempThreshold;
@@ -68,6 +114,7 @@ class SettingsStore extends ChangeNotifier {
       'settings_default_temp_threshold';
   static const String _kKeyOutputOnThresholdHours =
       'settings_output_on_threshold_hours';
+  static const String _kKeyCommandTransport = 'settings_command_transport';
 
   /// Loads all saved preferences once and applies them to the global
   /// notifiers. Safe to call repeatedly.
@@ -97,6 +144,9 @@ class SettingsStore extends ChangeNotifier {
           _prefs!.getDouble(_kKeyDefaultTempThreshold) ?? 65;
       _outputOnThresholdHours =
           _prefs!.getInt(_kKeyOutputOnThresholdHours) ?? 12;
+      _commandTransport = CommandTransportMode.values.asNameMap()[
+              _prefs!.getString(_kKeyCommandTransport)] ??
+          CommandTransportMode.tcp;
     } catch (e, st) {
       debugPrint('SettingsStore: loading preferences failed: $e\n$st');
       // Keep defaults if preferences are unavailable.
@@ -163,6 +213,15 @@ class SettingsStore extends ChangeNotifier {
     return _persistAndNotify();
   }
 
+  // ---- Command protocol ---------------------------------------------------
+
+  /// Sets the Control API command transport (TCP 5008, HTTP 80 or HTTPS 443)
+  /// and persists it. Newly-created module sessions honour the selection.
+  Future<void> setCommandTransport(CommandTransportMode mode) {
+    _commandTransport = mode;
+    return _persistAndNotify();
+  }
+
   Future<void> _persistAndNotify() async {
     await _prefs?.setBool(_kKeyModuleStatus, _moduleStatus);
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
@@ -170,6 +229,7 @@ class SettingsStore extends ChangeNotifier {
     await _prefs?.setBool(_kKeyAutomation, _automationTriggered);
     await _prefs?.setDouble(_kKeyDefaultTempThreshold, _defaultTempThreshold);
     await _prefs?.setInt(_kKeyOutputOnThresholdHours, _outputOnThresholdHours);
+    await _prefs?.setString(_kKeyCommandTransport, _commandTransport.name);
     notifyListeners();
   }
 }
