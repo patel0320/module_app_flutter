@@ -20,9 +20,10 @@
 // A valid pong proves recent reachability but does not authenticate the
 // device or prove a control command will succeed (spec §4.5).
 //
-// The 4.3 default timing profile matches the reference Windows client:
-//   5 s interval, 1.5 s response window, 15 s alive threshold. Monitor clients
-// should use jitter and avoid aggressive 5-second polling in the background.
+// The app-side monitor keeps a soft mobile cadence of 30-60 s per target
+// (randomized to desynchronize a fleet), with a 1.5 s response window and a
+// 15 s alive threshold. Monitor clients should use jitter and avoid aggressive
+// 5-second polling in the background.
 library;
 
 import 'dart:async';
@@ -246,15 +247,17 @@ class HeartbeatTarget {
 
 /// Periodic heartbeat monitor for a set of known modules.
 ///
-/// Matches the reference client cadence (every 5 s) while respecting a softer
-/// mobile interval. Each target is scheduled on its own timer with an initial
-/// random jitter so a fleet of modules does not transmit on the same boundary
+/// Keeps a soft mobile cadence: each cycle waits a randomized 30-60 s before
+/// pinging again, so a fleet of modules does not transmit on the same boundary
 /// (spec §4.5). Stateful per-target: a valid pong clears consecutive misses,
 /// a missed cycle counts against the target, and the availability is
 /// evaluated after every cycle against the spec §4.3 timing profile.
 class SoleuxHeartbeatMonitor {
-  /// Spec §4.3 default heartbeat interval.
-  static const Duration defaultInterval = Duration(seconds: 5);
+  /// Lower bound of the randomized heartbeat interval (30 s mobile cadence).
+  static const Duration defaultInterval = Duration(seconds: 30);
+
+  /// Upper bound of the randomized heartbeat interval (60 s).
+  static const Duration defaultMaxInterval = Duration(seconds: 60);
 
   /// Spec §4.3 alive threshold: a valid pong within this window keeps the
   /// module `online`.
@@ -266,14 +269,22 @@ class SoleuxHeartbeatMonitor {
   /// Spec §4.4 "three full cycles missed" -> offline.
   static const int defaultMaxMissedCycles = 3;
 
+  /// Shortest wait between pings; with [jitter] each cycle is randomized
+  /// within [interval, maxInterval].
   final Duration interval;
+
+  /// Longest wait between pings. When less than or equal to [interval], cycles
+  /// use [interval] directly.
+  final Duration maxInterval;
+
   final Duration acceptWindow;
   final Duration aliveThreshold;
   final Duration suspectThreshold;
   final int maxMissedCycles;
 
-  /// Whether the first ping of each target is staggered by a random delay to
-  /// desynchronize a multi-device fleet (spec §4.5).
+  /// Whether each cycle's delay is randomized across [interval, maxInterval]
+  /// (with a jittered first ping) to desynchronize a multi-device fleet
+  /// (spec §4.5).
   final bool jitter;
 
   /// Legacy per-ping callback, keyed by (host, tcpPort). Kept for callers
@@ -293,6 +304,7 @@ class SoleuxHeartbeatMonitor {
 
   SoleuxHeartbeatMonitor({
     this.interval = defaultInterval,
+    this.maxInterval = defaultMaxInterval,
     this.acceptWindow = SoleuxHeartbeat.defaultAcceptWindow,
     this.aliveThreshold = defaultAliveThreshold,
     this.suspectThreshold = defaultSuspectThreshold,
@@ -360,11 +372,20 @@ class SoleuxHeartbeatMonitor {
     }
   }
 
+  /// Uniform random delay in `[interval, maxInterval]` used for each ping
+  /// cycle when [jitter] is enabled (spec §4.5); returns [interval] otherwise.
+  Duration _randomInterval(_TargetState state) {
+    final minMs = interval.inMilliseconds;
+    final maxMs = maxInterval.inMilliseconds;
+    if (!jitter || maxMs <= minMs) return interval;
+    return Duration(
+        milliseconds: minMs + state.random.nextInt(maxMs - minMs + 1));
+  }
+
   void _schedule(_TargetState state) {
     state.timer?.cancel();
-    final windowMs = interval.inMilliseconds;
-    final delay = (jitter && windowMs > 0)
-        ? Duration(milliseconds: state.random.nextInt(windowMs))
+    final delay = (jitter && interval.inMilliseconds > 0)
+        ? Duration(milliseconds: state.random.nextInt(interval.inMilliseconds))
         : Duration.zero;
     state.timer = Timer(delay, () => _runTarget(state));
   }
@@ -389,7 +410,7 @@ class SoleuxHeartbeatMonitor {
     _reportAvail(state);
 
     if (_running) {
-      state.timer = Timer(interval, () => _runTarget(state));
+      state.timer = Timer(_randomInterval(state), () => _runTarget(state));
     }
   }
 

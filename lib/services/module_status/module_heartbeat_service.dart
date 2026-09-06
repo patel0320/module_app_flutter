@@ -10,13 +10,13 @@
 // removed or re-addressed), records `lastSeenAt` on every valid pong, and
 // maps the spec §4.4 availability state machine onto the app's
 // [ConnectionStatus] only when the state actually transitions (so the UI does
-// not churn with the 5 s ping cadence).
+// not churn with the 30-60 s ping cadence).
 //
 // Lifecycle mirror of [ModuleStatusScheduler]: it is started while the app is
 // in the foreground (a UDP ping is far cheaper than a TCP socket and gives
 // independent reachability evidence per spec §4.5) and stopped when the app
 // backgrounds, where native background workers take over instead of
-// aggressive 5-second polling.
+// aggressive 5-second background polling.
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
