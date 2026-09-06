@@ -120,6 +120,7 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
                   child: InputFieldCard(
                     input: module.inputs[i],
                     onHoldChanged: (held) => _holdInput(module, i, held),
+                    onReleased: _refresh,
                     onEdit: () => _editInput(module.inputs[i], i),
                   ),
                 ),

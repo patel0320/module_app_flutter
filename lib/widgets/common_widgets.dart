@@ -490,17 +490,21 @@ class DimmerChannelCard extends StatelessWidget {
 /// configuration page ([onEdit]); the large action button is press-and-hold -
 /// touching it calls [onHoldChanged] with `true`, releasing it with `false`,
 /// which drives the associated virtual input (`set_virtual_input_state`).
+/// Releasing the button also fires [onReleased] so the caller can re-fetch
+/// module info and refresh the input/output state shown on screen.
 class InputFieldCard extends StatefulWidget {
   const InputFieldCard({
     super.key,
     required this.input,
     required this.onHoldChanged,
     required this.onEdit,
+    this.onReleased,
   });
 
   final PhysicalInput input;
   final ValueChanged<bool> onHoldChanged;
   final VoidCallback onEdit;
+  final VoidCallback? onReleased;
 
   @override
   State<InputFieldCard> createState() => _InputFieldCardState();
@@ -563,7 +567,10 @@ class _InputFieldCardState extends State<InputFieldCard> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: (_) => _setPressed(true),
-              onTapUp: (_) => _setPressed(false),
+              onTapUp: (_) {
+                _setPressed(false);
+                widget.onReleased?.call();
+              },
               onTapCancel: () => _setPressed(false),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),

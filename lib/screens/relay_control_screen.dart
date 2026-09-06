@@ -147,6 +147,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
                         input: module.inputs[i],
                         onHoldChanged: (held) =>
                             _holdInput(module, i, held),
+                        onReleased: _refresh,
                         onEdit: () => _editInput(module.inputs[i], i),
                       ),
                     ),
