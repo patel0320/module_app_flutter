@@ -490,7 +490,7 @@ class DimmerChannelCard extends StatelessWidget {
 /// configuration page ([onEdit]); the large action button is press-and-hold -
 /// touching it calls [onHoldChanged] with `true`, releasing it with `false`,
 /// which drives the associated virtual input (`set_virtual_input_state`).
-class InputFieldCard extends StatelessWidget {
+class InputFieldCard extends StatefulWidget {
   const InputFieldCard({
     super.key,
     required this.input,
@@ -503,74 +503,83 @@ class InputFieldCard extends StatelessWidget {
   final VoidCallback onEdit;
 
   @override
+  State<InputFieldCard> createState() => _InputFieldCardState();
+}
+
+class _InputFieldCardState extends State<InputFieldCard> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+    widget.onHoldChanged(value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(
           children: [
-            InkWell(
-              onTap: onEdit,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.toggle_on_outlined, size: 28),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(input.name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 16)),
-                          const SizedBox(height: 2),
-                          Text(
-                            input.mode.label,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: onSurface.withValues(alpha: 0.55)),
-                          ),
-                        ],
+            Expanded(
+              child: InkWell(
+                onTap: widget.onEdit,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.toggle_on_outlined, size: 28),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(widget.input.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16)),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.input.mode.label,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: onSurface.withValues(alpha: 0.55)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const Icon(Icons.chevron_right),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(width: 8),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTapDown: (_) => onHoldChanged(true),
-              onTapUp: (_) => onHoldChanged(false),
-              onTapCancel: () => onHoldChanged(false),
-              child: Container(
-                height: 56,
-                width: double.infinity,
+              onTapDown: (_) => _setPressed(true),
+              onTapUp: (_) => _setPressed(false),
+              onTapCancel: () => _setPressed(false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: scheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  color: _pressed ? scheme.primary : scheme.secondaryContainer,
+                  shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.touch_app,
-                        color: scheme.onSecondaryContainer),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.inputHoldToActivate,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSecondaryContainer),
-                    ),
-                  ],
+                child: Icon(
+                  Icons.play_arrow,
+                  size: 28,
+                  color: _pressed
+                      ? scheme.onPrimary
+                      : scheme.onSecondaryContainer,
                 ),
               ),
             ),
