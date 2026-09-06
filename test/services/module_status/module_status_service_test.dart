@@ -237,6 +237,87 @@ void main() {
     await fake.server.close();
   });
 
+  test('set_output_configuration pushes name, enabled and initial_state',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-cfg',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    expect(
+      await service.updateOutputConfiguration(
+        'm-cfg',
+        0,
+        name: 'Server',
+        enabled: false,
+        initialState: OutputInitialState.on,
+      ),
+      isTrue,
+    );
+    await _flush();
+
+    final sent = fake.received.last;
+    expect(sent, contains('"action":"set_output_configuration"'));
+    expect(sent, contains('"name":"Server"'));
+    expect(sent, contains('"enabled":false'));
+    expect(sent, contains('"initial_state":"on"'));
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('set_output_configuration omits initial_state for Last State',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-cfg2',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    expect(
+      await service.updateOutputConfiguration(
+        'm-cfg2',
+        0,
+        name: 'Server',
+        initialState: OutputInitialState.lastState,
+      ),
+      isTrue,
+    );
+    await _flush();
+
+    final sent = fake.received.last;
+    expect(sent, contains('"action":"set_output_configuration"'));
+    expect(sent, isNot(contains('initial_state')));
+
+    service.dispose();
+    await fake.server.close();
+  });
+
   test(
       'a module pinned to the Control API (firmware >= 7.12) is refreshed '
       'directly over JSON without probing or an AT unit', () async {

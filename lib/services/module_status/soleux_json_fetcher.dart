@@ -57,6 +57,14 @@ class SoleuxOutputState {
   final bool state;
   final int? pwm;
 
+  /// Whether control is permitted (`enabled`). Null when the device does not
+  /// report it, in which case the output is treated as enabled.
+  final bool? enabled;
+
+  /// Device `initial_state` (`off`/`on`/`restore`, or a legacy int/absent).
+  /// Null when the device does not report it.
+  final Object? initialState;
+
   /// Timed/behavioural fields are surfaced raw for future pages.
   final Map<String, dynamic> raw;
 
@@ -65,17 +73,25 @@ class SoleuxOutputState {
     this.name = '',
     this.state = false,
     this.pwm,
+    this.enabled,
+    this.initialState,
     this.raw = const {},
   });
 
   factory SoleuxOutputState.fromJson(Map<String, dynamic> json) {
     final pwmRaw = json['pwm'];
-    final channel = _int(json['channel']);
+    final enabledRaw = json['output_enabled'] ?? json['enabled'];
     return SoleuxOutputState(
-      channel: channel,
+      channel: _int(json['channel']),
       name: json['output_name'] as String? ?? json['name'] as String? ?? '',
       state: json['output_state'] as bool? ?? false,
       pwm: pwmRaw is num ? pwmRaw.toInt() : null,
+      enabled: enabledRaw == null
+          ? null
+          : enabledRaw is bool
+              ? enabledRaw
+              : (enabledRaw as num?) != 0,
+      initialState: json['initial_state'],
       raw: json,
     );
   }
@@ -169,6 +185,12 @@ class SoleuxJsonFetcher {
     final stdoutNames = {
       for (final o in config.outputs) o.channel: o.name,
     };
+    final stdoutEnabled = {
+      for (final o in config.outputs) o.channel: o.enabled,
+    };
+    final stdoutInitialState = {
+      for (final o in config.outputs) o.channel: o.initialState,
+    };
     while (module.channels.length < targetOutputs) {
       final index = module.channels.length;
       final deviceName = stdoutNames[index];
@@ -178,6 +200,8 @@ class SoleuxJsonFetcher {
             ? deviceName
             : 'Output ${index + 1}',
         icon: Icons.power,
+        enabled: stdoutEnabled[index] ?? true,
+        initialState: OutputInitialState.fromWire(stdoutInitialState[index]),
       ));
     }
     if (module.channels.length > targetOutputs) {

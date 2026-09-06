@@ -110,4 +110,32 @@ void main() {
     final fresh = await repo();
     expect(fresh.fetch().single.name, 'Relay A');
   });
+
+  test('channel enabled + initial state round-trip through persistence',
+      () async {
+    final r = await repo();
+    await r.add(relay('m1', 'Relay A'));
+    await r.update('m1', DeviceModule(
+          id: 'm1',
+          name: 'Relay A',
+          type: ModuleType.relay,
+          ipAddress: '192.168.1.10',
+          status: ConnectionStatus.online,
+          roomName: 'Cabin',
+          internalTempC: 30,
+          channels: [
+            ChannelOutput(
+              id: 'm1-c1',
+              name: 'Light',
+              icon: Icons.lightbulb,
+              isOn: true,
+              enabled: false,
+              initialState: OutputInitialState.on,
+            ),
+          ],
+        ));
+    final channel = r.fetch().single.channels.single;
+    expect(channel.enabled, isFalse);
+    expect(channel.initialState, OutputInitialState.on);
+  });
 }

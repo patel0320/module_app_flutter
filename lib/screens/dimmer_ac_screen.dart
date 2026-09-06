@@ -24,11 +24,11 @@ class DimmerAcScreen extends StatefulWidget {
 }
 
 class _DimmerAcScreenState extends State<DimmerAcScreen> {
-  Future<void> _editChannel(ChannelOutput channel) async {
+  Future<void> _editChannel(ChannelOutput channel, int index) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
           builder: (_) => ChannelEditorScreen(
-              channel: channel, moduleName: widget.module.name)),
+              channel: channel, module: widget.module, index: index)),
     );
     if (saved == true) {
       // Persist the renamed output so the user-defined name survives restarts.
@@ -94,19 +94,19 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
           ),
           const SizedBox(height: 16),
           SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),
-          for (final channel in module.channels)
+          for (int i = 0; i < module.channels.length; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
               child: DimmerChannelCard(
-                channel: channel,
+                channel: module.channels[i],
                 onChanged: (value) =>
-                    setState(() => channel.brightness = value),
+                    setState(() => module.channels[i].brightness = value),
                 onChangeEnd: (value) => EventLogStore.shared.recordBrightness(
                   moduleName: module.name,
-                  outputName: channel.name,
+                  outputName: module.channels[i].name,
                   pct: value,
                 ),
-                onEdit: () => _editChannel(channel),
+                onEdit: () => _editChannel(module.channels[i], i),
               ),
             ),
           if (module.inputs.any((i) => i.enabled)) ...[

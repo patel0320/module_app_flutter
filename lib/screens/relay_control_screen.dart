@@ -25,11 +25,11 @@ class RelayControlScreen extends StatefulWidget {
 }
 
 class _RelayControlScreenState extends State<RelayControlScreen> {
-  Future<void> _editChannel(ChannelOutput channel) async {
+  Future<void> _editChannel(ChannelOutput channel, int index) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
           builder: (_) => ChannelEditorScreen(
-              channel: channel, moduleName: widget.module.name)),
+              channel: channel, module: widget.module, index: index)),
     );
     if (saved == true) {
       // Persist the renamed output so the user-defined name survives restarts.
@@ -132,7 +132,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
                     index: i,
                     onToggle: () =>
                         _toggleOutput(module, i, !module.channels[i].isOn),
-                    onEdit: () => _editChannel(module.channels[i]),
+                    onEdit: () => _editChannel(module.channels[i], i),
                   ),
                 ),
               if (module.inputs.isNotEmpty) ...[

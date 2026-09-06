@@ -93,6 +93,35 @@ class Room {
       Room(id: json['id'] as String, name: json['name'] as String? ?? '');
 }
 
+/// Where an output settles after the module powers up / restarts
+/// (Control API `set_output_configuration` `initial_state`).
+enum OutputInitialState {
+  on,
+  off,
+  lastState;
+
+  /// Parses any device-reported representation (`off`/`on`/`restore`, legacy
+  /// ints or an absent field) into [OutputInitialState]; anything that is not
+  /// an explicit `on`/`off` degrades to the default [OutputInitialState.lastState].
+  static OutputInitialState fromWire(Object? raw) =>
+      switch (raw?.toString().toLowerCase()) {
+        'on' => OutputInitialState.on,
+        'off' => OutputInitialState.off,
+        _ => OutputInitialState.lastState,
+      };
+}
+
+extension OutputInitialStateX on OutputInitialState {
+  /// Wire value for `set_output_configuration` `initial_state`. Null means
+  /// the parameter is omitted, which leaves the module in [lastState] - i.e.
+  /// it restores the state it had before the restart.
+  String? get wireValue => switch (this) {
+        OutputInitialState.on => 'on',
+        OutputInitialState.off => 'off',
+        OutputInitialState.lastState => null,
+      };
+}
+
 /// A single output/channel on a module (relay output, dimmer channel or
 /// blind direction pair).
 class ChannelOutput {
@@ -102,6 +131,8 @@ class ChannelOutput {
     required this.icon,
     this.isOn = false,
     this.brightness = 0,
+    this.enabled = true,
+    this.initialState = OutputInitialState.lastState,
   });
 
   final String id;
@@ -114,12 +145,20 @@ class ChannelOutput {
   /// Dimmer brightness percentage, 0-100 (0 = OFF, 100 = fully ON).
   int brightness;
 
+  /// Whether the output is shown / controllable on the module screen.
+  bool enabled;
+
+  /// State the output settles in after the module starts (`initial_state`).
+  OutputInitialState initialState;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'name': name,
         'icon': iconToJson(icon),
         'isOn': isOn,
         'brightness': brightness,
+        'enabled': enabled,
+        'initialState': initialState.name,
       };
 
   factory ChannelOutput.fromJson(Map<String, Object?> json) => ChannelOutput(
@@ -128,6 +167,8 @@ class ChannelOutput {
         icon: iconFromJson(json['icon']),
         isOn: json['isOn'] as bool? ?? false,
         brightness: json['brightness'] as int? ?? 0,
+        enabled: json['enabled'] as bool? ?? true,
+        initialState: OutputInitialState.fromWire(json['initialState']),
       );
 }
 

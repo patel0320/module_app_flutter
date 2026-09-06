@@ -1,21 +1,34 @@
 // lib/screens/channel_editor_screen.dart
 //
-// Brief section 2.2 "Customization": rename an output and associate a
-// simple icon with it, for quick and intuitive identification.
+// Brief section 2.2 "Customization": rename an output, associate a simple
+// icon with it, toggle whether it is shown on the module screen and pick the
+// state it settles in after the module restarts (ON / OFF / Last State).
+// Saving applies the change locally and pushes it to the module with
+// `set_output_configuration` (Control API spec §4.9).
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/module_status/module_status_service.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class ChannelEditorScreen extends StatefulWidget {
-  const ChannelEditorScreen(
-      {super.key, required this.channel, required this.moduleName});
+  const ChannelEditorScreen({
+    super.key,
+    required this.channel,
+    required this.module,
+    required this.index,
+  });
 
   final ChannelOutput channel;
-  final String moduleName;
+  final DeviceModule module;
+
+  /// Index of the output within [module.channels]; used as the channel index
+  /// for `set_output_configuration`.
+  final int index;
 
   @override
   State<ChannelEditorScreen> createState() => _ChannelEditorScreenState();
@@ -25,6 +38,8 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
   late final TextEditingController _nameController =
       TextEditingController(text: widget.channel.name);
   late IconData _selectedIcon = widget.channel.icon;
+  late bool _enabled = widget.channel.enabled;
+  late OutputInitialState _initialState = widget.channel.initialState;
 
   @override
   void dispose() {
@@ -32,10 +47,24 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final trimmed = _nameController.text.trim();
+    // Apply to the shared channel instance, then push the config to the device.
     widget.channel.name = trimmed.isEmpty ? widget.channel.name : trimmed;
     widget.channel.icon = _selectedIcon;
+    widget.channel.enabled = _enabled;
+    widget.channel.initialState = _initialState;
+
+    await ModuleStore.shared.update(widget.module.id, (_) {});
+    await ModuleStatusService.shared.updateOutputConfiguration(
+      widget.module.id,
+      widget.index,
+      name: widget.channel.name,
+      enabled: widget.channel.enabled,
+      initialState: widget.channel.initialState,
+    );
+
+    if (!mounted) return;
     Navigator.of(context).pop(true);
   }
 
@@ -44,11 +73,11 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.channelEditorTitle)),
+      appBar: AppBar(title: Text(widget.channel.name)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
         children: [
-          Text(widget.moduleName,
+          Text(widget.module.name,
               style: TextStyle(color: onSurface.withValues(alpha: 0.55))),
           const SizedBox(height: 16),
           Center(
@@ -89,6 +118,51 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
                   ),
                 ),
             ],
+          ),
+          const SizedBox(height: 24),
+          SectionHeader(l10n.channelEditorBehavior),
+          Card(
+            child: SwitchListTile(
+              value: _enabled,
+              onChanged: (value) => setState(() => _enabled = value),
+              title: Text(l10n.channelEditorEnabled,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(l10n.channelEditorEnabledHint),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SectionHeader(l10n.channelEditorInitialState),
+          Card(
+            child: RadioGroup<OutputInitialState>(
+              groupValue: _initialState,
+              onChanged: (value) =>
+                  setState(() => _initialState = value ?? _initialState),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<OutputInitialState>(
+                    value: OutputInitialState.on,
+                    title: Text(l10n.on,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(l10n.channelEditorInitialOnHint),
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<OutputInitialState>(
+                    value: OutputInitialState.off,
+                    title: Text(l10n.off,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(l10n.channelEditorInitialOffHint),
+                  ),
+                  const Divider(height: 1),
+                  RadioListTile<OutputInitialState>(
+                    value: OutputInitialState.lastState,
+                    title: Text(l10n.channelEditorInitialLastState,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(l10n.channelEditorInitialLastStateHint),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 32),
           FilledButton(onPressed: _save, child: Text(l10n.save)),
