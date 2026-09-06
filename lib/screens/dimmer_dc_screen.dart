@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
-import '../services/event_log_store.dart';
 import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/dimmer_controls_section.dart';
 import 'channel_editor_screen.dart';
 import 'input_editor_screen.dart';
 
@@ -79,53 +79,49 @@ class _DimmerDcScreenState extends State<DimmerDcScreen> {
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          ModuleStatusHeader(module: module),
-          const SizedBox(height: 8),
-          Text(
-            l10n.dimmerDcSubtitle,
-            style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.55)),
-          ),
-          const SizedBox(height: 16),
-          SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),
-          for (int i = 0; i < module.channels.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-              child: DimmerChannelCard(
-                channel: module.channels[i],
-                onChanged: (value) =>
-                    setState(() => module.channels[i].brightness = value),
-                onChangeEnd: (value) => EventLogStore.shared.recordBrightness(
-                  moduleName: module.name,
-                  outputName: module.channels[i].name,
-                  pct: value,
-                ),
-                onEdit: () => _editChannel(module.channels[i], i),
+      body: ListenableBuilder(
+        listenable: ModuleStore.shared,
+        builder: (context, _) {
+          final live =
+              ModuleStore.shared.byId(widget.module.id) ?? widget.module;
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.outerPadding),
+            children: [
+              ModuleStatusHeader(module: live),
+              const SizedBox(height: 8),
+              Text(
+                l10n.dimmerDcSubtitle,
+                style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.55)),
               ),
-            ),
-          if (module.inputs.any((i) => i.enabled)) ...[
-            const SizedBox(height: 24),
-            SectionHeader(l10n.moduleInputs(module.inputs.length)),
-            for (int i = 0; i < module.inputs.length; i++)
-              if (module.inputs[i].enabled)
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                  child: InputFieldCard(
-                    input: module.inputs[i],
-                    onHoldChanged: (held) => _holdInput(module, i, held),
-                    onReleased: _refresh,
-                    onEdit: () => _editInput(module.inputs[i], i),
-                  ),
-                ),
-          ],
-        ],
+              const SizedBox(height: 16),
+              DimmerControlsSection(
+                module: live,
+                onEditChannel: (index) =>
+                    _editChannel(live.channels[index], index),
+              ),
+              if (live.inputs.any((i) => i.enabled)) ...[
+                const SizedBox(height: 24),
+                SectionHeader(l10n.moduleInputs(live.inputs.length)),
+                for (int i = 0; i < live.inputs.length; i++)
+                  if (live.inputs[i].enabled)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                      child: InputFieldCard(
+                        input: live.inputs[i],
+                        onHoldChanged: (held) => _holdInput(module, i, held),
+                        onReleased: _refresh,
+                        onEdit: () => _editInput(live.inputs[i], i),
+                      ),
+                    ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

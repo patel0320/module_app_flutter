@@ -158,6 +158,7 @@ abstract final class SoleuxControlApiActions {
   static const String dimmerOff = 'dimmer_off';
   static const String toggleDimmer = 'toggle_dimmer';
   static const String getDimmerFrequency = 'get_dimmer_frequency';
+  static const String setDimmerFrequency = 'set_dimmer_frequency';
 
   // PDU energy and override (§7).
   static const String getEnergySummary = 'get_energy_summary';

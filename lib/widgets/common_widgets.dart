@@ -407,6 +407,14 @@ class ModuleStatusHeader extends StatelessWidget {
 /// A single dimmer channel: name/icon, brightness readout, quick 0%/100%
 /// shortcuts and a slider - shared by the DC and AC dimmer screens (brief
 /// section 2.3).
+///
+/// In addition to the drag-based [onChanged]/[onChangeEnd] pair, the card can
+/// be wired to the dimmer Control API catalogue terms (§6): tapping the icon
+/// toggles the output ([onToggle] -> `toggle_dimmer`), the low shortcut fires
+/// [onTurnOff] (`dimmer_off`) and the high shortcut fires [onTurnOn]
+/// (`dimmer_on`, restoring the saved level). When a shortcut callback is
+/// omitted it falls back to the escalated [onChanged] + [onChangeEnd] pair so
+/// the card still works without a Control API unit.
 class DimmerChannelCard extends StatelessWidget {
   const DimmerChannelCard({
     super.key,
@@ -414,6 +422,9 @@ class DimmerChannelCard extends StatelessWidget {
     required this.onChanged,
     required this.onEdit,
     this.onChangeEnd,
+    this.onToggle,
+    this.onTurnOn,
+    this.onTurnOff,
   });
 
   final ChannelOutput channel;
@@ -422,6 +433,17 @@ class DimmerChannelCard extends StatelessWidget {
 
   /// Invoked once when a drag gesture ends, carrying the settled brightness.
   final ValueChanged<int>? onChangeEnd;
+
+  /// Tapping the channel icon. Used to `toggle_dimmer` (Control API §6.7).
+  final VoidCallback? onToggle;
+
+  /// Turning the output on at its saved level (`dimmer_on`, §6.5). Invoked by
+  /// the full-brightness shortcut when provided.
+  final VoidCallback? onTurnOn;
+
+  /// Turning the output off (`dimmer_off`, §6.6). Invoked by the low shortcut
+  /// when provided.
+  final VoidCallback? onTurnOff;
 
   @override
   Widget build(BuildContext context) {
@@ -434,7 +456,11 @@ class DimmerChannelCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                IconAvatar(icon: channel.icon, filled: isOn),
+                InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: onToggle,
+                  child: IconAvatar(icon: channel.icon, filled: isOn),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(channel.name,
@@ -454,8 +480,12 @@ class DimmerChannelCard extends StatelessWidget {
                   tooltip: AppLocalizations.of(context).cwTurnOff,
                   icon: const Icon(Icons.brightness_low),
                   onPressed: () {
-                    onChanged(0);
-                    onChangeEnd?.call(0);
+                    if (onTurnOff != null) {
+                      onTurnOff!();
+                    } else {
+                      onChanged(0);
+                      onChangeEnd?.call(0);
+                    }
                   },
                 ),
                 Expanded(
@@ -470,11 +500,15 @@ class DimmerChannelCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: AppLocalizations.of(context).cwFullBrightness,
+                  tooltip: AppLocalizations.of(context).cwTurnOn,
                   icon: const Icon(Icons.brightness_high),
                   onPressed: () {
-                    onChanged(100);
-                    onChangeEnd?.call(100);
+                    if (onTurnOn != null) {
+                      onTurnOn!();
+                    } else {
+                      onChanged(100);
+                      onChangeEnd?.call(100);
+                    }
                   },
                 ),
               ],

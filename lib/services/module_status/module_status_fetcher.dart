@@ -35,6 +35,8 @@ class ModuleStatusFetcherRegistry {
 
   void _registerBuiltIns() {
     register(const RelayModuleStatusFetcher());
+    register(const DimmerModuleStatusFetcher(ModuleType.dimmerDc));
+    register(const DimmerModuleStatusFetcher(ModuleType.dimmerAc));
   }
 
   /// Registers (or replaces) the fetcher for its module type.
@@ -46,4 +48,27 @@ class ModuleStatusFetcherRegistry {
 
   /// The set of module types the registry knows how to fetch today.
   Set<ModuleType> get supportedTypes => _fetchers.keys.toSet();
+}
+
+/// Fetcher for dimmer modules (DC PWM / AC phase-cut). Real dimmers speak the
+/// Control API: their live output state is parsed by [SoleuxJsonFetcher] during
+/// the JSON probe in `ModuleStatusService._probeSoleuxJson`/`_probeHttp`, and
+/// the dimmer Control API catalogue (§6) drives `DimmerControlService`. This
+/// fetcher exists so the legacy-fetcher gate in `_refreshOne` does not block
+/// dimmer modules from reaching that JSON probe. There is no legacy AT dimmer
+/// dump, so the AT path carries no commands and just reports reachability.
+class DimmerModuleStatusFetcher implements ModuleStatusFetcher {
+  const DimmerModuleStatusFetcher(this.type);
+
+  @override
+  final ModuleType type;
+
+  @override
+  List<String> get fetchCommands => const [];
+
+  @override
+  void apply(DeviceModule module, List<PduResponse> responses) {
+    // State is applied by the Control API path; keep the module online here.
+    module.status = ConnectionStatus.online;
+  }
 }

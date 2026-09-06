@@ -289,6 +289,8 @@
   "dimmerAcSubtitle": "Ieșiri dimare 220V AC",
   "dimmerDcSubtitle": "Ieșiri dimare 12-24V DC (PWM)",
   "dimmingChannelsHeader": "Canaluri de dimare ({count})",
+  "dimmerAllOutputs": "Toate ieșirile",
+  "dimmerFrequencyHeader": "Frecvență PWM",
 
   "blindHeader": "Ieșiri oblon / motor",
   "blindMovingUp": "Se mișcă în sus...",
@@ -352,6 +354,7 @@
   "cwStatusOffline": "Offline",
   "cwModuleSummary": "{ip} · {room}",
   "cwTurnOff": "Stinge",
+  "cwTurnOn": "Pornește",
   "cwFullBrightness": "Luminozitate maximă",
   "cwJustNow": "Chiar acum",
   "cwMinutesAgo": "acum {count} min",

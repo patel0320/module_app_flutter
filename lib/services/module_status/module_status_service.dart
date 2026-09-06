@@ -69,6 +69,85 @@ class ModuleStatusResult {
   int get total => online.length + offline.length;
 }
 
+/// One dimmer channel's requested/actual level and logical state, as returned
+/// by `get_dimmer_state` (§6.1) and `get_dimmer_levels` (§6.2) of the Control
+/// API specification.
+class DimmerStateSnapshot {
+  final int channel;
+  final bool state;
+  final double requestedLevel;
+  final double actualLevel;
+  final bool transitioning;
+
+  const DimmerStateSnapshot({
+    required this.channel,
+    required this.state,
+    required this.requestedLevel,
+    required this.actualLevel,
+    required this.transitioning,
+  });
+
+  /// Parses the flat `{channel, state, requested_level, actual_level,
+  /// transitioning}` object returned by both §6.1 and the entries of §6.2's
+  /// `outputs` list. Null when `channel` is absent or not numeric.
+  static DimmerStateSnapshot? fromMap(Map<String, dynamic> map) {
+    final channel = (map['channel'] as num?)?.toInt();
+    if (channel == null) return null;
+    final rawState = map['state'];
+    final rawTransitioning = map['transitioning'];
+    return DimmerStateSnapshot(
+      channel: channel,
+      state: rawState is bool ? rawState : false,
+      requestedLevel: (map['requested_level'] as num?)?.toDouble() ?? 0,
+      actualLevel: (map['actual_level'] as num?)?.toDouble() ?? 0,
+      transitioning: rawTransitioning is bool ? rawTransitioning : false,
+    );
+  }
+}
+
+/// Dimmer PWM/drive frequency as returned by `get_dimmer_frequency` (§6.8).
+class DimmerFrequencyInfo {
+  final int frequencyHz;
+
+  /// Supported values, or the enumerated range from the `allowed_hz` span
+  /// `{min,max}` form the spec allows.
+  final List<int> allowedHz;
+  final bool applyRequired;
+
+  const DimmerFrequencyInfo({
+    required this.frequencyHz,
+    required this.allowedHz,
+    required this.applyRequired,
+  });
+
+  /// Parses the §6.8 result; null when `frequency_hz` is missing.
+  static DimmerFrequencyInfo? fromMap(Map<String, dynamic> map) {
+    final hz = (map['frequency_hz'] as num?)?.toInt();
+    if (hz == null) return null;
+    final allowed = <int>[];
+    final raw = map['allowed_hz'];
+    if (raw is List) {
+      for (final value in raw) {
+        if (value is num) allowed.add(value.toInt());
+      }
+    } else if (raw is Map) {
+      final min = (raw['min'] as num?)?.toInt();
+      final max = (raw['max'] as num?)?.toInt();
+      if (min != null && max != null) {
+        for (var value = min; value <= max; value++) {
+          allowed.add(value);
+        }
+      }
+    }
+    final rawApply = map['apply_required'];
+    return DimmerFrequencyInfo(
+      frequencyHz: hz,
+      allowedHz: allowed,
+      applyRequired: rawApply is bool ? rawApply : false,
+    );
+  }
+}
+
 class ModuleStatusService {
   /// Per-module timeout for the whole exchange.
   static const Duration defaultTimeout = Duration(seconds: 2);
@@ -257,6 +336,275 @@ class ModuleStatusService {
           '$e\n$st');
       return false;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dimmer control catalogue facade (Control API spec §6). These commands are
+  // Control-API-only: they need the live [SoleuxControlApiService] unit and
+  // return false/null for legacy-AT sessions, whose dimmer control stays on the
+  // [setDimmerLevel] protocol facade above.
+  // ---------------------------------------------------------------------------
+
+  /// `get_dimmer_levels` (§6.2) - reads every dimmer requested/actual level
+  /// and state, or null when the module has no live Control API unit or the
+  /// command was rejected.
+  Future<List<DimmerStateSnapshot>?> getDimmerLevels(String moduleId) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return null;
+    try {
+      final response = await unit.getDimmerLevels();
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: get_dimmer_levels on $moduleId '
+            'rejected: ${response.error?.summary}');
+        return null;
+      }
+      final raw = response.result?['outputs'];
+      if (raw is! List) return null;
+      final levels = <DimmerStateSnapshot>[];
+      for (final item in raw) {
+        if (item is Map) {
+          final snapshot = DimmerStateSnapshot.fromMap(
+              Map<String, dynamic>.from(item));
+          if (snapshot != null) levels.add(snapshot);
+        }
+      }
+      return levels;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: get_dimmer_levels on $moduleId '
+          'failed: $e\n$st');
+      return null;
+    }
+  }
+
+  /// `get_dimmer_state` (§6.1) - reads one dimmer channel's relay state,
+  /// requested level and actual level.
+  Future<DimmerStateSnapshot?> getDimmerState(
+      String moduleId, int channel) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return null;
+    try {
+      final response = await unit.getDimmerState(channel);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: get_dimmer_state ($channel) on '
+            '$moduleId rejected: ${response.error?.summary}');
+        return null;
+      }
+      final result = response.result;
+      if (result == null) return null;
+      return DimmerStateSnapshot.fromMap(result);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: get_dimmer_state ($channel) on '
+          '$moduleId failed: $e\n$st');
+      return null;
+    }
+  }
+
+  /// Applies [getDimmerLevels]' snapshot to the live store channels (target
+  /// level -> brightness, state -> on/off), so screens show the module-reported
+  /// dimming without a full configuration re-fetch.
+  Future<void> syncDimmerLevels(String moduleId) async {
+    final levels = await getDimmerLevels(moduleId);
+    if (levels == null) return;
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    for (final snapshot in levels) {
+      if (snapshot.channel < 0 || snapshot.channel >= live.channels.length) {
+        continue;
+      }
+      final channel = live.channels[snapshot.channel];
+      channel.isOn = snapshot.state;
+      channel.brightness = snapshot.requestedLevel.round().clamp(0, 100);
+    }
+    _scheduleCommit();
+  }
+
+  /// `set_multiple_dimmer_levels` (§6.4) - sets several brightness levels
+  /// together. [targets] holds `{channel, level, transition_ms?}` maps.
+  Future<bool> setMultipleDimmerLevels(
+    String moduleId,
+    List<Map<String, dynamic>> targets, {
+    String? execution,
+    int? intervalMs,
+  }) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response = await unit.setMultipleDimmerLevels(targets,
+          execution: execution, intervalMs: intervalMs);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: set_multiple_dimmer_levels on '
+            '$moduleId rejected: ${response.error?.summary}');
+        return false;
+      }
+      _applyDimmerLevelsToStore(moduleId, response.result);
+      return true;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_multiple_dimmer_levels on '
+          '$moduleId failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// `dimmer_on` (§6.5) - turns one dimmer on at its saved requested level.
+  Future<bool> dimmerOn(
+      String moduleId, int channel, {int? transitionMs}) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response =
+          await unit.dimmerOn(channel, transitionMs: transitionMs);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: dimmer_on ($channel) on $moduleId '
+            'rejected: ${response.error?.summary}');
+        return false;
+      }
+      _applyDimmerResultToStore(moduleId, response.result);
+      return true;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: dimmer_on ($channel) on $moduleId '
+          'failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// `dimmer_off` (§6.6) - turns one dimmer off without discarding its saved
+  /// level.
+  Future<bool> dimmerOff(
+      String moduleId, int channel, {int? transitionMs}) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response =
+          await unit.dimmerOff(channel, transitionMs: transitionMs);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: dimmer_off ($channel) on $moduleId '
+            'rejected: ${response.error?.summary}');
+        return false;
+      }
+      _applyDimmerResultToStore(moduleId, response.result);
+      return true;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: dimmer_off ($channel) on $moduleId '
+          'failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// `toggle_dimmer` (§6.7) - toggles one dimmer while retaining its target
+  /// level.
+  Future<bool> toggleDimmer(
+      String moduleId, int channel, {int? transitionMs}) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response =
+          await unit.toggleDimmer(channel, transitionMs: transitionMs);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: toggle_dimmer ($channel) on '
+            '$moduleId rejected: ${response.error?.summary}');
+        return false;
+      }
+      _applyDimmerResultToStore(moduleId, response.result);
+      return true;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: toggle_dimmer ($channel) on $moduleId '
+          'failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// `get_dimmer_frequency` (§6.8) - reads the configured dimmer PWM/drive
+  /// frequency and its supported values.
+  Future<DimmerFrequencyInfo?> getDimmerFrequency(String moduleId) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return null;
+    try {
+      final response = await unit.getDimmerFrequency();
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: get_dimmer_frequency on $moduleId '
+            'rejected: ${response.error?.summary}');
+        return null;
+      }
+      final result = response.result;
+      if (result == null) return null;
+      return DimmerFrequencyInfo.fromMap(result);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: get_dimmer_frequency on $moduleId '
+          'failed: $e\n$st');
+      return null;
+    }
+  }
+
+  /// `set_dimmer_frequency` (§6.9) - changes the dimmer PWM/drive frequency.
+  /// [frequencyHz] must be one of the `allowed_hz` reported by
+  /// [getDimmerFrequency].
+  Future<bool> setDimmerFrequency(String moduleId, int frequencyHz,
+      {bool? applyNow}) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response = await unit
+          .setDimmerFrequency(frequencyHz, applyNow: applyNow);
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: set_dimmer_frequency ($frequencyHz) '
+            'on $moduleId rejected: ${response.error?.summary}');
+        return false;
+      }
+      return true;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_dimmer_frequency ($frequencyHz) '
+          'on $moduleId failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// Applies a per-channel dimmer result (`get_dimmer_state` shape or the
+  /// `{dimmer: {...}}` wrapper used by `dimmer_on`/`dimmer_off`/`toggle_dimmer`)
+  /// to the live store channel. The display brightness follows the saved
+  /// `requested_level` so an OFF dimmer keeps showing its target level.
+  void _applyDimmerResultToStore(
+      String moduleId, Map<String, dynamic>? result) {
+    if (result == null) return;
+    final wrapped = result['dimmer'];
+    final data =
+        wrapped is Map ? Map<String, dynamic>.from(wrapped) : result;
+    final channel = (data['channel'] as num?)?.toInt();
+    if (channel == null || channel < 0) return;
+    final live = store.byId(moduleId);
+    if (live == null || channel >= live.channels.length) return;
+    final output = live.channels[channel];
+    final rawState = data['state'];
+    if (rawState is bool) output.isOn = rawState;
+    final rawLevel = data['requested_level'] ?? data['actual_level'];
+    if (rawLevel is num) output.brightness = rawLevel.round().clamp(0, 100);
+    _scheduleCommit();
+  }
+
+  /// Applies a `set_multiple_dimmer_levels` result (ordered per-target
+  /// `channel`/`level`) to the live store channels.
+  void _applyDimmerLevelsToStore(
+      String moduleId, Map<String, dynamic>? result) {
+    if (result == null) return;
+    final raw = result['results'];
+    if (raw is! List) return;
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final data = Map<String, dynamic>.from(item);
+      final channel = (data['channel'] as num?)?.toInt();
+      if (channel == null || channel < 0 || channel >= live.channels.length) {
+        continue;
+      }
+      final output = live.channels[channel];
+      final rawLevel =
+          data['level'] ?? data['requested_level'] ?? data['actual_level'];
+      if (rawLevel is num) {
+        output.brightness = rawLevel.round().clamp(0, 100);
+        output.isOn = output.brightness > 0;
+      }
+    }
+    _scheduleCommit();
   }
 
   /// Sets the logical state of a virtual input (`set_virtual_input_state`,

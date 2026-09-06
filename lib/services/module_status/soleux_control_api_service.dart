@@ -153,10 +153,6 @@ abstract class SoleuxControlApiService {
       request(SoleuxJsonActions.setMapping,
           {'input': input, 'output': output, 'code': code});
 
-  /// `set_dimmer_frequency` (AC/DC Dimmer).
-  Future<SoleuxJsonResponse> setDimmerFrequency(Map<String, dynamic> values) =>
-      request(SoleuxJsonActions.setDimmerFrequency, values);
-
   /// `get_energy_history` (PDU Energy Meter). The date range must not exceed
   /// 365 days.
   Future<SoleuxJsonResponse> getEnergyHistory(
@@ -269,6 +265,26 @@ abstract class SoleuxControlApiService {
           {'include_configuration': includeConfiguration},
           timeout: timeout);
 
+  /// `get_dimmer_state` - read relay state, requested level and actual level
+  /// for one dimmer (spec §6.1).
+  Future<SoleuxJsonResponse> getDimmerState(
+    int channel, {
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+        SoleuxControlApiActions.getDimmerState,
+        {'channel': channel},
+        timeout: timeout,
+      );
+
+  /// `get_dimmer_levels` - read all dimmer requested and actual levels
+  /// (spec §6.2).
+  Future<SoleuxJsonResponse> getDimmerLevels({
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getDimmerLevels, const {},
+          timeout: timeout);
+
   /// `get_device_state` - complete synchronization snapshot (spec §2.3).
   Future<SoleuxJsonResponse> getDeviceState({
     List<String> include = const ['inputs', 'outputs', 'sensors'],
@@ -299,6 +315,93 @@ abstract class SoleuxControlApiService {
             'level': level,
             if (transitionMs != null) 'transition_ms': transitionMs,
             if (turnOn != null) 'turn_on': turnOn,
+          },
+          timeout: timeout);
+
+  /// `set_multiple_dimmer_levels` - set several brightness levels together
+  /// (spec §6.4). `targets` holds `{channel, level, transition_ms?}` maps.
+  Future<SoleuxJsonResponse> setMultipleDimmerLevels(
+    List<Map<String, dynamic>> targets, {
+    String? execution,
+    int? intervalMs,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.setMultipleDimmerLevels,
+          {
+            'outputs': targets,
+            if (execution != null) 'execution': execution,
+            if (intervalMs != null) 'interval_ms': intervalMs,
+          },
+          timeout: timeout);
+
+  /// `dimmer_on` - turn on one dimmer using its saved requested level
+  /// (spec §6.5). Result carries the resulting `dimmer` state.
+  Future<SoleuxJsonResponse> dimmerOn(
+    int channel, {
+    int? transitionMs,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.dimmerOn,
+          {
+            'channel': channel,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+          },
+          timeout: timeout);
+
+  /// `dimmer_off` - turn off one dimmer without discarding its saved level
+  /// (spec §6.6). Result carries the resulting `dimmer` state.
+  Future<SoleuxJsonResponse> dimmerOff(
+    int channel, {
+    int? transitionMs,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.dimmerOff,
+          {
+            'channel': channel,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+          },
+          timeout: timeout);
+
+  /// `toggle_dimmer` - toggle one dimmer while retaining its target level
+  /// (spec §6.7). Result carries the resulting `dimmer` state.
+  Future<SoleuxJsonResponse> toggleDimmer(
+    int channel, {
+    int? transitionMs,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.toggleDimmer,
+          {
+            'channel': channel,
+            if (transitionMs != null) 'transition_ms': transitionMs,
+          },
+          timeout: timeout);
+
+  /// `get_dimmer_frequency` - read configured dimmer PWM/drive frequency
+  /// (spec §6.8). Result carries `frequency_hz`, `allowed_hz` and
+  /// `apply_required`.
+  Future<SoleuxJsonResponse> getDimmerFrequency({
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.getDimmerFrequency, const {},
+          timeout: timeout);
+
+  /// `set_dimmer_frequency` - change dimmer PWM/drive frequency (spec §6.9).
+  /// `frequency_hz` must be one of `allowed_hz` reported by
+  /// [getDimmerFrequency]; [applyNow] applies immediately when true (default).
+  Future<SoleuxJsonResponse> setDimmerFrequency(
+    int frequencyHz, {
+    bool? applyNow,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(
+          SoleuxControlApiActions.setDimmerFrequency,
+          {
+            'frequency_hz': frequencyHz,
+            if (applyNow != null) 'apply_now': applyNow,
           },
           timeout: timeout);
 

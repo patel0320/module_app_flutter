@@ -320,6 +320,8 @@
   "dimmerDcSubtitle": "12-24V DC dimming outputs (PWM)",
   "dimmingChannelsHeader": "Dimming Channels ({count})",
   "@dimmingChannelsHeader": {"placeholders": {"count": {"type": "int"}}},
+  "dimmerAllOutputs": "All outputs",
+  "dimmerFrequencyHeader": "PWM Frequency",
 
   "blindHeader": "Blind / Motor Outputs",
   "blindMovingUp": "Moving up...",
@@ -388,6 +390,7 @@
   "cwModuleSummary": "{ip} \u00b7 {room}",
   "@cwModuleSummary": {"placeholders": {"ip": {"type": "String"}, "room": {"type": "String"}}},
   "cwTurnOff": "Turn off",
+  "cwTurnOn": "Turn on",
   "cwFullBrightness": "Full brightness",
   "cwJustNow": "Just now",
   "cwMinutesAgo": "{count} min ago",
