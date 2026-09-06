@@ -76,7 +76,7 @@ void main() {
     expect(module.channels[2].name, 'Floodlight');
     expect(module.channels[2].isOn, isTrue);
     expect(module.inputs.length, 1);
-    expect(module.inputs[0].label, 'Door');
+    expect(module.inputs[0].name, 'Door');
   });
 
   test('dimmer outputs take PWM brightness from the configuration', () {

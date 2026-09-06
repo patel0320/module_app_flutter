@@ -138,9 +138,9 @@ class ModuleStore extends ChangeNotifier {
           i < priorInputs.length
               ? PhysicalInput(
                   id: priorInputs[i].id,
-                  label: priorInputs[i].label,
+                  name: priorInputs[i].name,
                   mode: priorInputs[i].mode,
-                  boundTo: priorInputs[i].boundTo,
+                  enabled: priorInputs[i].enabled,
                 )
               : fresh.inputs[i],
       ]);

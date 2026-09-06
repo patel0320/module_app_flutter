@@ -55,19 +55,16 @@ List<DeviceModule> mockModules() => [
         inputs: [
           PhysicalInput(
               id: 'm1i1',
-              label: 'Switch 1',
-              mode: InputMode.toggle,
-              boundTo: 'Cabin Light'),
+              name: 'Switch 1',
+              mode: InputMode.maintained),
           PhysicalInput(
               id: 'm1i2',
-              label: 'Switch 2',
-              mode: InputMode.associated,
-              boundTo: 'Departure (scenario)'),
+              name: 'Switch 2',
+              mode: InputMode.pulse),
           PhysicalInput(
               id: 'm1i3',
-              label: 'Switch 3',
-              mode: InputMode.momentary,
-              boundTo: 'Deck Floodlight'),
+              name: 'Switch 3',
+              mode: InputMode.momentary),
         ],
       ),
       DeviceModule(
@@ -87,9 +84,8 @@ List<DeviceModule> mockModules() => [
         inputs: [
           PhysicalInput(
               id: 'm2i1',
-              label: 'Switch 1',
-              mode: InputMode.associated,
-              boundTo: 'Salon Blind'),
+              name: 'Switch 1',
+              mode: InputMode.maintained),
         ],
       ),
       DeviceModule(

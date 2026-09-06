@@ -210,8 +210,8 @@ void main() {
       final module = _relayModule();
       fetcher.apply(module, [PduResponse.parse('IN:0:ON\r\nIN:2:ON')]);
       expect(module.inputs.length, 3);
-      expect(module.inputs[0].label, 'Switch 1');
-      expect(module.inputs[2].label, 'Switch 3');
+      expect(module.inputs[0].name, 'Switch 1');
+      expect(module.inputs[2].name, 'Switch 3');
     });
 
     test('new inputs adopt the device-reported names', () {
@@ -222,8 +222,8 @@ void main() {
             'IN:0:ON\r\nIN:1:OFF\r\nCHNAME_IN:0:Front Door\r\nCHNAME_IN:1:Engine Room'),
       ]);
       expect(module.inputs.length, 2);
-      expect(module.inputs[0].label, 'Front Door');
-      expect(module.inputs[1].label, 'Engine Room');
+      expect(module.inputs[0].name, 'Front Door');
+      expect(module.inputs[1].name, 'Engine Room');
     });
   });
 

@@ -119,10 +119,10 @@ abstract class BaseModuleStatusFetcher implements ModuleStatusFetcher {
       final deviceName = inputNames[index];
       module.inputs.add(PhysicalInput(
         id: '${module.id}i${index + 1}',
-        label: (deviceName != null && deviceName.isNotEmpty)
+        name: (deviceName != null && deviceName.isNotEmpty)
             ? deviceName
             : 'Switch ${index + 1}',
-        mode: InputMode.toggle,
+        mode: InputMode.momentary,
       ));
     }
     if (module.inputs.length > targetCount) {

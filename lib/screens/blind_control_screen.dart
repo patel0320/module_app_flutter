@@ -11,6 +11,7 @@ import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import 'input_editor_screen.dart';
 
 enum _Motion { idle, up, down }
 
@@ -52,6 +53,18 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
     });
   }
 
+  Future<void> _editInput(PhysicalInput input, int index) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) => InputEditorScreen(
+              input: input, module: widget.module, index: index)),
+    );
+    setState(() {});
+  }
+
+  Future<void> _holdInput(DeviceModule module, int index, bool held) =>
+      ModuleStatusService.shared.setVirtualInputState(module.id, index, held);
+
   @override
   Widget build(BuildContext context) {
     final module = widget.module;
@@ -84,6 +97,21 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
                 onDown: () => _press(channel, _Motion.down),
               ),
             ),
+          if (module.inputs.any((i) => i.enabled)) ...[
+            const SizedBox(height: 24),
+            SectionHeader(l10n.moduleInputs(module.inputs.length)),
+            for (int i = 0; i < module.inputs.length; i++)
+              if (module.inputs[i].enabled)
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                  child: InputFieldCard(
+                    input: module.inputs[i],
+                    onHoldChanged: (held) => _holdInput(module, i, held),
+                    onEdit: () => _editInput(module.inputs[i], i),
+                  ),
+                ),
+          ],
         ],
       ),
     );

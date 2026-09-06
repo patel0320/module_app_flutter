@@ -486,6 +486,101 @@ class DimmerChannelCard extends StatelessWidget {
   }
 }
 
+/// A single input field on a module screen. Tapping the card opens the input
+/// configuration page ([onEdit]); the large action button is press-and-hold -
+/// touching it calls [onHoldChanged] with `true`, releasing it with `false`,
+/// which drives the associated virtual input (`set_virtual_input_state`).
+class InputFieldCard extends StatelessWidget {
+  const InputFieldCard({
+    super.key,
+    required this.input,
+    required this.onHoldChanged,
+    required this.onEdit,
+  });
+
+  final PhysicalInput input;
+  final ValueChanged<bool> onHoldChanged;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: onEdit,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.toggle_on_outlined, size: 28),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(input.name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
+                          const SizedBox(height: 2),
+                          Text(
+                            input.mode.label,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: onSurface.withValues(alpha: 0.55)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (_) => onHoldChanged(true),
+              onTapUp: (_) => onHoldChanged(false),
+              onTapCancel: () => onHoldChanged(false),
+              child: Container(
+                height: 56,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.touch_app,
+                        color: scheme.onSecondaryContainer),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.inputHoldToActivate,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSecondaryContainer),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Formats a [DateTime] as a short relative-ish timestamp for log lists.
 String formatLogTimestamp(DateTime time, AppLocalizations l10n) {
   final Duration diff = DateTime.now().difference(time);

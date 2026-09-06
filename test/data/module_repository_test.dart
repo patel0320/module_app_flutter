@@ -24,7 +24,7 @@ void main() {
         ],
         inputs: [
           PhysicalInput(
-              id: '$id-i1', label: 'Switch 1', mode: InputMode.toggle),
+              id: '$id-i1', name: 'Switch 1', mode: InputMode.maintained),
         ],
       );
 
@@ -49,7 +49,7 @@ void main() {
     expect(modules.first.type, ModuleType.relay);
     expect(modules.first.channels.single.name, 'Light');
     expect(modules.first.channels.single.icon, Icons.lightbulb);
-    expect(modules.first.inputs.single.mode, InputMode.toggle);
+    expect(modules.first.inputs.single.mode, InputMode.maintained);
   });
 
   test('add replaces an existing module with the same id', () async {

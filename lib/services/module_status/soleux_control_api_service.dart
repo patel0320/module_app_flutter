@@ -134,6 +134,20 @@ abstract class SoleuxControlApiService {
       request(SoleuxJsonActions.setInputConfiguration,
           {'channel': channel, ...values});
 
+  /// `set_virtual_input_state` - set and retain a virtual input's state
+  /// (Control API spec §3.4).
+  Future<SoleuxJsonResponse> setVirtualInputState(
+    int channel,
+    bool state, {
+    String? source,
+    Duration timeout = const Duration(seconds: 5),
+  }) =>
+      request(SoleuxControlApiActions.setVirtualInputState, {
+        'channel': channel,
+        'state': state,
+        if (source != null) 'source': source,
+      }, timeout: timeout);
+
   /// `set_mapping` - input->output mapping (code 0..5).
   Future<SoleuxJsonResponse> setMapping(int input, int output, int code) =>
       request(SoleuxJsonActions.setMapping,

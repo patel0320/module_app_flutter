@@ -283,6 +283,8 @@
   "relayPhysicalInputs": "Intrări fizice",
   "relayOutput": "Ieșire {number}",
   "relayInputSummary": "{mode} · legat la {target}",
+  "moduleInputs": "Intrări ({count})",
+  "inputHoldToActivate": "Apăsați și mențineți",
 
   "dimmerAcSubtitle": "Ieșiri dimare 220V AC",
   "dimmerDcSubtitle": "Ieșiri dimare 12-24V DC (PWM)",
@@ -317,6 +319,10 @@
 
   "inputEditorOnModule": "Pe modulul: {name}",
   "inputEditorBehavior": "Comportament",
+  "inputEditorName": "Nume",
+  "inputEditorEnabled": "Activat",
+  "inputEditorEnabledHint": "Când este activat, această intrare este afișată pe ecranul modulului.",
+  "inputEditorBehaviorHint": "Apăsarea și menținerea trimite întotdeauna un impuls către intrarea virtuală; acest comportament se aplică intrării fizice mapate.",
   "inputEditorBoundTarget": "Ținta legată",
   "inputEditorOutputScenarioLabel": "Ieșire sau scenariu",
   "inputEditorNotAssigned": "Neatribuită",

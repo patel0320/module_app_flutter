@@ -259,6 +259,61 @@ class ModuleStatusService {
     }
   }
 
+  /// Sets the logical state of a virtual input (`set_virtual_input_state`,
+  /// Control API spec §3.4). Pressing-and-holding an input's action button
+  /// sends `true`, releasing it sends `false`. Requires a live Control API
+  /// unit; returns false when the module is offline.
+  Future<bool> setVirtualInputState(
+      String moduleId, int index, bool state) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response = await unit.setVirtualInputState(index, state,
+          source: 'app');
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: set_virtual_input_state '
+            '($index, $state) on $moduleId rejected: '
+            '${response.error?.summary}');
+      }
+      return response.ok;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_virtual_input_state '
+          '($index, $state) on $moduleId failed: $e\n$st');
+      return false;
+    }
+  }
+
+  /// Saves an input's configuration (`set_input_configuration`, Control API
+  /// spec §3.3): its display [name], [enabled] flag (whether it shows up in
+  /// the module screen) and behaviour [mode]. Returns whether the module
+  /// accepted the change.
+  Future<bool> updateInputConfiguration(
+    String moduleId,
+    int index, {
+    String? name,
+    bool? enabled,
+    InputMode? mode,
+  }) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return false;
+    try {
+      final response = await unit.setInputConfiguration(index, {
+        if (name != null) 'name': name,
+        if (enabled != null) 'enabled': enabled,
+        if (mode != null) 'mode': mode.name,
+      });
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: set_input_configuration '
+            '($index) on $moduleId rejected: ${response.error?.summary}');
+      }
+      return response.ok;
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: set_input_configuration '
+          '($index) on $moduleId failed: $e\n$st');
+      return false;
+    }
+  }
+
   Future<bool> _setOutputState(String moduleId, int index, bool state) async {
     final protocol = commandProtocolFor(moduleId);
     if (protocol == null) return false;

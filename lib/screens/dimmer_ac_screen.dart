@@ -12,6 +12,7 @@ import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'channel_editor_screen.dart';
+import 'input_editor_screen.dart';
 
 class DimmerAcScreen extends StatefulWidget {
   const DimmerAcScreen({super.key, required this.module});
@@ -35,6 +36,18 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
     }
     setState(() {});
   }
+
+  Future<void> _editInput(PhysicalInput input, int index) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) => InputEditorScreen(
+              input: input, module: widget.module, index: index)),
+    );
+    setState(() {});
+  }
+
+  Future<void> _holdInput(DeviceModule module, int index, bool held) =>
+      ModuleStatusService.shared.setVirtualInputState(module.id, index, held);
 
   Future<void> _editModuleInfo() async {
     final saved = await showEditModuleInfoDialog(context, widget.module);
@@ -96,6 +109,21 @@ class _DimmerAcScreenState extends State<DimmerAcScreen> {
                 onEdit: () => _editChannel(channel),
               ),
             ),
+          if (module.inputs.any((i) => i.enabled)) ...[
+            const SizedBox(height: 24),
+            SectionHeader(l10n.moduleInputs(module.inputs.length)),
+            for (int i = 0; i < module.inputs.length; i++)
+              if (module.inputs[i].enabled)
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                  child: InputFieldCard(
+                    input: module.inputs[i],
+                    onHoldChanged: (held) => _holdInput(module, i, held),
+                    onEdit: () => _editInput(module.inputs[i], i),
+                  ),
+                ),
+          ],
         ],
       ),
     );

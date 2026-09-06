@@ -84,6 +84,7 @@ COMMON_ACTIONS = {
 }
 RELAY_ACTIONS = COMMON_ACTIONS | {
     "set_input_configuration", "set_output_configuration", "set_mapping",
+    "set_virtual_input_state", "trigger_virtual_input",
     "write_hardware", "settings_backup_download_begin", "transfer_upload_begin",
     "transfer_upload_chunk", "transfer_upload_finish", "transfer_download_chunk",
     "transfer_download_finish", "transfer_commit",
@@ -191,8 +192,14 @@ class ModuleState:
         self.mac = parse_mac(mac)
 
         self.inputs = [
-            {"name": f"Switch {i + 1}", "state": False, "enabled": 1}
+            {"name": f"Switch {i + 1}", "state": False, "enabled": 1,
+             "mode": "momentary"}
             for i in range(profile["input_count"])
+        ]
+        self.virtual_inputs = [
+            {"name": f"Virtual {i + 1}", "state": False, "enabled": 1,
+             "mode": "momentary"}
+            for i in range(profile["virtual_input_count"])
         ]
         self.outputs = []
         for ch in range(profile["output_count"]):
@@ -326,16 +333,29 @@ def outputs_payload(state):
 
 
 def inputs_payload(state):
-    return [
+    physical = [
         {"kind": "physical", "channel": ch, "name": inp["name"],
-         "enabled": bool(inp["enabled"]), "state": inp["state"]}
+         "enabled": bool(inp["enabled"]), "state": inp["state"],
+         "mode": inp["mode"]}
         for ch, inp in enumerate(state.inputs)
     ]
+    virtual = [
+        {"kind": "virtual", "channel": ch, "name": vin["name"],
+         "enabled": bool(vin["enabled"]), "state": vin["state"],
+         "mode": vin["mode"]}
+        for ch, vin in enumerate(state.virtual_inputs)
+    ]
+    return physical, virtual
 
 
 # Legacy numeric mapping-code -> control behaviour name (spec §5.1).
 CODE_TO_BEHAVIOR = {0: "none", 1: "on", 2: "off", 3: "toggle",
                     4: "continuous_on", 5: "continuous_off"}
+
+
+def _release_virtual(state, channel):
+    if 0 <= channel < len(state.virtual_inputs):
+        state.virtual_inputs[channel]["state"] = False
 
 
 def build_page(state, page):
@@ -458,6 +478,12 @@ def handle_json_action(state, action, params, req_id):
             inp["name"] = str(params["name"])
         if "enabled" in params:
             inp["enabled"] = 1 if params["enabled"] else 0
+        if "mode" in params:
+            mode = str(params["mode"])
+            if mode not in ("momentary", "maintained", "pulse"):
+                raise RequestError(f"invalid mode '{mode}'",
+                                   "invalid_configuration")
+            inp["mode"] = mode
         return {"channel": channel, "saved": True}
 
     if action == "set_output_configuration":
@@ -628,12 +654,39 @@ def handle_control_api_action(state, action, params, req_id):
         return {"outputs": outputs_payload(state), "revision": 1}
 
     if action == "get_inputs":
-        return {"inputs": inputs_payload(state), "virtual_inputs": [],
-                "revision": 1}
+        physical, virtual = inputs_payload(state)
+        return {"inputs": physical, "virtual_inputs": virtual, "revision": 1}
+
+    if action == "set_virtual_input_state":
+        channel = int(params.get("channel", -1))
+        if not (0 <= channel < len(state.virtual_inputs)):
+            raise RequestError(f"virtual input {channel} out of range")
+        vin = state.virtual_inputs[channel]
+        if not vin["enabled"]:
+            raise RequestError("virtual input disabled", "input_disabled")
+        new_state = bool(params.get("state", False))
+        changed = vin["state"] != new_state
+        vin["state"] = new_state
+        return {"channel": channel, "state": new_state, "changed": changed}
+
+    if action == "trigger_virtual_input":
+        channel = int(params.get("channel", -1))
+        if not (0 <= channel < len(state.virtual_inputs)):
+            raise RequestError(f"virtual input {channel} out of range")
+        vin = state.virtual_inputs[channel]
+        if not vin["enabled"]:
+            raise RequestError("virtual input disabled", "input_disabled")
+        duration = int(params.get("duration_ms", 100))
+        vin["state"] = True
+        threading.Timer(duration / 1000.0,
+                        lambda: _release_virtual(state, channel)).start()
+        return {"channel": channel, "triggered": True,
+                "release_in_ms": duration}
 
     if action == "get_device_state":
+        physical, virtual = inputs_payload(state)
         return {"revision": 1, "captured_at": now_str(),
-                "inputs": inputs_payload(state),
+                "inputs": physical, "virtual_inputs": virtual,
                 "outputs": outputs_payload(state),
                 "sensors": [], "faults": []}
 

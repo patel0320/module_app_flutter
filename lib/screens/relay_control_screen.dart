@@ -38,14 +38,21 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
     setState(() {});
   }
 
-  Future<void> _editInput(PhysicalInput input) async {
+  Future<void> _editInput(PhysicalInput input, int index) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-          builder: (_) =>
-              InputEditorScreen(input: input, module: widget.module)),
+          builder: (_) => InputEditorScreen(
+              input: input, module: widget.module, index: index)),
     );
     setState(() {});
   }
+
+  /// Drives the input's virtual input: sending `true` on touch start and
+  /// `false` on touch end (set_virtual_input_state). Results in no state
+  /// change when the module is offline.
+  Future<void> _holdInput(DeviceModule module, int index, bool held) =>
+      ModuleStatusService.shared
+          .setVirtualInputState(module.id, index, held);
 
   Future<void> _editModuleInfo() async {
     final saved = await showEditModuleInfoDialog(context, widget.module);
@@ -130,14 +137,19 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
                 ),
               if (module.inputs.isNotEmpty) ...[
                 const SizedBox(height: 24),
-                SectionHeader(l10n.relayPhysicalInputs),
-                for (final input in module.inputs)
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                    child:
-                        _InputRow(input: input, onTap: () => _editInput(input)),
-                  ),
+                SectionHeader(l10n.moduleInputs(module.inputs.length)),
+                for (int i = 0; i < module.inputs.length; i++)
+                  if (module.inputs[i].enabled)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          bottom: AppSpacing.betweenCards),
+                      child: InputFieldCard(
+                        input: module.inputs[i],
+                        onHoldChanged: (held) =>
+                            _holdInput(module, i, held),
+                        onEdit: () => _editInput(module.inputs[i], i),
+                      ),
+                    ),
               ],
             ],
           ),
@@ -195,51 +207,6 @@ class _OutputRow extends StatelessWidget {
             IconButton(
                 icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InputRow extends StatelessWidget {
-  const _InputRow({required this.input, required this.onTap});
-
-  final PhysicalInput input;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final l10n = AppLocalizations.of(context);
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              const Icon(Icons.toggle_on_outlined, size: 32),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(input.label,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.relayInputSummary(input.mode.label, input.boundTo),
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: onSurface.withValues(alpha: 0.55)),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
         ),
       ),
     );

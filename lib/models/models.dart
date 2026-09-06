@@ -45,18 +45,20 @@ extension ModuleTypeX on ModuleType {
 /// green (online) or red (offline) dot - see brief section 2.1.
 enum ConnectionStatus { online, offline }
 
-/// Physical switch input behaviour - brief section 2.2.
-enum InputMode { momentary, toggle, associated }
+/// Input field behaviour - the Control API `set_input_configuration` `mode`
+/// (momentary | maintained | pulse), see
+/// doc/Soleux_Control_API_Command_Specification_v0.3.md §3.3.
+enum InputMode { momentary, maintained, pulse }
 
 extension InputModeX on InputMode {
   String get label {
     switch (this) {
       case InputMode.momentary:
         return 'Momentary';
-      case InputMode.toggle:
-        return 'Toggle';
-      case InputMode.associated:
-        return 'Associated';
+      case InputMode.maintained:
+        return 'Maintained';
+      case InputMode.pulse:
+        return 'Pulse';
     }
   }
 
@@ -64,10 +66,10 @@ extension InputModeX on InputMode {
     switch (this) {
       case InputMode.momentary:
         return 'The action is executed only while the button is pressed.';
-      case InputMode.toggle:
-        return 'Each press toggles the state (ON/OFF) of an output or scenario.';
-      case InputMode.associated:
-        return 'The input is linked directly to a specific output or scenario.';
+      case InputMode.maintained:
+        return 'The state stays ON until the button is pressed again.';
+      case InputMode.pulse:
+        return 'A press pulses the input for a fixed duration, then releases it.';
     }
   }
 }
@@ -197,33 +199,48 @@ IconData iconFromJson(Object? json) {
   return Icons.power;
 }
 
-/// A physical switch wired to a module (brief section 2.2).
+/// An input field shown on a module screen: pressing-and-holding its action
+/// button drives the associated virtual input (`set_virtual_input_state`), and
+/// its configuration (name / behaviour / enabled) is pushed with
+/// `set_input_configuration`.
 class PhysicalInput {
   PhysicalInput({
     required this.id,
-    required this.label,
-    this.mode = InputMode.toggle,
-    this.boundTo = 'Not assigned',
+    required this.name,
+    this.mode = InputMode.momentary,
+    this.enabled = true,
   });
 
   final String id;
-  final String label;
+  String name;
   InputMode mode;
-  String boundTo;
+
+  /// When false the input is hidden from its module screen.
+  bool enabled;
 
   Map<String, Object?> toJson() => {
         'id': id,
-        'label': label,
+        'name': name,
         'mode': mode.name,
-        'boundTo': boundTo,
+        'enabled': enabled,
       };
 
   factory PhysicalInput.fromJson(Map<String, Object?> json) => PhysicalInput(
         id: json['id'] as String,
-        label: json['label'] as String,
-        mode: InputMode.values.byName(json['mode'] as String),
-        boundTo: json['boundTo'] as String? ?? 'Not assigned',
+        name: (json['name'] ?? json['label']) as String? ?? 'Switch',
+        mode: _inputModeFromJson(json['mode']),
+        enabled: json['enabled'] as bool? ?? true,
       );
+
+  /// Maps a persisted `mode` value to [InputMode], tolerating the legacy
+  /// `toggle` / `associated` values so old saved data still loads.
+  static InputMode _inputModeFromJson(Object? raw) => switch (raw) {
+        'momentary' => InputMode.momentary,
+        'maintained' => InputMode.maintained,
+        'pulse' => InputMode.pulse,
+        'toggle' || 'associated' => InputMode.maintained,
+        _ => InputMode.momentary,
+      };
 }
 
 /// A hardware module added to the system (brief section 2.1).

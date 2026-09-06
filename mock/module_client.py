@@ -840,6 +840,12 @@ class _V2Api:
         params.update(opts)
         return self.call("set_input_configuration", params)
 
+    def set_virtual_input_state(self, channel, state, source=None):
+        params = {"channel": int(channel), "state": bool(state)}
+        if source is not None:
+            params["source"] = source
+        return self.call("set_virtual_input_state", params)
+
     def set_mapping(self, input_ch, output_ch, code):
         if isinstance(code, str):
             code = BEHAVIOUR_TO_CODE[code]
