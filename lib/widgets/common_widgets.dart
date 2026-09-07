@@ -524,15 +524,14 @@ class DimmerChannelCard extends StatelessWidget {
 }
 
 /// A single input field on a module screen. Tapping the card opens the input
-/// configuration page ([onEdit]); the large action button is press-and-hold -
-/// touching it calls [onHoldChanged] with `true`, releasing it with `false`,
-/// which drives the associated virtual input (`set_virtual_input_state`).
-/// Releasing the button also fires [onReleased] so the caller can re-fetch
-/// module info and refresh the input/output state shown on screen.
+/// configuration page ([onEdit]); the action button drives the associated
+/// virtual input (`set_virtual_input_state`): each press sends `true`, waits
+/// 100 ms, then sends `false`.
 ///
-/// A press is only accepted once the previous press's release command
-/// (the `set_virtual_input_state` `false`) has received its response, so rapid
-/// repeats never pile up on the transport while a command is still in flight.
+/// A press is ignored while a previous press's `false` command is still
+/// awaiting its response, so rapid repeats never pile up on the transport.
+/// After the `false` response arrives, [onReleased] fires so the caller can
+/// re-fetch module info and refresh the input/output state shown on screen.
 class InputFieldCard extends StatefulWidget {
   const InputFieldCard({
     super.key,
@@ -552,32 +551,27 @@ class InputFieldCard extends StatefulWidget {
 }
 
 class _InputFieldCardState extends State<InputFieldCard> {
-  bool _pressed = false;
+  static const int _pressDelayMs = 100;
+
   bool _busy = false;
 
-  void _press() {
-    if (_pressed || _busy) return;
-    setState(() => _pressed = true);
-    widget.onHoldChanged(true);
-  }
-
-  Future<void> _release() async {
-    if (!_pressed || _busy) return;
-    // Lock the button until the release command's response arrives; the next
-    // press can only happen once it has completed.
-    setState(() {
-      _pressed = false;
-      _busy = true;
-    });
+  /// Fires a single press action: drives the virtual input `true`, waits
+  /// [_pressDelayMs], then drives it `false`. The button stays locked
+  /// ([_busy]) until the `false` command's response arrives, so the next
+  /// press is ignored while one is still in flight.
+  Future<void> _fire() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    await widget.onHoldChanged(true);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await Future<void>.delayed(const Duration(milliseconds: _pressDelayMs));
+    if (!mounted) return;
+    setState(() => _busy = true);
     await widget.onHoldChanged(false);
     if (!mounted) return;
     setState(() => _busy = false);
     widget.onReleased?.call();
-  }
-
-  void _cancel() {
-    if (!_pressed) return;
-    setState(() => _pressed = false);
   }
 
   @override
@@ -627,24 +621,20 @@ class _InputFieldCardState extends State<InputFieldCard> {
             const SizedBox(width: 8),
             Listener(
               behavior: HitTestBehavior.opaque,
-              onPointerDown: (_) => _press(),
-              onPointerUp: (_) => _release(),
-              onPointerCancel: (_) => _cancel(),
+              onPointerDown: (_) => _fire(),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _pressed || _busy
-                      ? scheme.primary
-                      : scheme.secondaryContainer,
+                  color: _busy ? scheme.primary : scheme.secondaryContainer,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.play_arrow,
                   size: 28,
-                  color: _pressed || _busy
+                  color: _busy
                       ? scheme.onPrimary
                       : scheme.onSecondaryContainer,
                 ),
