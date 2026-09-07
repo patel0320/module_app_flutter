@@ -27,10 +27,11 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          for (final scenario in scenarios)
+          for (final (scenario, roomName) in scenarios)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: HomeQuickActionCard(scenario: scenario),
+              child: HomeQuickActionCard(
+                  scenario: scenario, roomName: roomName),
             ),
           const SizedBox(height: 16),
           Text('Temperature', style: Theme.of(context).textTheme.titleLarge),
