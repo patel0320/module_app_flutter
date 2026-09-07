@@ -171,10 +171,11 @@ abstract class SoleuxControlApiService {
   // the legacy AT+ control operations: set_output_state / toggle_output /
   // restart_output replace ON/OFF/TOGGLE/RESTART and masked AT operations,
   // set_dimmer_level replaces the dimmer brightness command, and ping replaces
-  // `AT\r`. The dimmer catalogue (§6) below - get_dimmer_state,
-  // get_dimmer_levels, set_dimmer_level, set_multiple_dimmer_levels,
-  // dimmer_on, dimmer_off, toggle_dimmer, get_dimmer_frequency and
-  // set_dimmer_frequency - is the new API command set served on the Control API
+  // `AT\r`. Dimmer level read-back goes through get_device_state (set_pwm /
+  // actual_pwm) and dimmer on/off through set_output_state, replacing the
+  // retired get_dimmer_state/get_dimmer_levels/dimmer_on/dimmer_off commands.
+  // set_dimmer_level, set_multiple_dimmer_levels, toggle_dimmer,
+  // get_dimmer_frequency and set_dimmer_frequency remain on the Control API
   // port (legacy port + 3, 5008 by default). Unimplemented catalogue actions
   // return the common `unsupported_command` error, which the caller can use to
   // fall back to the implemented subset.
@@ -269,25 +270,52 @@ abstract class SoleuxControlApiService {
           {'include_configuration': includeConfiguration},
           timeout: timeout);
 
-  /// `get_dimmer_state` - read relay state, requested level and actual level
-  /// for one dimmer (spec §6.1).
+  /// Reads one dimmer channel's state via `get_device_state`, returning the
+  /// matching `outputs` entry (with `set_pwm`/`actual_pwm`) so callers can build
+  /// a [DimmerStateSnapshot]. Returns a response whose `result` is the flat
+  /// per-channel map (channel/state/set_pwm/actual_pwm) or null when the channel
+  /// is absent from the snapshot.
   Future<SoleuxJsonResponse> getDimmerState(
     int channel, {
     Duration timeout = const Duration(seconds: 5),
-  }) =>
-      request(
-        SoleuxControlApiActions.getDimmerState,
-        {'channel': channel},
-        timeout: timeout,
-      );
+  }) async {
+    final response = await getDeviceState(timeout: timeout);
+    if (!response.ok || response.result == null) return response;
+    final outputs = response.result!['outputs'];
+    Map<String, dynamic>? entry;
+    if (outputs is List) {
+      for (final output in outputs) {
+        if (output is Map && output['channel'] == channel) {
+          entry = Map<String, dynamic>.from(output);
+          break;
+        }
+      }
+    }
+    return SoleuxJsonResponse(
+      id: response.id,
+      ok: response.ok,
+      protocol: response.protocol,
+      result: entry,
+      error: response.error,
+    );
+  }
 
-  /// `get_dimmer_levels` - read all dimmer requested and actual levels
-  /// (spec §6.2).
+  /// Reads every dimmer channel's state via `get_device_state`, returning the
+  /// `outputs` list (with `set_pwm`/`actual_pwm`) as `{outputs: [...]}`.
   Future<SoleuxJsonResponse> getDimmerLevels({
     Duration timeout = const Duration(seconds: 5),
-  }) =>
-      request(SoleuxControlApiActions.getDimmerLevels, const {},
-          timeout: timeout);
+  }) async {
+    final response = await getDeviceState(timeout: timeout);
+    if (!response.ok || response.result == null) return response;
+    final outputs = response.result!['outputs'];
+    return SoleuxJsonResponse(
+      id: response.id,
+      ok: response.ok,
+      protocol: response.protocol,
+      result: {'outputs': outputs is List ? outputs : const []},
+      error: response.error,
+    );
+  }
 
   /// `get_device_state` - complete synchronization snapshot (spec §2.3).
   Future<SoleuxJsonResponse> getDeviceState({
@@ -352,35 +380,25 @@ abstract class SoleuxControlApiService {
           },
           timeout: timeout);
 
-  /// `dimmer_on` - turn on one dimmer using its saved requested level
-  /// (spec §6.5). Result carries the resulting `dimmer` state.
+  /// Turns one dimmer channel on via `set_output_state` (`state: true`),
+  /// replacing the retired `dimmer_on` command.
   Future<SoleuxJsonResponse> dimmerOn(
     int channel, {
     int? transitionMs,
     Duration timeout = const Duration(seconds: 5),
   }) =>
-      request(
-          SoleuxControlApiActions.dimmerOn,
-          {
-            'channel': channel,
-            if (transitionMs != null) 'transition_ms': transitionMs,
-          },
-          timeout: timeout);
+      setOutputState(channel, true,
+          transitionMs: transitionMs, timeout: timeout);
 
-  /// `dimmer_off` - turn off one dimmer without discarding its saved level
-  /// (spec §6.6). Result carries the resulting `dimmer` state.
+  /// Turns one dimmer channel off via `set_output_state` (`state: false`),
+  /// replacing the retired `dimmer_off` command.
   Future<SoleuxJsonResponse> dimmerOff(
     int channel, {
     int? transitionMs,
     Duration timeout = const Duration(seconds: 5),
   }) =>
-      request(
-          SoleuxControlApiActions.dimmerOff,
-          {
-            'channel': channel,
-            if (transitionMs != null) 'transition_ms': transitionMs,
-          },
-          timeout: timeout);
+      setOutputState(channel, false,
+          transitionMs: transitionMs, timeout: timeout);
 
   /// `toggle_dimmer` - toggle one dimmer while retaining its target level
   /// (spec §6.7). Result carries the resulting `dimmer` state.

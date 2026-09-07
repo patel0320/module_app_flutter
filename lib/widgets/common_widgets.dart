@@ -412,12 +412,12 @@ class ModuleStatusHeader extends StatelessWidget {
 /// section 2.3).
 ///
 /// In addition to the drag-based [onChanged]/[onChangeEnd] pair, the card can
-/// be wired to the dimmer Control API catalogue terms (§6): tapping the icon
-/// toggles the output ([onToggle] -> `toggle_dimmer`), the low shortcut fires
-/// [onTurnOff] (`dimmer_off`) and the high shortcut fires [onTurnOn]
-/// (`dimmer_on`, restoring the saved level). When a shortcut callback is
-/// omitted it falls back to the escalated [onChanged] + [onChangeEnd] pair so
-/// the card still works without a Control API unit.
+/// be wired to the Control API: tapping the icon toggles the output
+/// ([onToggle] -> `toggle_dimmer`), the low shortcut fires [onTurnOff]
+/// (`set_output_state` `state: false`) and the high shortcut fires [onTurnOn]
+/// (`set_output_state` `state: true`). When a shortcut callback is omitted it
+/// falls back to the escalated [onChanged] + [onChangeEnd] pair so the card
+/// still works without a Control API unit.
 class DimmerChannelCard extends StatelessWidget {
   const DimmerChannelCard({
     super.key,
@@ -437,15 +437,15 @@ class DimmerChannelCard extends StatelessWidget {
   /// Invoked once when a drag gesture ends, carrying the settled brightness.
   final ValueChanged<int>? onChangeEnd;
 
-  /// Tapping the channel icon. Used to `toggle_dimmer` (Control API §6.7).
+  /// Tapping the channel icon. Used to `toggle_dimmer` (Control API §4.4).
   final VoidCallback? onToggle;
 
-  /// Turning the output on at its saved level (`dimmer_on`, §6.5). Invoked by
-  /// the full-brightness shortcut when provided.
+  /// Turning the output on (`set_output_state` `state: true`). Invoked by the
+  /// full-brightness shortcut when provided.
   final VoidCallback? onTurnOn;
 
-  /// Turning the output off (`dimmer_off`, §6.6). Invoked by the low shortcut
-  /// when provided.
+  /// Turning the output off (`set_output_state` `state: false`). Invoked by the
+  /// low shortcut when provided.
   final VoidCallback? onTurnOff;
 
   @override

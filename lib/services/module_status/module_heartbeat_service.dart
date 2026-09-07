@@ -23,6 +23,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/soleux/soleux_heartbeat.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
+import 'module_status_service.dart';
 
 /// Owns the heartbeat monitor for the configured module fleet.
 class ModuleHeartbeatService {
@@ -89,6 +90,64 @@ class ModuleHeartbeatService {
 
   /// Most recent valid pong time for the module with [id], or null.
   DateTime? lastSeenFor(String moduleId) => _monitor.lastSeenAtFor(moduleId);
+
+  /// One-shot UDP heartbeat pass over the persisted fleet, used by the native
+  /// background worker. Pings every module's heartbeat port once - concurrently
+  /// to respect the OS's limited background execution window - and maps each
+  /// result onto the same [ConnectionStatus] used by the periodic foreground
+  /// monitor, but without starting the periodic [Timer]. Returns the
+  /// reachability split for callers that need it.
+  ///
+  /// This is what keeps offline/online status fresh (and drives background
+  /// notifications) while the app is suspended, where the periodic
+  /// [SoleuxHeartbeatMonitor] cannot run.
+  Future<ModuleStatusResult> pollFleetOnce() async {
+    await store.init();
+    final modules = store.modules;
+    final targets = <HeartbeatTarget>[
+      for (final module in modules)
+        HeartbeatTarget(
+          host: module.ipAddress,
+          tcpPort: module.tcpPort,
+          heartbeatPort: module.effectiveHeartbeatPort,
+          key: module.id,
+        ),
+    ];
+
+    final client = SoleuxHeartbeat();
+    final results = await Future.wait(targets.map((target) async {
+      try {
+        final heartbeat = await client.ping(
+          target.host,
+          target.tcpPort,
+          heartbeatPort: target.heartbeatPort,
+        );
+        return (target: target, alive: heartbeat.alive);
+      } catch (_) {
+        return (target: target, alive: false);
+      }
+    }));
+
+    final online = <DeviceModule>[];
+    final offline = <DeviceModule>[];
+    final byId = {for (final m in modules) m.id: m};
+    for (final entry in results) {
+      final module = byId[entry.target.key];
+      if (module == null) continue;
+      final live = store.byId(module.id) ?? module;
+      if (entry.alive) {
+        live.lastSeenAt = DateTime.now();
+        live.status = ConnectionStatus.online;
+        online.add(live);
+      } else {
+        live.status = ConnectionStatus.offline;
+        offline.add(live);
+      }
+    }
+
+    await store.commit();
+    return ModuleStatusResult(online: online, offline: offline);
+  }
 
   void _onStoreChanged() {
     if (!_running) return;

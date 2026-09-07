@@ -16,9 +16,10 @@
 //
 // The worker only reads/writes the locally persisted module list
 // (shared_preferences), so it needs no network beyond the module LAN and no
-// cloud dependency. Each poll is a one-shot connect -> ping -> close: a JSON
-// `ping` on the Control API port (legacy port + 3) for Control API devices,
-// otherwise the legacy `AT\r` ping.
+// cloud dependency. Each poll is a one-shot UDP heartbeat `ping` on the
+// module's heartbeat port (legacy port + 2) that updates every module's
+// online/offline `ConnectionStatus` - the same reachability source the
+// foreground uses (see [ModuleHeartbeatService.pollFleetOnce]).
 //
 // `callbackDispatcher` must remain a top-level function: the plugin invokes it
 // by its callback handle from a fresh background isolate.
@@ -31,7 +32,7 @@ import '../../models/models.dart';
 import '../module_store.dart';
 import '../notification_service.dart';
 import '../settings_store.dart';
-import 'module_status_service.dart';
+import 'module_heartbeat_service.dart';
 
 /// Thin wrapper around the [Workmanager] plugin.
 abstract final class BackgroundStatusWorker {
@@ -98,7 +99,10 @@ abstract final class BackgroundStatusWorker {
         for (final m in ModuleStore.shared.modules) m.id: m.status,
       };
 
-      await ModuleStatusService.shared.pollAll();
+      // Run the UDP heartbeat pass: concurrent one-shot pings that update each
+      // module's lastSeenAt / ConnectionStatus (the same status source the
+      // foreground uses), driving the diffed notifications below.
+      await ModuleHeartbeatService.shared.pollFleetOnce();
 
       final notifier = LocalNotificationService.shared;
       for (final entry in before.entries) {

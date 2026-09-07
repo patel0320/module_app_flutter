@@ -326,6 +326,9 @@ def outputs_payload(state):
             "changed_at": now_str(),
         }
         if p["is_dimmer"]:
+            entry["set_pwm"] = float(out.get("pwm", 0))
+            entry["actual_pwm"] = float(out.get("pwm", 0))
+            # Legacy field aliases, kept for older clients.
             entry["requested_level"] = float(out.get("pwm", 0))
             entry["actual_level"] = float(out.get("pwm", 0))
         outs.append(entry)

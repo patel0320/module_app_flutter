@@ -149,13 +149,10 @@ abstract final class SoleuxControlApiActions {
   static const String applyHardwareConfiguration =
       'apply_hardware_configuration';
 
-  // Dimmer control (§6).
-  static const String getDimmerState = 'get_dimmer_state';
-  static const String getDimmerLevels = 'get_dimmer_levels';
+  // Dimmer control (§6). Level read-back and on/off now go through
+  // `get_device_state` (set_pwm/actual_pwm) and `set_output_state`.
   static const String setDimmerLevel = 'set_dimmer_level';
   static const String setMultipleDimmerLevels = 'set_multiple_dimmer_levels';
-  static const String dimmerOn = 'dimmer_on';
-  static const String dimmerOff = 'dimmer_off';
   static const String toggleDimmer = 'toggle_dimmer';
   static const String getDimmerFrequency = 'get_dimmer_frequency';
   static const String setDimmerFrequency = 'set_dimmer_frequency';

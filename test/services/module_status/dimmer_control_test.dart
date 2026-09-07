@@ -114,32 +114,21 @@ class _FakeDimmerDevice {
           'transitioning': false,
           'operation_id': 'op-$ch',
         };
-      case 'dimmer_on':
+      case 'set_output_state':
         final ch = params['channel'] as int;
-        states[ch] = true;
+        final on = params['state'] as bool;
+        states[ch] = on;
+        // set_pwm keeps the saved set level; only the state flips. Off drops the
+        // actual to 0, on without a set level defaults to full brightness.
+        if (on && levels[ch] == null) {
+          levels[ch] = 100;
+        }
         return {
-          'dimmer': {
-            'channel': ch,
-            'state': true,
-            'requested_level': levels[ch] ?? 0,
-            'actual_level': levels[ch] ?? 0,
-            'transitioning': false,
-            'revision': 1,
-          },
-        };
-      case 'dimmer_off':
-        final ch = params['channel'] as int;
-        states[ch] = false;
-        return {
-          'dimmer': {
-            'channel': ch,
-            'state': false,
-            // Off keeps the saved requested level so "on" can restore it.
-            'requested_level': levels[ch] ?? 0,
-            'actual_level': 0,
-            'transitioning': false,
-            'revision': 1,
-          },
+          'channel': ch,
+          'requested_state': on,
+          'actual_state': on,
+          'pending': false,
+          'revision': 1,
         };
       case 'toggle_dimmer':
         final ch = params['channel'] as int;
@@ -148,35 +137,31 @@ class _FakeDimmerDevice {
           'dimmer': {
             'channel': ch,
             'state': states[ch],
-            'requested_level': levels[ch] ?? 0,
-            'actual_level': (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
+            'set_pwm': levels[ch] ?? 0,
+            'actual_pwm':
+                (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
             'transitioning': false,
             'revision': 1,
           },
         };
-      case 'get_dimmer_state':
-        final ch = params['channel'] as int;
+      case 'get_device_state':
         return {
-          'channel': ch,
-          'state': states[ch] ?? false,
-          'requested_level': levels[ch] ?? 0,
-          'actual_level': (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
-          'transitioning': false,
           'revision': 1,
-        };
-      case 'get_dimmer_levels':
-        return {
           'outputs': [
             for (var ch = 0; ch < 2; ch++)
               {
                 'channel': ch,
                 'state': states[ch] ?? false,
-                'requested_level': levels[ch] ?? 0,
-                'actual_level': (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
-                'transitioning': false,
+                'set_pwm': levels[ch] ?? 0,
+                'actual_pwm':
+                    (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
+                'pending': false,
               },
           ],
-          'revision': 1,
+          'inputs': const [],
+          'virtual_inputs': const [],
+          'sensors': const [],
+          'faults': const [],
         };
       case 'set_multiple_dimmer_levels':
         final outputs = params['outputs'] as List;
@@ -247,7 +232,7 @@ void main() {
     expect(store.byId('dim1')!.channels, hasLength(2));
   });
 
-  test('refreshOne also fetches get_dimmer_levels and hydrates level/state',
+  test('refreshOne also fetches get_device_state and hydrates level/state',
       () async {
     // Device reports ch0 at 55 ON and ch1 at 70 ON before the refresh.
     fake.levels[0] = 55;
@@ -258,8 +243,9 @@ void main() {
     expect(await service.refreshOne(module), isTrue);
     await _flush();
 
-    expect(fake.received.any((r) => r['action'] == 'get_dimmer_levels'), isTrue,
-        reason: 'module-info refresh must also read the dimmer levels (§6.2)');
+    expect(fake.received.any((r) => r['action'] == 'get_device_state'), isTrue,
+        reason: 'module-info refresh must read dimmer levels via '
+            'get_device_state');
     final live = store.byId('dim1')!;
     expect(live.channels[0].isOn, isTrue);
     expect(live.channels[0].brightness, 55);
@@ -278,29 +264,28 @@ void main() {
     expect(fake.received.last['action'], 'set_dimmer_level');
     expect(fake.received.last['params'], {'channel': 0, 'value': 35});
 
-    // §6.5 dimmer_on restores the saved level and flips the output on.
+    // dimmer_on -> set_output_state(state: true).
     expect(await service.dimmerOn('dim1', 0), isTrue);
     await _flush();
-    expect(fake.received.last['action'], 'dimmer_on');
-    expect(fake.received.last['params'], {'channel': 0});
+    expect(fake.received.last['action'], 'set_output_state');
+    expect(fake.received.last['params'], {'channel': 0, 'state': true});
     final live = store.byId('dim1')!;
     expect(live.channels[0].isOn, isTrue);
-    expect(live.channels[0].brightness, 35,
-        reason: 'on keeps the saved requested level');
 
-    // §6.6 dimmer_off flips off without discarding the saved level.
+    // dimmer_off -> set_output_state(state: false).
     expect(await service.dimmerOff('dim1', 0), isTrue);
     await _flush();
-    expect(fake.received.last['action'], 'dimmer_off');
+    expect(fake.received.last['action'], 'set_output_state');
+    expect(fake.received.last['params'], {'channel': 0, 'state': false});
     expect(store.byId('dim1')!.channels[0].isOn, isFalse);
-    expect(store.byId('dim1')!.channels[0].brightness, 35,
-        reason: 'off must keep the saved requested level');
 
-    // §6.7 toggle_dimmer inverts state.
+    // §6.7 toggle_dimmer inverts state and reports the set/actual PWM.
     expect(await service.toggleDimmer('dim1', 0), isTrue);
     await _flush();
     expect(fake.received.last['action'], 'toggle_dimmer');
     expect(store.byId('dim1')!.channels[0].isOn, isTrue);
+    expect(store.byId('dim1')!.channels[0].brightness, 35,
+        reason: 'toggle reports set_pwm 35, keeping the earlier set level');
   });
 
   test('get_dimmer_state / get_dimmer_levels return parsed snapshots and '
@@ -310,14 +295,14 @@ void main() {
     expect(await service.setDimmerLevel('dim1', 0, 40), isTrue);
     expect(await service.setDimmerLevel('dim1', 1, 80), isTrue);
 
-    // §6.1 single-channel snapshot.
+    // Single-channel snapshot via get_device_state's output entry.
     final snapshot = await service.getDimmerState('dim1', 0);
     expect(snapshot, isNotNull);
     expect(snapshot!.channel, 0);
     expect(snapshot.state, isTrue);
     expect(snapshot.requestedLevel, 40);
 
-    // §6.2 all levels.
+    // All levels from the same get_device_state outputs list.
     final all = await service.getDimmerLevels('dim1');
     expect(all, isNotNull);
     expect(all, hasLength(2));
@@ -325,7 +310,7 @@ void main() {
     expect(all[1].requestedLevel, 80);
   });
 
-  test('syncDimmerLevels hydrates the live channels from get_dimmer_levels',
+  test('syncDimmerLevels hydrates the live channels from get_device_state',
       () async {
     await service.refreshOne(module);
     await _flush();
@@ -395,19 +380,31 @@ void main() {
   });
 
   test('DimmerStateSnapshot / DimmerFrequencyInfo parse the wire shapes', () {
+    // A get_device_state output entry: set_pwm/actual_pwm.
     final snapshot = DimmerStateSnapshot.fromMap(const {
       'channel': 2,
       'state': true,
-      'requested_level': 70.0,
-      'actual_level': 40.0,
-      'transitioning': true,
+      'set_pwm': 70.0,
+      'actual_pwm': 40.0,
     });
     expect(snapshot, isNotNull);
     expect(snapshot!.channel, 2);
     expect(snapshot.state, isTrue);
     expect(snapshot.requestedLevel, 70.0);
     expect(snapshot.actualLevel, 40.0);
-    expect(snapshot.transitioning, isTrue);
+
+    // Backward compatibility: requested_level/actual_level still parse.
+    final legacy = DimmerStateSnapshot.fromMap(const {
+      'channel': 3,
+      'state': false,
+      'requested_level': 55.0,
+      'actual_level': 0.0,
+      'transitioning': false,
+    });
+    expect(legacy, isNotNull);
+    expect(legacy!.requestedLevel, 55.0);
+    expect(legacy.actualLevel, 0.0);
+    expect(legacy.transitioning, isFalse);
 
     final freq = DimmerFrequencyInfo.fromMap(const {
       'frequency_hz': 2000,

@@ -181,6 +181,49 @@ void main() {
     server.close();
   });
 
+  test('pollFleetOnce flips online/offline via a one-shot UDP pass', () async {
+    // relay-6 answers (live) while relay-7 has no server (dead).
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final store = ModuleStore.forTesting();
+    await store.init();
+
+    await store.upsert(DeviceModule(
+      id: 'relay-6',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      tcpPort: serverPort - 2,
+      status: ConnectionStatus.suspect,
+      roomName: 'Cabin',
+      internalTempC: 25,
+    ));
+    await store.upsert(DeviceModule(
+      id: 'relay-7',
+      name: 'Relay',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      tcpPort: 1, // unreachable heartbeat port
+      status: ConnectionStatus.suspect,
+      roomName: 'Cabin',
+      internalTempC: 25,
+    ));
+
+    final service = ModuleHeartbeatService.forTesting(store: store);
+
+    final result = await service.pollFleetOnce();
+
+    expect(result.online.map((m) => m.id), contains('relay-6'));
+    expect(result.offline.map((m) => m.id), contains('relay-7'));
+    final live = store.byId('relay-6')!;
+    expect(live.status, ConnectionStatus.online);
+    expect(live.lastSeenAt, isNotNull);
+    final dead = store.byId('relay-7')!;
+    expect(dead.status, ConnectionStatus.offline);
+
+    server.close();
+  });
+
   test('removing a module stops its heartbeat targets', () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Relay');

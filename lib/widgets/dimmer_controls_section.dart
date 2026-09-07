@@ -2,17 +2,16 @@
 //
 // Live dimming controls shared by the AC and DC dimmer screens: a master "all
 // outputs" brightness slider, one controllable card per channel and the PWM
-// drive-frequency selector. Every control is mapped to the Control API dimmer
-// catalogue (doc/Soleux_Control_API_Command_Specification_v0.3.md §6):
+// drive-frequency selector. Every control is mapped to the Control API
+// (doc/Soleux_Control_API_Command_Specification_v0.3.md):
 //
-//   - master slider end      -> set_multiple_dimmer_levels (§6.4)
-//   - per-channel slider end -> set_dimmer_level            (§6.3)
-//   - off shortcut           -> dimmer_off                  (§6.6)
-//   - on shortcut            -> dimmer_on                   (§6.5)
-//   - icon tap               -> toggle_dimmer               (§6.7) then
-//                               get_dimmer_state            (§6.1) to re-sync
-//   - initial / refresh sync -> get_dimmer_levels           (§6.2)
-//   - frequency selector     -> get/set_dimmer_frequency    (§6.8 / §6.9)
+//   - master slider end      -> set_multiple_dimmer_levels
+//   - per-channel slider end -> set_dimmer_level
+//   - off shortcut           -> set_output_state(state: false)
+//   - on shortcut            -> set_output_state(state: true)
+//   - icon tap               -> toggle_dimmer then get_device_state to re-sync
+//   - initial / refresh sync -> get_device_state (reads set_pwm/actual_pwm)
+//   - frequency selector     -> get/set_dimmer_frequency
 //
 // The section reads the live module from [ModuleStore] so the state reflected
 // by [ModuleStatusService] after each successful command rebuilds it without
@@ -65,7 +64,7 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
   }
 
   Future<void> _sync() async {
-    // Hydrate the per-channel levels from get_dimmer_levels then read the
+    // Hydrate the per-channel levels from get_device_state then read the
     // frequency; unsupported/unreachable commands are no-ops.
     await ModuleStatusService.shared.syncDimmerLevels(widget.module.id);
     final frequency =
@@ -93,8 +92,9 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
       outputName: channel.name,
       on: true,
     );
-    // dimmer_on restores the saved requested level; when the level is 0 that
-    // would look like "nothing happens", so turn on at full brightness instead.
+    // set_output_state(state: true) turns the dimmer fully on; when the level
+    // is 0 that would look like "nothing happens", so turn on at full brightness
+    // instead.
     if (channel.brightness > 0) {
       await ModuleStatusService.shared.dimmerOn(module.id, index);
     } else {
@@ -114,7 +114,7 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
       outputName: channel.name,
       on: false,
     );
-    // dimmer_off keeps the saved level, so we only flip the logical state.
+    // set_output_state(state: false) turns the dimmer off; we flip the state.
     await ModuleStatusService.shared.dimmerOff(module.id, index);
     if (mounted) setState(() => channel.isOn = false);
   }
