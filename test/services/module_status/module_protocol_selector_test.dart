@@ -1,5 +1,5 @@
 // Tests for ModuleProtocolSelector: the firmware-driven choice between the
-// Control API (doc/Soleux_Control_API_Command_Specification_v0.2.md) and the
+// Control API (doc/Soleux_Control_API_Command_Specification_v0.3.md) and the
 // legacy TCP AT protocol (doc/PROTOCOLS.md §1).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:soleux_device_manager/models/models.dart';
@@ -9,11 +9,15 @@ import 'package:soleux_device_manager/services/module_status/module_protocol_sel
 void main() {
   const selector = ModuleProtocolSelector();
 
-  DeviceModule module({String? firmware, bool advertised = false}) =>
+  DeviceModule module({
+    String? firmware,
+    bool advertised = false,
+    ModuleType type = ModuleType.relay,
+  }) =>
       DeviceModule(
         id: 'm1',
         name: 'Relay',
-        type: ModuleType.relay,
+        type: type,
         ipAddress: '192.168.1.10',
         status: ConnectionStatus.offline,
         roomName: 'Cabin',
@@ -63,5 +67,32 @@ void main() {
     expect(selector.decideForFirmware(null), isNull);
     expect(selector.decideForFirmware('Build 42'), isNull);
     expect(selector.decideForFirmware(''), isNull);
+  });
+
+  group('dimmer family (5008 Control API regardless of firmware)', () {
+    for (final type in [ModuleType.dimmerDc, ModuleType.dimmerAc]) {
+      test('$type: a sub-7.12 version string must NOT pin the dimmer to AT',
+          () {
+        // Dimmer firmware does not follow the relay >= 7.12 release gate; a
+        // "1.20"-style version would have pinned it to legacy AT and forced
+        // AT+BRIGH instead of the 5008 set_dimmer_level command.
+        final d = selector.decide(module(firmware: '1.20 Build :9', type: type));
+        expect(d.pinned, isFalse,
+            reason: 'dimmers must stay probeable so the 5008 Control API is '
+                'tried first');
+      });
+
+      test('$type: advertisement selects the Control API without pinning', () {
+        final d = selector.decide(
+            module(firmware: '1.20', type: type, advertised: true));
+        expect(d.kind, ModuleCommandProtocolKind.controlApi);
+        expect(d.pinned, isFalse);
+      });
+
+      test('$type: unknown firmware stays probeable', () {
+        final d = selector.decide(module(type: type));
+        expect(d.pinned, isFalse);
+      });
+    }
   });
 }

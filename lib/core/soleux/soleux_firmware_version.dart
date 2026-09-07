@@ -3,7 +3,7 @@
 // Firmware version value type used to pick the right TCP command protocol:
 //
 //   - firmware >= 7.12 speaks the Soleux Control API described in
-//     doc/Soleux_Control_API_Command_Specification_v0.2.md (one JSON object per
+//     doc/Soleux_Control_API_Command_Specification_v0.3.md (one JSON object per
 //     line on the legacy TCP port + 3);
 //   - older firmware speaks the legacy TCP AT protocol described in
 //     doc/PROTOCOLS.md §1 (AT+ commands on the legacy TCP port).
@@ -88,7 +88,7 @@ final class SoleuxFirmwareVersion implements Comparable<SoleuxFirmwareVersion> {
 
 /// Policy for choosing the TCP command protocol from a firmware version.
 ///
-/// doc/Soleux_Control_API_Command_Specification_v0.2.md is the transport-neutral
+/// doc/Soleux_Control_API_Command_Specification_v0.3.md is the transport-neutral
 /// command model introduced with this release; modules below the gate keep
 /// using the legacy TCP AT commands documented in doc/PROTOCOLS.md.
 abstract final class SoleuxControlApiPolicy {

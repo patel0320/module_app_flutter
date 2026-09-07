@@ -2,7 +2,7 @@
 //
 // Pure policy for choosing the TCP command protocol of a module - the single
 // source of truth for the migration boundary described in
-// doc/Soleux_Control_API_Command_Specification_v0.2.md:
+// doc/Soleux_Control_API_Command_Specification_v0.3.md:
 //
 //   - firmware >= 7.12 (the Control API release gate) -> controlApi;
 //   - firmware <  7.12                                -> legacyAt;
@@ -13,6 +13,13 @@
 //
 // Pinned selections are authoritative: a 7.12+ module is never spoken to with
 // AT, and a pre-7.12 module is never spoken to with Control API JSON.
+//
+// Dimmer modules are the exception: per the spec "Implemented AC/DC Dimmer
+// profile", the active dimmer firmware exposes the protocol 2 command subset
+// on the Control API port (legacy port + 3, 5008 by default) independently of
+// the relay >= 7.12 gate, so a dimmer's version string must never pin it to
+// legacy AT. Dimmers are always left probeable and reach the 5008 Control API
+// first.
 import '../../core/soleux/soleux_firmware_version.dart';
 import '../../models/models.dart';
 import 'module_command_protocol.dart';
@@ -38,6 +45,22 @@ class ModuleProtocolSelector {
 
   /// Resolves the protocol for [module] per the firmware/discovery policy.
   ModuleProtocolDecision decide(DeviceModule module) {
+    // Dimmers are a Control API device family (spec v0.3 "Implemented AC/DC
+    // Dimmer profile"): their active firmware answers the protocol 2 JSON on
+    // the Control API port (5008 by default) regardless of the relay >= 7.12
+    // release gate, so a dimmer's own (non-relay) version string must not pin
+    // it to legacy AT. Keep the choice probeable so the status service probes
+    // 5008 first and only falls back to AT for genuinely pre-Control-API
+    // units.
+    if (_isDimmerFamily(module)) {
+      return ModuleProtocolDecision(
+        kind: module.isControlApiAdvertised
+            ? ModuleCommandProtocolKind.controlApi
+            : ModuleCommandProtocolKind.legacyAt,
+        pinned: false,
+      );
+    }
+
     final fromFirmware = decideForFirmware(module.firmware);
     if (fromFirmware != null) return fromFirmware;
 
@@ -51,6 +74,12 @@ class ModuleProtocolSelector {
       pinned: false,
     );
   }
+
+  /// A lighting dimmer module (DC PWM or AC phase-cut) - the
+  /// [SoleuxDeviceFamily.dimmer] family.
+  bool _isDimmerFamily(DeviceModule module) =>
+      module.type == ModuleType.dimmerDc ||
+      module.type == ModuleType.dimmerAc;
 
   /// Distinguishes between a pinned controlApi / legacyAt for a *known*
   /// firmware version. Returns null when the firmware is unknown or
