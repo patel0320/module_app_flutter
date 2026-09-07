@@ -156,8 +156,8 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
   }
 
   Future<void> _setFrequency(int frequencyHz) async {
-    await ModuleStatusService.shared.setDimmerFrequency(
-        widget.module.id, frequencyHz);
+    await ModuleStatusService.shared
+        .setDimmerFrequency(widget.module.id, frequencyHz);
     final frequency =
         await ModuleStatusService.shared.getDimmerFrequency(widget.module.id);
     if (mounted) setState(() => _frequency = frequency);
@@ -184,25 +184,15 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (module.channels.length > 1) ...[
-              _MasterBrightnessCard(
-                value: _master ?? _defaultMaster(module),
-                onChanged: (value) => setState(() => _master = value),
-                onChangeEnd: (value) => _setMasterLevel(module, value),
-              ),
-              const SizedBox(height: AppSpacing.betweenCards),
-            ],
             SectionHeader(l10n.dimmingChannelsHeader(module.channels.length)),
             for (int i = 0; i < module.channels.length; i++)
               Padding(
-                padding:
-                    const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
                 child: DimmerChannelCard(
                   channel: module.channels[i],
                   onChanged: (value) =>
                       setState(() => module.channels[i].brightness = value),
-                  onChangeEnd: (value) =>
-                      _setChannelLevel(module, i, value),
+                  onChangeEnd: (value) => _setChannelLevel(module, i, value),
                   onToggle: () => _toggleChannel(module, i),
                   onTurnOn: () => _turnChannelOn(module, i),
                   onTurnOff: () => _turnChannelOff(module, i),
