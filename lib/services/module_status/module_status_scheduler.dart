@@ -11,7 +11,7 @@
 //     reachability evidence and refreshes the module target set.
 //   - Background (paused/inactive/hidden/detached): keeping sockets open
 //     wastes battery and the OS may suspend the app anyway, so every socket is
-//     dropped and aggressive in-Dart 5-second heartbeat polling is stopped;
+//     dropped and the in-app 30-60 s UDP heartbeat cadence is stopped;
 //     the fleet is instead polled by the OS's native background worker (see
 //     [BackgroundStatusWorker]: Android WorkManager / iOS BGAppRefreshTask),
 //     which survives the process being suspended or killed.
@@ -85,8 +85,9 @@ class ModuleStatusScheduler with WidgetsBindingObserver {
   void _enterBackground() {
     _foreground = false;
     // Stop the in-app UDP heartbeat polling: the OS may suspend the timers
-    // anyway, and aggressive 5-second monitoring must not run in a background
-    // state (spec §4.5). The native worker resumes reachability polling.
+    // anyway, and the randomized 30-60 s monitoring must not run in a
+    // background state (spec §4.5). The native worker resumes reachability
+    // polling.
     ModuleHeartbeatService.shared.stop();
     // Close every persistent socket so they are not held open in the
     // background, then let the OS's native background worker poll the fleet

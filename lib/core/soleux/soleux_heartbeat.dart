@@ -21,9 +21,11 @@
 // device or prove a control command will succeed (spec §4.5).
 //
 // The app-side monitor keeps a soft mobile cadence of 30-60 s per target
-// (randomized to desynchronize a fleet), with a 1.5 s response window and a
-// 15 s alive threshold. Monitor clients should use jitter and avoid aggressive
-// 5-second polling in the background.
+// (randomized to desynchronize a fleet), with a 1.5 s response window. The
+// alive/suspect thresholds are scaled to that cadence (3 / 2 full cycles at
+// the longest randomized wait, i.e. 180 s / 120 s by default) so a single
+// lost pong never flips a reachable module offline. Monitor clients should
+// use jitter and avoid aggressive 5-second polling in the background.
 library;
 
 import 'dart:async';
@@ -251,7 +253,8 @@ class HeartbeatTarget {
 /// pinging again, so a fleet of modules does not transmit on the same boundary
 /// (spec §4.5). Stateful per-target: a valid pong clears consecutive misses,
 /// a missed cycle counts against the target, and the availability is
-/// evaluated after every cycle against the spec §4.3 timing profile.
+/// evaluated after every cycle against the spec §4.3 timing profile, scaled
+/// to the configured cadence (see [_deriveAliveThreshold]).
 class SoleuxHeartbeatMonitor {
   /// Lower bound of the randomized heartbeat interval (30 s mobile cadence).
   static const Duration defaultInterval = Duration(seconds: 30);
@@ -259,15 +262,29 @@ class SoleuxHeartbeatMonitor {
   /// Upper bound of the randomized heartbeat interval (60 s).
   static const Duration defaultMaxInterval = Duration(seconds: 60);
 
-  /// Spec §4.3 alive threshold: a valid pong within this window keeps the
-  /// module `online`.
-  static const Duration defaultAliveThreshold = Duration(milliseconds: 15000);
-
-  /// Spec §4.3 suspect threshold used as an optional enhancement.
-  static const Duration defaultSuspectThreshold = Duration(milliseconds: 10000);
-
   /// Spec §4.4 "three full cycles missed" -> offline.
   static const int defaultMaxMissedCycles = 3;
+
+  /// Longest pause between two consecutive pings for the configured cadence:
+  /// [maxInterval] while jitter is enabled and wider than [interval], otherwise
+  /// [interval] (fixed cadence / jitter disabled reuse it exactly).
+  static Duration _maximumGap(
+          Duration interval, Duration maxInterval, bool jitter) =>
+      (jitter && maxInterval > interval) ? maxInterval : interval;
+
+  /// Spec §4.3 alive threshold, re-based from the desktop profile (15 s at the
+  /// fixed 5 s cadence = "no valid pong for three full cycles") onto this
+  /// monitor's cadence. Scaled to the longest wait so a single lost pong - for
+  /// example a dropped UDP datagram - never flips a reachable module `offline`.
+  static Duration _deriveAliveThreshold(Duration interval, Duration maxInterval,
+          int maxMissedCycles, bool jitter) =>
+      _maximumGap(interval, maxInterval, jitter) * maxMissedCycles;
+
+  /// Spec §4.3 suspect threshold, re-based the same way ("last valid pong
+  /// older than two full cycles", i.e. 10 s at the 5 s cadence).
+  static Duration _deriveSuspectThreshold(
+          Duration interval, Duration maxInterval, bool jitter) =>
+      _maximumGap(interval, maxInterval, jitter) * 2;
 
   /// Shortest wait between pings; with [jitter] each cycle is randomized
   /// within [interval, maxInterval].
@@ -306,11 +323,14 @@ class SoleuxHeartbeatMonitor {
     this.interval = defaultInterval,
     this.maxInterval = defaultMaxInterval,
     this.acceptWindow = SoleuxHeartbeat.defaultAcceptWindow,
-    this.aliveThreshold = defaultAliveThreshold,
-    this.suspectThreshold = defaultSuspectThreshold,
+    Duration? aliveThreshold,
+    Duration? suspectThreshold,
     this.maxMissedCycles = defaultMaxMissedCycles,
     this.jitter = true,
-  });
+  })  : aliveThreshold = aliveThreshold ??
+            _deriveAliveThreshold(interval, maxInterval, maxMissedCycles, jitter),
+        suspectThreshold =
+            suspectThreshold ?? _deriveSuspectThreshold(interval, maxInterval, jitter);
 
   bool get running => _running;
 

@@ -231,6 +231,60 @@ void main() {
         lessThan(states.indexOf(HeartbeatAvailability.offline)));
   });
 
+  test('default alive/suspect thresholds scale to the 30-60 s cadence (§4.3)',
+      () {
+    final monitor = SoleuxHeartbeatMonitor();
+    // Spec §4.3 re-based from the 5 s desktop profile: alive = 3 full cycles
+    // (3 x 60 s), suspect = 2 full cycles (2 x 60 s).
+    expect(monitor.aliveThreshold, const Duration(seconds: 180));
+    expect(monitor.suspectThreshold, const Duration(seconds: 120));
+  });
+
+  test('thresholds are derived from a custom cadence', () {
+    final monitor = SoleuxHeartbeatMonitor(
+      interval: const Duration(milliseconds: 200),
+      maxInterval: const Duration(milliseconds: 400),
+      jitter: false,
+    );
+    // alive = 3 cycles, suspect = 2 cycles, based on the longest wait (here
+    // [interval], because jitter is disabled).
+    expect(monitor.aliveThreshold, const Duration(milliseconds: 600));
+    expect(monitor.suspectThreshold, const Duration(milliseconds: 400));
+  });
+
+  test('a few missed cycles do not flip a live target offline (no flicker)',
+      () async {
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'Relay');
+    final clientTcpPort = serverPort - 2;
+    final states = <HeartbeatAvailability>[];
+    final monitor = SoleuxHeartbeatMonitor(
+      interval: const Duration(milliseconds: 200),
+      acceptWindow: const Duration(milliseconds: 60),
+      jitter: false,
+    );
+    monitor.onState = (target, state) => states.add(state);
+
+    monitor.start([('127.0.0.1', clientTcpPort)]);
+    await Future<void>.delayed(const Duration(milliseconds: 520));
+    expect(states, contains(HeartbeatAvailability.online));
+
+    server.close(); // the device disappears after a recent successful pong
+    // A couple of missed cycles (< 3, i.e. well within the scaled alive
+    // threshold) must not declare the target offline.
+    await Future<void>.delayed(const Duration(milliseconds: 420));
+    expect(states, isNot(contains(HeartbeatAvailability.offline)));
+
+    // Continued loss degrades to suspect then offline.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    expect(states,
+        containsAll([HeartbeatAvailability.suspect,
+            HeartbeatAvailability.offline]));
+
+    monitor.stop();
+    server.close();
+  });
+
   test('refreshTargets keeps per-target state by key', () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Relay');
