@@ -601,14 +601,14 @@ class _InputFieldCardState extends State<InputFieldCard> {
               ),
             ),
             const SizedBox(width: 8),
-            GestureDetector(
+            Listener(
               behavior: HitTestBehavior.opaque,
-              onTapDown: (_) => _setPressed(true),
-              onTapUp: (_) {
+              onPointerDown: (_) => _setPressed(true),
+              onPointerUp: (_) {
                 _setPressed(false);
                 widget.onReleased?.call();
               },
-              onTapCancel: () => _setPressed(false),
+              onPointerCancel: (_) => _setPressed(false),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
                 width: 48,
