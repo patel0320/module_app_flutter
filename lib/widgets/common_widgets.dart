@@ -8,9 +8,8 @@ import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 
-/// Small green/red dot used everywhere a module's connectivity status is
-/// shown (brief section 2.1: "a green dot for Online or a red dot for
-/// Offline").
+/// Small green/amber/red dot used everywhere a module's connectivity status is
+/// shown (online = green, suspect = amber, offline = red).
 class StatusDot extends StatelessWidget {
   const StatusDot({super.key, required this.status, this.size = 10});
 
@@ -19,17 +18,20 @@ class StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool online = status == ConnectionStatus.online;
+    final color = switch (status) {
+      ConnectionStatus.online => AppColors.online,
+      ConnectionStatus.suspect => AppColors.suspect,
+      ConnectionStatus.offline => AppColors.offlineAlert,
+    };
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: online ? AppColors.online : AppColors.offlineAlert,
+        color: color,
         boxShadow: [
           BoxShadow(
-            color: (online ? AppColors.online : AppColors.offlineAlert)
-                .withValues(alpha: 0.4),
+            color: color.withValues(alpha: 0.4),
             blurRadius: 4,
           ),
         ],
@@ -349,8 +351,13 @@ class ModuleStatusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color onSurface = Theme.of(context).colorScheme.onSurface;
-    final bool online = module.status == ConnectionStatus.online;
-    final bool tempAlert = module.isOverTemperature;
+    final l10n = AppLocalizations.of(context);
+    final tempAlert = module.isOverTemperature;
+    final (label, color) = switch (module.status) {
+      ConnectionStatus.online => (l10n.online, AppColors.online),
+      ConnectionStatus.suspect => (l10n.suspect, AppColors.suspect),
+      ConnectionStatus.offline => (l10n.offline, AppColors.offlineAlert),
+    };
 
     return Card(
       child: Padding(
@@ -364,13 +371,9 @@ class ModuleStatusHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    online
-                        ? AppLocalizations.of(context).online
-                        : AppLocalizations.of(context).offline,
+                    label,
                     style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color:
-                            online ? AppColors.online : AppColors.offlineAlert),
+                        fontWeight: FontWeight.w800, color: color),
                   ),
                   const SizedBox(height: 2),
                   Text(

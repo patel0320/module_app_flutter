@@ -20,12 +20,11 @@
 // A valid pong proves recent reachability but does not authenticate the
 // device or prove a control command will succeed (spec §4.5).
 //
-// The app-side monitor keeps a soft mobile cadence of 30-60 s per target
-// (randomized to desynchronize a fleet), with a 1.5 s response window. The
-// alive/suspect thresholds are scaled to that cadence (3 / 2 full cycles at
-// the longest randomized wait, i.e. 180 s / 120 s by default) so a single
-// lost pong never flips a reachable module offline. Monitor clients should
-// use jitter and avoid aggressive 5-second polling in the background.
+// The app-side monitor keeps a fixed 30 s cadence per target, with a 1.5 s
+// response window. Availability is derived purely from a consecutive-miss
+// counter: one failed heartbeat flags the target suspect; three consecutive
+// failures flag it offline; any successful pong resets the counter to zero and
+// flags it online again.
 library;
 
 import 'dart:async';
@@ -219,10 +218,16 @@ class SoleuxHeartbeat {
   }
 }
 
-/// Availability of a monitored heartbeat target, derived from the spec §4.4
-/// state machine (minus `connected`, which is reported by an active Control
-/// API session in a higher layer).
-enum HeartbeatAvailability { unknown, online, suspect, offline, rebooting }
+/// Availability of a monitored heartbeat target, derived from a consecutive
+/// missed-ping counter:
+///   - `unknown`: no pong has ever been received yet;
+///   - `online`: the last ping succeeded;
+///   - `suspect`: the last ping failed but fewer than [SoleuxHeartbeatMonitor.maxMissedCycles];
+///   - `offline`: [SoleuxHeartbeatMonitor.maxMissedCycles] pings failed in a row.
+/// A successful pong always returns the target to `online` and resets the
+/// failure counter. (The spec's `connected` state is reported by an active
+/// Control API session in a higher layer, not by the heartbeat.)
+enum HeartbeatAvailability { unknown, online, suspect, offline }
 
 /// A single device the heartbeat monitor watches. The heartbeat port is the
 /// advertised value when given, otherwise derived from the legacy TCP port.
@@ -249,70 +254,33 @@ class HeartbeatTarget {
 
 /// Periodic heartbeat monitor for a set of known modules.
 ///
-/// Keeps a soft mobile cadence: each cycle waits a randomized 30-60 s before
-/// pinging again, so a fleet of modules does not transmit on the same boundary
-/// (spec §4.5). Stateful per-target: a valid pong clears consecutive misses,
-/// a missed cycle counts against the target, and the availability is
-/// evaluated after every cycle against the spec §4.3 timing profile, scaled
-/// to the configured cadence (see [_deriveAliveThreshold]).
+/// Pings every fixed [interval] (30 s in production). Stateful per-target: a
+/// valid pong clears consecutive misses, a missed ping increments the counter,
+/// and availability is derived from that counter after every cycle.
 class SoleuxHeartbeatMonitor {
-  /// Lower bound of the randomized heartbeat interval (30 s mobile cadence).
+  /// Heartbeat interval (fixed 30 s mobile cadence).
   static const Duration defaultInterval = Duration(seconds: 30);
 
-  /// Upper bound of the randomized heartbeat interval (60 s).
-  static const Duration defaultMaxInterval = Duration(seconds: 60);
-
-  /// Spec §4.4 "three full cycles missed" -> offline.
+  /// Consecutive failed pings before a target is flagged offline.
   static const int defaultMaxMissedCycles = 3;
 
-  /// Longest pause between two consecutive pings for the configured cadence:
-  /// [maxInterval] while jitter is enabled and wider than [interval], otherwise
-  /// [interval] (fixed cadence / jitter disabled reuse it exactly).
-  static Duration _maximumGap(
-          Duration interval, Duration maxInterval, bool jitter) =>
-      (jitter && maxInterval > interval) ? maxInterval : interval;
-
-  /// Spec §4.3 alive threshold, re-based from the desktop profile (15 s at the
-  /// fixed 5 s cadence = "no valid pong for three full cycles") onto this
-  /// monitor's cadence. Scaled to the longest wait so a single lost pong - for
-  /// example a dropped UDP datagram - never flips a reachable module `offline`.
-  static Duration _deriveAliveThreshold(Duration interval, Duration maxInterval,
-          int maxMissedCycles, bool jitter) =>
-      _maximumGap(interval, maxInterval, jitter) * maxMissedCycles;
-
-  /// Spec §4.3 suspect threshold, re-based the same way ("last valid pong
-  /// older than two full cycles", i.e. 10 s at the 5 s cadence).
-  static Duration _deriveSuspectThreshold(
-          Duration interval, Duration maxInterval, bool jitter) =>
-      _maximumGap(interval, maxInterval, jitter) * 2;
-
-  /// Shortest wait between pings; with [jitter] each cycle is randomized
-  /// within [interval, maxInterval].
+  /// Fixed delay between pings.
   final Duration interval;
 
-  /// Longest wait between pings. When less than or equal to [interval], cycles
-  /// use [interval] directly.
-  final Duration maxInterval;
-
   final Duration acceptWindow;
-  final Duration aliveThreshold;
-  final Duration suspectThreshold;
+
+  /// Consecutive failed pings before a target is flagged offline.
   final int maxMissedCycles;
 
-  /// Whether each cycle's delay is randomized across [interval, maxInterval]
-  /// (with a jittered first ping) to desynchronize a multi-device fleet
-  /// (spec §4.5).
-  final bool jitter;
-
-  /// Legacy per-ping callback, keyed by (host, tcpPort). Kept for callers
-  /// that only need raw reachability.
+  /// Per-ping callback, keyed by (host, tcpPort). Kept for callers that only
+  /// need raw reachability.
   void Function(String host, int tcpPort, HeartbeatResult result)? onResult;
 
-  /// Fires whenever a target's availability transitions (spec §4.4), e.g.
-  /// online -> offline. Idempotent per state: duplicate pongs do not re-fire.
+  /// Fires whenever a target's availability transitions (e.g. online ->
+  /// suspect -> offline). Idempotent per state: duplicate pongs do not re-fire.
   void Function(HeartbeatTarget target, HeartbeatAvailability state)? onState;
 
-  /// Fires for every *valid* pong (spec §4.2). Callers can use this to refresh
+  /// Fires for every *valid* pong. Callers can use this to refresh
   /// `last_seen_at` without a full state transition.
   void Function(HeartbeatTarget target, SoleuxPong pong)? onPong;
 
@@ -321,16 +289,9 @@ class SoleuxHeartbeatMonitor {
 
   SoleuxHeartbeatMonitor({
     this.interval = defaultInterval,
-    this.maxInterval = defaultMaxInterval,
     this.acceptWindow = SoleuxHeartbeat.defaultAcceptWindow,
-    Duration? aliveThreshold,
-    Duration? suspectThreshold,
     this.maxMissedCycles = defaultMaxMissedCycles,
-    this.jitter = true,
-  })  : aliveThreshold = aliveThreshold ??
-            _deriveAliveThreshold(interval, maxInterval, maxMissedCycles, jitter),
-        suspectThreshold =
-            suspectThreshold ?? _deriveSuspectThreshold(interval, maxInterval, jitter);
+  });
 
   bool get running => _running;
 
@@ -348,8 +309,8 @@ class SoleuxHeartbeatMonitor {
 
   /// Replaces the monitored target set while preserving per-target state for
   /// targets that keep their stabilization key. Removed targets are stopped;
-  /// new targets start with jitter. Safe while stopped (nothing is scheduled
-  /// until [start]).
+  /// new targets schedule immediately. Safe while stopped (nothing is
+  /// scheduled until [start]).
   void refreshTargets(Iterable<HeartbeatTarget> targets) {
     final incoming = <String, HeartbeatTarget>{
       for (final target in targets) target.stabilizationKey: target,
@@ -366,7 +327,15 @@ class SoleuxHeartbeatMonitor {
     }
     if (_running) {
       for (final state in _states.values) {
-        if (state.timer == null || !state.timer!.isActive) _schedule(state);
+        // While a ping is in flight the timer has already fired (isActive ==
+        // false) and _runTarget's tail schedules the next cycle itself; a
+        // refresh must not lay down a second timer in that window or orphaned
+        // timers pile up concurrent ping loops that flood the network and
+        // inflate missedCycles.
+        if (!state.inFlight &&
+            (state.timer == null || !state.timer!.isActive)) {
+          _schedule(state);
+        }
       }
     }
   }
@@ -389,48 +358,56 @@ class SoleuxHeartbeatMonitor {
     for (final state in _states.values) {
       state.timer?.cancel();
       state.timer = null;
+      // A ping that is mid-flight when we stop must not disqualify the target
+      // from being scheduled after a restart; it also must not re-schedule
+      // itself once the monitor is running again.
+      state.inFlight = false;
+      state.generation++;
     }
   }
 
-  /// Uniform random delay in `[interval, maxInterval]` used for each ping
-  /// cycle when [jitter] is enabled (spec §4.5); returns [interval] otherwise.
-  Duration _randomInterval(_TargetState state) {
-    final minMs = interval.inMilliseconds;
-    final maxMs = maxInterval.inMilliseconds;
-    if (!jitter || maxMs <= minMs) return interval;
-    return Duration(
-        milliseconds: minMs + state.random.nextInt(maxMs - minMs + 1));
-  }
-
+  /// Fires the first ping immediately (no jitter); later pings happen every
+  /// [interval].
   void _schedule(_TargetState state) {
     state.timer?.cancel();
-    final delay = (jitter && interval.inMilliseconds > 0)
-        ? Duration(milliseconds: state.random.nextInt(interval.inMilliseconds))
-        : Duration.zero;
-    state.timer = Timer(delay, () => _runTarget(state));
+    state.generation++;
+    state.timer = Timer(Duration.zero, () => _runTarget(state));
   }
 
   Future<void> _runTarget(_TargetState state) async {
-    final client = SoleuxHeartbeat(acceptWindow: acceptWindow);
-    final result = await client.ping(
-      state.target.host,
-      state.target.tcpPort,
-      heartbeatPort: state.target.heartbeatPort,
-    );
+    // Guard against two ping loops racing on the same target (which can only
+    // happen if an in-flight run is superseded, e.g. stop + immediate start).
+    if (state.inFlight) return;
+    state.inFlight = true;
+    final generation = state.generation;
+    try {
+      final client = SoleuxHeartbeat(acceptWindow: acceptWindow);
+      final result = await client.ping(
+        state.target.host,
+        state.target.tcpPort,
+        heartbeatPort: state.target.heartbeatPort,
+      );
 
-    if (result.alive && result.pong != null) {
-      state.everSeen = true;
-      state.missedCycles = 0;
-      state.lastSeenAt = DateTime.now();
-      onPong?.call(state.target, result.pong!);
-    } else {
-      state.missedCycles++;
-    }
-    onResult?.call(state.target.host, state.target.tcpPort, result);
-    _reportAvail(state);
-
-    if (_running) {
-      state.timer = Timer(_randomInterval(state), () => _runTarget(state));
+      if (result.alive && result.pong != null) {
+        state.everSeen = true;
+        state.missedCycles = 0;
+        state.lastSeenAt = DateTime.now();
+        onPong?.call(state.target, result.pong!);
+      } else {
+        state.missedCycles++;
+      }
+      onResult?.call(state.target.host, state.target.tcpPort, result);
+      _reportAvail(state);
+    } finally {
+      state.inFlight = false;
+      // Schedule the next cycle only when we are still the current run: a
+      // refresh/stop may have bumped the generation while we were pinging and
+      // owns the timer now, so we must not overwrite it with an orphaned
+      // duplicate loop.
+      if (_running && generation == state.generation) {
+        state.timer?.cancel();
+        state.timer = Timer(interval, () => _runTarget(state));
+      }
     }
   }
 
@@ -441,18 +418,17 @@ class SoleuxHeartbeatMonitor {
     onState?.call(state.target, next);
   }
 
-  /// Spec §4.4 availability from the current sample counters and last-seen
-  /// age.
+  /// Availability derived from the consecutive-miss counter:
+  /// unknown before any pong; online with no misses; suspect with at least one
+  /// miss but fewer than [maxMissedCycles]; offline at [maxMissedCycles].
   HeartbeatAvailability _availability(_TargetState state) {
-    final lastSeen = state.lastSeenAt;
-    if (!state.everSeen || lastSeen == null) {
+    if (!state.everSeen || state.lastSeenAt == null) {
       return HeartbeatAvailability.unknown;
     }
-    final age = DateTime.now().difference(lastSeen);
-    if (age >= aliveThreshold || state.missedCycles >= maxMissedCycles) {
+    if (state.missedCycles >= maxMissedCycles) {
       return HeartbeatAvailability.offline;
     }
-    if (state.missedCycles >= 2 || age > suspectThreshold) {
+    if (state.missedCycles >= 1) {
       return HeartbeatAvailability.suspect;
     }
     return HeartbeatAvailability.online;
@@ -467,7 +443,14 @@ class _TargetState {
   int missedCycles = 0;
   bool everSeen = false;
   HeartbeatAvailability lastReported = HeartbeatAvailability.unknown;
-  final Random random = Random();
+
+  /// True while a ping for this target is in flight, so refreshes do not lay
+  /// down a competing timer in the await window.
+  bool inFlight = false;
+
+  /// Bumped on every reschedule/stop so a superseded in-flight run knows not
+  /// to chain its own next cycle (prevents orphaned duplicate ping loops).
+  int generation = 0;
 
   _TargetState(this.target);
 }

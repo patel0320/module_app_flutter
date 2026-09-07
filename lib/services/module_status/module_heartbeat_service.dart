@@ -8,9 +8,8 @@
 // stateful [SoleuxHeartbeatMonitor] for the currently configured fleet,
 // refreshes the target set whenever the [ModuleStore] changes (module added,
 // removed or re-addressed), records `lastSeenAt` on every valid pong, and
-// maps the spec §4.4 availability state machine onto the app's
-// [ConnectionStatus] only when the state actually transitions (so the UI does
-// not churn with the 30-60 s ping cadence).
+// maps the monitor's availability (online / suspect / offline) onto the app's
+// [ConnectionStatus] whenever it transitions.
 //
 // Lifecycle mirror of [ModuleStatusScheduler]: it is started while the app is
 // in the foreground (a UDP ping is far cheaper than a TCP socket and gives
@@ -128,11 +127,12 @@ class ModuleHeartbeatService {
     _scheduleCommit();
   }
 
-  /// Spec §4.4 transitions map onto [ConnectionStatus] only when the state
-  /// actually changes (the monitor deduplicates identical states), keeping the
-  /// UI stable across the ping interval. `unknown`/`suspect`/`rebooting` never
-  /// downgrade a module that another layer (TCP Control API session) still
-  /// considers healthy.
+  /// Maps the monitor's availability onto the app's [ConnectionStatus] only
+  /// when the state actually changes (the monitor deduplicates identical
+  /// states), keeping the UI stable across the ping interval. `suspect` is a
+  /// real app status (shown as a watch-out state); `unknown` never downgrades
+  /// a module that another layer (TCP Control API session) still considers
+  /// healthy.
   void _onState(HeartbeatTarget target, HeartbeatAvailability state) {
     final module = store.byId(target.key);
     if (module == null) return;
@@ -141,15 +141,13 @@ class ModuleHeartbeatService {
       case HeartbeatAvailability.online:
         module.status = ConnectionStatus.online;
         break;
+      case HeartbeatAvailability.suspect:
+        module.status = ConnectionStatus.suspect;
+        break;
       case HeartbeatAvailability.offline:
         module.status = ConnectionStatus.offline;
         break;
       case HeartbeatAvailability.unknown:
-      case HeartbeatAvailability.suspect:
-      case HeartbeatAvailability.rebooting:
-        // Do not flicker the fleet's green/red dot on a transiently aging
-        // heartbeat; the offline->online and online->offline transitions are
-        // handled above.
         return;
     }
     store.commit().ignore();

@@ -41,9 +41,10 @@ extension ModuleTypeX on ModuleType {
   }
 }
 
-/// Online / offline connectivity indicator shown throughout the app as a
-/// green (online) or red (offline) dot - see brief section 2.1.
-enum ConnectionStatus { online, offline }
+/// Connection / availability indicator shown throughout the app: green
+/// (online), amber (suspect - heartbeat failing but not yet offline) or red
+/// (offline).
+enum ConnectionStatus { online, suspect, offline }
 
 /// Input field behaviour - the Control API `set_input_configuration` `mode`
 /// (momentary | maintained | pulse), see

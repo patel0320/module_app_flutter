@@ -199,13 +199,21 @@ class NotificationMonitor {
         _lastStatus[entry.key] = current;
         continue;
       }
+      // `old` is the pre-transition baseline. Only genuine online<->offline
+      // crossings raise a status notification; `suspect` is an intermediate
+      // watch state (heartbeat failing but not yet offline) that updates the
+      // baseline silently so a module does not ping-pong "offline"/"online"
+      // alerts while it is merely suspect.
+      final old = _lastStatus[entry.key]!;
       _lastStatus[entry.key] = current;
+      final wentOffline = current == ConnectionStatus.offline &&
+          old != ConnectionStatus.offline;
+      final backOnline =
+          current == ConnectionStatus.online && old != ConnectionStatus.online;
+      if (!wentOffline && !backOnline) continue;
       notificationCount++;
       LocalNotificationService.shared
-          .showModuleStatusChanged(
-            module,
-            current == ConnectionStatus.online,
-          )
+          .showModuleStatusChanged(module, current == ConnectionStatus.online)
           .ignore();
     }
   }

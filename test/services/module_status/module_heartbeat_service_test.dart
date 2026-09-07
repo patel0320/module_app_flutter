@@ -77,9 +77,7 @@ void main() {
       monitor: SoleuxHeartbeatMonitor(
         interval: const Duration(milliseconds: 150),
         acceptWindow: const Duration(milliseconds: 300),
-        aliveThreshold: const Duration(milliseconds: 600),
-        suspectThreshold: const Duration(milliseconds: 400),
-        jitter: false,
+        maxMissedCycles: 3,
       ),
     );
 
@@ -115,10 +113,8 @@ void main() {
       store: store,
       monitor: SoleuxHeartbeatMonitor(
         interval: const Duration(milliseconds: 150),
-        acceptWindow: const Duration(milliseconds: 300),
-        aliveThreshold: const Duration(milliseconds: 600),
-        suspectThreshold: const Duration(milliseconds: 400),
-        jitter: false,
+        acceptWindow: const Duration(milliseconds: 100),
+        maxMissedCycles: 3,
       ),
     );
 
@@ -130,7 +126,9 @@ void main() {
     expect(store.byId('relay-2')!.status, ConnectionStatus.online);
 
     server.close(); // device disappears
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    // Fail cycle is acceptWindow + interval (~250 ms); 3 consecutive misses
+    // land around 1000 ms after the last pong, so 1800 ms gives margin.
+    await Future<void>.delayed(const Duration(milliseconds: 1800));
 
     expect(store.byId('relay-2')!.status, ConnectionStatus.offline);
     expect(states,
@@ -163,7 +161,7 @@ void main() {
       monitor: SoleuxHeartbeatMonitor(
         interval: const Duration(milliseconds: 150),
         acceptWindow: const Duration(milliseconds: 300),
-        jitter: false,
+        maxMissedCycles: 3,
       ),
     );
 
@@ -205,7 +203,7 @@ void main() {
       monitor: SoleuxHeartbeatMonitor(
         interval: const Duration(milliseconds: 150),
         acceptWindow: const Duration(seconds: 1),
-        jitter: false,
+        maxMissedCycles: 3,
       ),
     );
 

@@ -202,15 +202,19 @@ class _ModuleCard extends StatelessWidget {
                         RoomTag(label: module.roomName),
                         const SizedBox(width: 8),
                         Text(
-                          status == ConnectionStatus.online
-                              ? l10n.online
-                              : l10n.offline,
+                          switch (status) {
+                            ConnectionStatus.online => l10n.online,
+                            ConnectionStatus.suspect => l10n.suspect,
+                            ConnectionStatus.offline => l10n.offline,
+                          },
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: status == ConnectionStatus.online
-                                ? AppColors.online
-                                : AppColors.offlineAlert,
+                            color: switch (status) {
+                              ConnectionStatus.online => AppColors.online,
+                              ConnectionStatus.suspect => AppColors.suspect,
+                              ConnectionStatus.offline => AppColors.offlineAlert,
+                            },
                           ),
                         ),
                       ],

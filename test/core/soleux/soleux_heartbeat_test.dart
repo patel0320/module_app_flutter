@@ -37,6 +37,21 @@ Future<(RawDatagramSocket, int)> startPongServer({
 }
 
 void main() {
+  /// Pumps the event loop until [condition] holds (or fails after [timeout]),
+  /// so timing-dependent assertions do not race with the ping cadence.
+  Future<void> pumpUntil(
+    bool Function() condition, {
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (!condition()) {
+      if (DateTime.now().isAfter(deadline)) {
+        fail('condition not met within $timeout');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+    }
+  }
+
   test('heartbeat port is TCP HostPort + 2', () {
     expect(SoleuxHeartbeat.defaultAcceptWindow,
         const Duration(milliseconds: 1500));
@@ -202,54 +217,97 @@ void main() {
     server.close();
   });
 
-  test('monitor transitions online -> suspect -> offline (§4.4)', () async {
+  test('monitor transitions online -> suspect -> offline on missed pings',
+      () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Relay');
     final clientTcpPort = serverPort - 2;
     final states = <HeartbeatAvailability>[];
     final monitor = SoleuxHeartbeatMonitor(
+      // Small accept window so a miss cycle (timeout + interval) is quick and
+      // the consecutive-miss sequence completes within the test window.
       interval: const Duration(milliseconds: 150),
-      acceptWindow: const Duration(milliseconds: 300),
-      aliveThreshold: const Duration(milliseconds: 600),
-      suspectThreshold: const Duration(milliseconds: 400),
-      jitter: false,
+      acceptWindow: const Duration(milliseconds: 60),
+      maxMissedCycles: 3,
     );
     monitor.onState = (target, state) => states.add(state);
 
     monitor.start([('127.0.0.1', clientTcpPort)]);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    await pumpUntil(() => states.contains(HeartbeatAvailability.online));
     server.close(); // the device stops answering pings
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    await pumpUntil(() => states.contains(HeartbeatAvailability.offline));
     monitor.stop();
 
     expect(states, contains(HeartbeatAvailability.online));
     expect(states, contains(HeartbeatAvailability.suspect));
-    expect(states, contains(HeartbeatAvailability.offline));
     expect(states.indexOf(HeartbeatAvailability.online),
         lessThan(states.indexOf(HeartbeatAvailability.suspect)));
     expect(states.indexOf(HeartbeatAvailability.suspect),
         lessThan(states.indexOf(HeartbeatAvailability.offline)));
   });
 
-  test('default alive/suspect thresholds scale to the 30-60 s cadence (§4.3)',
-      () {
+  test('defaults to a fixed 30 s cadence and 3-miss offline threshold', () {
     final monitor = SoleuxHeartbeatMonitor();
-    // Spec §4.3 re-based from the 5 s desktop profile: alive = 3 full cycles
-    // (3 x 60 s), suspect = 2 full cycles (2 x 60 s).
-    expect(monitor.aliveThreshold, const Duration(seconds: 180));
-    expect(monitor.suspectThreshold, const Duration(seconds: 120));
+    expect(monitor.interval, const Duration(seconds: 30));
+    expect(monitor.maxMissedCycles, 3);
   });
 
-  test('thresholds are derived from a custom cadence', () {
+  test('a successful pong resets consecutive misses and returns online',
+      () async {
+    // A pong server that can be silenced and revived on the same port, so the
+    // monitor keeps addressing the same target across outage + recovery.
+    final socket =
+        await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    var enabled = true;
+    socket.listen((event) {
+      if (event != RawSocketEvent.read) return;
+      final datagram = socket.receive();
+      if (datagram == null) return;
+      if (!enabled) return; // offline window: swallow pings
+      try {
+        final decoded = jsonDecode(utf8.decode(datagram.data));
+        if (decoded['op'] != 'ping') return;
+        final nonce = decoded['nonce'] as String;
+        socket.send(
+            utf8.encode(jsonEncode({
+              'soleux_heartbeat': 1,
+              'op': 'pong',
+              'nonce': nonce,
+              'tcp_port': 5005,
+              'name': 'Relay',
+            })),
+            datagram.address,
+            datagram.port);
+      } catch (_) {}
+    });
+
+    final clientTcpPort = socket.port - 2;
+    final states = <HeartbeatAvailability>[];
     final monitor = SoleuxHeartbeatMonitor(
-      interval: const Duration(milliseconds: 200),
-      maxInterval: const Duration(milliseconds: 400),
-      jitter: false,
+      interval: const Duration(milliseconds: 150),
+      acceptWindow: const Duration(milliseconds: 60),
+      maxMissedCycles: 3,
     );
-    // alive = 3 cycles, suspect = 2 cycles, based on the longest wait (here
-    // [interval], because jitter is disabled).
-    expect(monitor.aliveThreshold, const Duration(milliseconds: 600));
-    expect(monitor.suspectThreshold, const Duration(milliseconds: 400));
+    monitor.onState = (target, state) => states.add(state);
+
+    monitor.start([('127.0.0.1', clientTcpPort)]);
+    await pumpUntil(() => states.contains(HeartbeatAvailability.online));
+
+    // One to two missed pings flag the target suspect, but never offline.
+    enabled = false;
+    await pumpUntil(() => states.contains(HeartbeatAvailability.suspect));
+    expect(states, isNot(contains(HeartbeatAvailability.offline)));
+
+    // A recovered pong returns the target online and resets the miss counter,
+    // so the next outage starts again from zero (suspect, not offline).
+    enabled = true;
+    await pumpUntil(() => states.last == HeartbeatAvailability.online);
+    enabled = false;
+    await pumpUntil(() => states.contains(HeartbeatAvailability.suspect));
+    expect(states, isNot(contains(HeartbeatAvailability.offline)));
+
+    monitor.stop();
+    socket.close();
   });
 
   test('a few missed cycles do not flip a live target offline (no flicker)',
@@ -261,7 +319,7 @@ void main() {
     final monitor = SoleuxHeartbeatMonitor(
       interval: const Duration(milliseconds: 200),
       acceptWindow: const Duration(milliseconds: 60),
-      jitter: false,
+      maxMissedCycles: 3,
     );
     monitor.onState = (target, state) => states.add(state);
 
@@ -270,7 +328,7 @@ void main() {
     expect(states, contains(HeartbeatAvailability.online));
 
     server.close(); // the device disappears after a recent successful pong
-    // A couple of missed cycles (< 3, i.e. well within the scaled alive
+    // A couple of missed cycles (< 3, i.e. within the consecutive-miss
     // threshold) must not declare the target offline.
     await Future<void>.delayed(const Duration(milliseconds: 420));
     expect(states, isNot(contains(HeartbeatAvailability.offline)));
@@ -296,7 +354,6 @@ void main() {
     final monitor = SoleuxHeartbeatMonitor(
       interval: const Duration(milliseconds: 150),
       acceptWindow: const Duration(seconds: 1),
-      jitter: false,
     );
 
     monitor.start([('127.0.0.1', target.tcpPort)]);
