@@ -637,20 +637,15 @@ class _QuickScenarioCard extends StatelessWidget {
                               color: cs.onSurface),
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            _RoomTag(label: scenario.roomName),
-                            const SizedBox(width: 8),
-                            Text(
-                              isSlider
-                                  ? l10n.homeManualDimming
-                                  : l10n.homeActionsCount(
-                                      scenario.actions.length),
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: cs.onSurface.withValues(alpha: 0.6)),
-                            ),
-                          ],
+                        _RoomTag(label: scenario.roomName),
+                        const SizedBox(height: 4),
+                        Text(
+                          isSlider
+                              ? l10n.homeManualDimming
+                              : l10n.homeActionsCount(scenario.actions.length),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
