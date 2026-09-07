@@ -1256,6 +1256,9 @@ class ModuleStatusService {
 
   /// Fetches the implemented Relay configuration dump (the currently available
   /// "relay state/configuration operations" subset) and applies it to [live].
+  /// Dimmer modules additionally expose their requested/actual levels and per
+  /// channel state through the dimmer catalogue, so their levels are fetched
+  /// right after so the store reflects real brightness/on-off.
   Future<void> _fetchRelayConfiguration(
       SoleuxControlApiService unit, DeviceModule live) async {
     try {
@@ -1271,6 +1274,48 @@ class ModuleStatusService {
       debugPrint('Module ${live.name} (${live.id}) relay configuration fetch '
           'failed: $e\n$st');
     }
+    await _fetchDimmerLevels(unit, live);
+  }
+
+  /// `get_dimmer_levels` (§6.2) - reads every dimmer requested/actual level and
+  /// state and applies them to [live]'s channels. No-op for non-dimmer modules.
+  Future<void> _fetchDimmerLevels(
+      SoleuxControlApiService unit, DeviceModule live) async {
+    if (live.type != ModuleType.dimmerDc && live.type != ModuleType.dimmerAc) {
+      return;
+    }
+    try {
+      final response =
+          await unit.getDimmerLevels(timeout: const Duration(seconds: 3));
+      if (response.ok) {
+        final raw = response.result?['outputs'];
+        if (raw is List) _applyDimmerOutputs(live.id, raw);
+      }
+    } catch (e, st) {
+      debugPrint('Module ${live.name} (${live.id}) dimmer levels fetch '
+          'failed: $e\n$st');
+    }
+  }
+
+  /// Applies a `get_dimmer_levels` `outputs` list to the live store channels
+  /// (state -> on/off, requested level -> brightness).
+  void _applyDimmerOutputs(String moduleId, List raw) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final data = Map<String, dynamic>.from(item);
+      final channel = (data['channel'] as num?)?.toInt();
+      if (channel == null || channel < 0 || channel >= live.channels.length) {
+        continue;
+      }
+      final output = live.channels[channel];
+      final rawState = data['state'];
+      if (rawState is bool) output.isOn = rawState;
+      final rawLevel = data['requested_level'] ?? data['actual_level'];
+      if (rawLevel is num) output.brightness = rawLevel.round().clamp(0, 100);
+    }
+    _scheduleCommit();
   }
 
   /// Per-module timeout for a JSON `hello` round-trip.

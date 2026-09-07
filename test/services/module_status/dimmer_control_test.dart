@@ -247,6 +247,26 @@ void main() {
     expect(store.byId('dim1')!.channels, hasLength(2));
   });
 
+  test('refreshOne also fetches get_dimmer_levels and hydrates level/state',
+      () async {
+    // Device reports ch0 at 55 ON and ch1 at 70 ON before the refresh.
+    fake.levels[0] = 55;
+    fake.states[0] = true;
+    fake.levels[1] = 70;
+    fake.states[1] = true;
+
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    expect(fake.received.any((r) => r['action'] == 'get_dimmer_levels'), isTrue,
+        reason: 'module-info refresh must also read the dimmer levels (§6.2)');
+    final live = store.byId('dim1')!;
+    expect(live.channels[0].isOn, isTrue);
+    expect(live.channels[0].brightness, 55);
+    expect(live.channels[1].isOn, isTrue);
+    expect(live.channels[1].brightness, 70);
+  });
+
   test('set_dimmer_level / dimmer_on / dimmer_off / toggle_dimmer dispatch '
       'the spec actions and reflect state', () async {
     await service.refreshOne(module);
@@ -256,7 +276,7 @@ void main() {
     expect(await service.setDimmerLevel('dim1', 0, 35), isTrue);
     await _flush();
     expect(fake.received.last['action'], 'set_dimmer_level');
-    expect(fake.received.last['params'], {'channel': 0, 'level': 35.0});
+    expect(fake.received.last['params'], {'channel': 0, 'level': 35});
 
     // §6.5 dimmer_on restores the saved level and flips the output on.
     expect(await service.dimmerOn('dim1', 0), isTrue);

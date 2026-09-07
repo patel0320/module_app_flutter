@@ -304,10 +304,12 @@ abstract class SoleuxControlApiService {
           timeout: timeout);
 
   /// `set_dimmer_level` - set one dimmer brightness level (spec §6.3).
-  /// Replaces the legacy dimmer brightness AT command.
+  /// Replaces the legacy dimmer brightness AT command. The target device
+  /// enforces an interger `level` (0-100); the spec table lists it as
+  /// `0.0-100.0 percent` but the firmware rejects fractional values.
   Future<SoleuxJsonResponse> setDimmerLevel(
     int channel,
-    double level, {
+    int level, {
     int? transitionMs,
     bool? turnOn,
     Duration timeout = const Duration(seconds: 5),
@@ -323,7 +325,9 @@ abstract class SoleuxControlApiService {
           timeout: timeout);
 
   /// `set_multiple_dimmer_levels` - set several brightness levels together
-  /// (spec §6.4). `targets` holds `{channel, level, transition_ms?}` maps.
+  /// (spec §6.4). [targets] holds `{channel, level, transition_ms?}` maps.
+  /// Levels are coerced to integers on the wire, matching the device's integer
+  /// `level` rule for [setDimmerLevel].
   Future<SoleuxJsonResponse> setMultipleDimmerLevels(
     List<Map<String, dynamic>> targets, {
     String? execution,
@@ -333,7 +337,15 @@ abstract class SoleuxControlApiService {
       request(
           SoleuxControlApiActions.setMultipleDimmerLevels,
           {
-            'outputs': targets,
+            'outputs': [
+              for (final target in targets)
+                {
+                  'channel': target['channel'],
+                  'level': (target['level'] as num?)?.round() ?? 0,
+                  if (target.containsKey('transition_ms'))
+                    'transition_ms': target['transition_ms'],
+                },
+            ],
             if (execution != null) 'execution': execution,
             if (intervalMs != null) 'interval_ms': intervalMs,
           },
