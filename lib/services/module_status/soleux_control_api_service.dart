@@ -305,8 +305,9 @@ abstract class SoleuxControlApiService {
 
   /// `set_dimmer_level` - set one dimmer brightness level (spec §6.3).
   /// Replaces the legacy dimmer brightness AT command. The target device
-  /// enforces an interger `level` (0-100); the spec table lists it as
-  /// `0.0-100.0 percent` but the firmware rejects fractional values.
+  /// expects the brightness under the `value` key and enforces an integer
+  /// (0-100); the spec table lists it as `0.0-100.0 percent` but the firmware
+  /// rejects fractional values.
   Future<SoleuxJsonResponse> setDimmerLevel(
     int channel,
     int level, {
@@ -318,7 +319,7 @@ abstract class SoleuxControlApiService {
           SoleuxControlApiActions.setDimmerLevel,
           {
             'channel': channel,
-            'level': level,
+            'value': level,
             if (transitionMs != null) 'transition_ms': transitionMs,
             if (turnOn != null) 'turn_on': turnOn,
           },

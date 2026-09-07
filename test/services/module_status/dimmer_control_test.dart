@@ -104,7 +104,7 @@ class _FakeDimmerDevice {
         };
       case 'set_dimmer_level':
         final ch = params['channel'] as int;
-        final level = (params['level'] as num).toInt();
+        final level = (params['value'] as num).toInt();
         levels[ch] = level;
         states[ch] = level > 0;
         return {
@@ -272,11 +272,11 @@ void main() {
     await service.refreshOne(module);
     await _flush();
 
-    // §6.3 set_dimmer_level -> set_dimmer_level with channel + level.
+    // §6.3 set_dimmer_level -> set_dimmer_level with channel + value.
     expect(await service.setDimmerLevel('dim1', 0, 35), isTrue);
     await _flush();
     expect(fake.received.last['action'], 'set_dimmer_level');
-    expect(fake.received.last['params'], {'channel': 0, 'level': 35});
+    expect(fake.received.last['params'], {'channel': 0, 'value': 35});
 
     // §6.5 dimmer_on restores the saved level and flips the output on.
     expect(await service.dimmerOn('dim1', 0), isTrue);
