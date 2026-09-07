@@ -846,7 +846,6 @@ class ModuleStatusService {
   Future<bool> _pollConnectivity(DeviceModule module) async {
     final live = store.byId(module.id) ?? module;
     if (_fetchers.forType(module.type) == null) {
-      live.status = ConnectionStatus.offline;
       return false;
     }
     final mode = _commandTransport();
@@ -854,14 +853,11 @@ class ModuleStatusService {
     // Firmware-pinned protocol: ping exactly the transport the firmware speaks.
     final decision = _protocolSelector.decide(live);
     if (decision.pinned) {
-      final reachable = decision.kind == ModuleCommandProtocolKind.controlApi
+      return decision.kind == ModuleCommandProtocolKind.controlApi
           ? (mode == CommandTransportMode.tcp
               ? await _pollJsonPing(live)
               : await _pollHttpPing(live, mode))
           : await _pollAtPing(live);
-      live.status =
-          reachable ? ConnectionStatus.online : ConnectionStatus.offline;
-      return reachable;
     }
 
     // Unknown firmware: Control API devices (discovery advertised the Control
@@ -869,14 +865,11 @@ class ModuleStatusService {
     // transport (TCP legacy port + 3, or HTTP/HTTPS /api/v1/command).
     // Everything else - AT-only and legacy `J:` devices - still answers the
     // legacy `AT\r` ping on the legacy TCP port during migration.
-    final reachable = live.isControlApiAdvertised
+    return live.isControlApiAdvertised
         ? (mode == CommandTransportMode.tcp
             ? await _pollJsonPing(live)
             : await _pollHttpPing(live, mode))
         : await _pollAtPing(live);
-    live.status =
-        reachable ? ConnectionStatus.online : ConnectionStatus.offline;
-    return reachable;
   }
 
   /// One-shot legacy `AT\r` ping on the legacy TCP port. Opens a temporary
@@ -1019,15 +1012,9 @@ class ModuleStatusService {
     final fetcher = _fetchers.forType(module.type);
     if (fetcher == null) {
       // Unsupported module type - no status probe exists, so it cannot be
-      // confirmed reachable; mark it offline so the UI represents it clearly.
-      live.status = ConnectionStatus.offline;
+      // confirmed reachable.
       return false;
     }
-
-    // Optimistically reset the module to offline so the UI never shows a stale
-    // "online" from a previous seed/run while this probe is in flight; the
-    // module is only flipped back to online once the full dump is acknowledged.
-    live.status = ConnectionStatus.offline;
 
     // Firmware-pinned protocol (>= 7.12 -> Control API, < 7.12 -> legacy AT):
     // drive exactly the transport the firmware speaks, without cross-protocol
@@ -1050,7 +1037,6 @@ class ModuleStatusService {
     if (mode != CommandTransportMode.tcp) {
       final httpOk = await _probeHttp(live, mode);
       if (httpOk == true) {
-        live.status = ConnectionStatus.online;
         // A Control API device must not keep a duplicate legacy AT+ unit (and
         // its second socket) around.
         _units.remove(live.id)?.dispose();
@@ -1067,7 +1053,6 @@ class ModuleStatusService {
 
     final jsonOk = await _probeSoleuxJson(live);
     if (jsonOk == true) {
-      live.status = ConnectionStatus.online;
       // A JSON-capable device must not keep a duplicate legacy AT+ unit (and
       // its second socket) around.
       _units.remove(live.id)?.dispose();
@@ -1095,14 +1080,12 @@ class ModuleStatusService {
       await unit.connect();
       debugPrint('Module ${live.name} (${live.id}) connected');
       if (!unit.isConnected) {
-        live.status = ConnectionStatus.offline;
         return false;
       }
       debugPrint('Module ${live.name} (${live.id}) connected, fetching...');
       final allOk = await unit.run(fetcher.fetchCommands);
       debugPrint('Module ${live.name} (${live.id}) refresh: $allOk');
       if (!allOk) {
-        live.status = ConnectionStatus.offline;
         return false;
       }
       // A status dump may newly reveal >= 7.12 firmware (e.g. an OTA update):
@@ -1113,12 +1096,10 @@ class ModuleStatusService {
           decision.kind == ModuleCommandProtocolKind.controlApi) {
         return await _refreshControlApi(live);
       }
-      live.status = ConnectionStatus.online;
       return true;
     } catch (e) {
       debugPrint('Module ${live.name} (${live.id}) refresh failed: $e');
       // Socket / protocol / timeout - module unreachable.
-      live.status = ConnectionStatus.offline;
       return false;
     }
   }
@@ -1134,13 +1115,11 @@ class ModuleStatusService {
       await _fetchRelayConfiguration(unit, live);
       // A Control API device must not keep a duplicate legacy AT+ unit around.
       _units.remove(live.id)?.dispose();
-      live.status = ConnectionStatus.online;
       return true;
     }
     if (ok == false) {
       _disposeJsonUnit(live.id);
     }
-    live.status = ConnectionStatus.offline;
     return false;
   }
 
@@ -1339,12 +1318,6 @@ class ModuleStatusService {
     );
     // Live status parses -> stream into the store (persist + notify).
     unit.moduleStream.listen((_) => _scheduleCommit());
-    // Connect/disconnect -> flip the module's online status.
-    unit.connectionStateStream.listen((connected) {
-      unit.module.status =
-          connected ? ConnectionStatus.online : ConnectionStatus.offline;
-      _scheduleCommit();
-    });
 
     _units[module.id] = unit;
     return unit;
@@ -1410,7 +1383,6 @@ class ModuleStatusService {
     if (existing != null) existing.dispose();
 
     final unit = SoleuxHttpService(baseUri: baseUri, timeout: timeout);
-    _wireHttpUnit(module, unit);
     _jsonUnits[module.id] = unit;
     return unit;
   }
@@ -1428,26 +1400,6 @@ class ModuleStatusService {
         live.channels[event.channel!].isOn = event.state!;
         _scheduleCommit();
       }
-    });
-    // Connect/disconnect -> flip the module's online status.
-    unit.connectionStateStream.listen((connected) {
-      final live = store.byId(module.id);
-      if (live == null) return;
-      live.status =
-          connected ? ConnectionStatus.online : ConnectionStatus.offline;
-      _scheduleCommit();
-    });
-  }
-
-  /// Wires the HTTP/HTTPS unit's reachability transitions to the module's
-  /// online status (the endpoint keeps no socket, so no event stream exists).
-  void _wireHttpUnit(DeviceModule module, SoleuxHttpService unit) {
-    unit.connectionStateStream.listen((connected) {
-      final live = store.byId(module.id);
-      if (live == null) return;
-      live.status =
-          connected ? ConnectionStatus.online : ConnectionStatus.offline;
-      _scheduleCommit();
     });
   }
 

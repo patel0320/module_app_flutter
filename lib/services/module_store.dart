@@ -111,7 +111,8 @@ class ModuleStore extends ChangeNotifier {
     existing.ipAddress = fresh.ipAddress;
     existing.tcpPort = fresh.tcpPort;
     existing.roomName = fresh.roomName;
-    existing.status = fresh.status;
+    // Connectivity status is owned by the heartbeat monitor, so it is not
+    // copied from the freshly discovered `fresh` copy here.
 
     final priorChannels = List.of(existing.channels);
     final priorInputs = List.of(existing.inputs);

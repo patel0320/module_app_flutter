@@ -94,7 +94,9 @@ void main() {
       expect(kept.channels.single.icon, Icons.lightbulb);
       expect(kept.channels.single.id, 'u1c1');
       expect(kept.channels.single.isOn, isTrue); // fresh state adopted
-      expect(kept.status, ConnectionStatus.online);
+      expect(kept.status, ConnectionStatus.offline,
+          reason: 'online/offline status is owned by the heartbeat monitor, '
+              'so a rediscovery merge does not overwrite it');
     });
 
     test('update mutates an existing module and notifies', () async {

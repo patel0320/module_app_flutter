@@ -68,7 +68,7 @@ class DimmerModuleStatusFetcher implements ModuleStatusFetcher {
 
   @override
   void apply(DeviceModule module, List<PduResponse> responses) {
-    // State is applied by the Control API path; keep the module online here.
-    module.status = ConnectionStatus.online;
+    // State is applied by the Control API path; connectivity comes from the
+    // heartbeat monitor.
   }
 }

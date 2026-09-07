@@ -377,7 +377,9 @@ void main() {
     expect(await service.refreshOne(module), isTrue);
     await _flush();
 
-    expect(store.byId('m-at')!.status, ConnectionStatus.online);
+    expect(store.byId('m-at')!.status, ConnectionStatus.offline,
+        reason: 'online/offline status is owned by the heartbeat monitor, '
+            'not the status refresh');
     expect(store.byId('m-at')!.firmware, '7.10 Build :1');
     expect(store.byId('m-at')!.channels, hasLength(2));
     expect(store.byId('m-at')!.channels[1].isOn, isTrue);
