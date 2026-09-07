@@ -1,7 +1,7 @@
 // lib/core/soleux/soleux_json_protocol.dart
 //
 // Codec for the Soleux Control API / JSON protocol described in
-// doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport and message
+// doc/Soleux_Control_API_Command_Specification_v0.3.md §"Transport and message
 // envelope".
 //
 // Wire contract (Control API, the default framing):
@@ -102,7 +102,7 @@ abstract final class SoleuxJsonActions {
 }
 
 /// Control API catalogue actions
-/// (doc/Soleux_Control_API_Command_Specification_v0.2.md, "Command catalogue").
+/// (doc/Soleux_Control_API_Command_Specification_v0.3.md, "Command catalogue").
 ///
 /// Clients must use `hello` and `get_capabilities` data and must not assume
 /// every catalogued action is available on a given firmware yet; unimplemented

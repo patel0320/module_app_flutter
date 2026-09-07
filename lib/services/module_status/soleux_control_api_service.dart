@@ -1,7 +1,7 @@
 // lib/services/module_status/soleux_control_api_service.dart
 //
 // Transport-neutral command surface for the Soleux Control API
-// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport and message
+// (doc/Soleux_Control_API_Command_Specification_v0.3.md §"Transport and message
 // envelope"): the action + params envelope and the common `ok`/`error` result
 // are identical on every transport, so a single interface describes both the
 // persistent TCP socket client ([SoleuxJsonService]) and the stateless
@@ -167,13 +167,17 @@ abstract class SoleuxControlApiService {
       });
 
   // ---------------------------------------------------------------------------
-  // Control API catalogue commands (doc/...Specification_v0.2.md). These replace
+  // Control API catalogue commands (doc/...Specification_v0.3.md). These replace
   // the legacy AT+ control operations: set_output_state / toggle_output /
   // restart_output replace ON/OFF/TOGGLE/RESTART and masked AT operations,
   // set_dimmer_level replaces the dimmer brightness command, and ping replaces
-  // `AT\r`. Unimplemented catalogue actions return the common
-  // `unsupported_command` error, which the caller can use to fall back to the
-  // implemented subset.
+  // `AT\r`. The dimmer catalogue (§6) below - get_dimmer_state,
+  // get_dimmer_levels, set_dimmer_level, set_multiple_dimmer_levels,
+  // dimmer_on, dimmer_off, toggle_dimmer, get_dimmer_frequency and
+  // set_dimmer_frequency - is the new API command set served on the Control API
+  // port (legacy port + 3, 5008 by default). Unimplemented catalogue actions
+  // return the common `unsupported_command` error, which the caller can use to
+  // fall back to the implemented subset.
   // ---------------------------------------------------------------------------
 
   /// `ping` - reachability + round-trip estimate (§1.2). Result carries

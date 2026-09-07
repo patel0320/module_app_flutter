@@ -359,7 +359,7 @@ class DeviceModule {
   set tcpPort(int value) => _tcpPort = value;
 
   /// Control API TCP port used by the JSON Control API transport
-  /// (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport
+  /// (doc/Soleux_Control_API_Command_Specification_v0.3.md §"Transport
   /// mapping"): the advertised [apiPort] when present, otherwise the legacy
   /// TCP port + 3 (`5005 -> 5008`). Per the discovery/heartbeat spec, when
   /// `API_PORT` is absent a client may probe `PORT + 3` but must complete the

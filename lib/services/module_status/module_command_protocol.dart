@@ -4,7 +4,7 @@
 // wire protocols live:
 //
 //   - [ControlApiCommandProtocol] - the Soleux Control API (JSON envelope)
-//     described in doc/Soleux_Control_API_Command_Specification_v0.2.md, used
+//     described in doc/Soleux_Control_API_Command_Specification_v0.3.md, used
 //     by modules whose firmware is >= 7.12;
 //   - [LegacyAtCommandProtocol]   - the legacy TCP AT protocol described in
 //     doc/PROTOCOLS.md §1, used by older modules.
@@ -17,7 +17,7 @@
 /// The TCP command protocol a module speaks.
 enum ModuleCommandProtocolKind {
   /// JSON Control API on the legacy TCP port + 3
-  /// (doc/Soleux_Control_API_Command_Specification_v0.2.md "Transport mapping").
+  /// (doc/Soleux_Control_API_Command_Specification_v0.3.md "Transport mapping").
   controlApi,
 
   /// Legacy `AT+` ASCII commands on the legacy TCP port (doc/PROTOCOLS.md §1).

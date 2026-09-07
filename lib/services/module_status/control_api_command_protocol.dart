@@ -1,11 +1,12 @@
 // lib/services/module_status/control_api_command_protocol.dart
 //
 // [ModuleCommandProtocol] implementation over the Soleux Control API
-// (doc/Soleux_Control_API_Command_Specification_v0.2.md), used for modules whose
+// (doc/Soleux_Control_API_Command_Specification_v0.3.md), used for modules whose
 // firmware is at or above 7.12. Commands use the transport-neutral Control API
-// envelope: one JSON object per line on the legacy TCP port + 3, or the same
-// envelope POSTed to /api/v1/command over HTTP/HTTPS ([SoleuxHttpService]);
-// responses are matched by `id` on TCP and by the common envelope on HTTP.
+// envelope: one JSON object per line on the legacy TCP port + 3 (5008 by
+// default), or the same envelope POSTed to /api/v1/command over HTTP/HTTPS
+// ([SoleuxHttpService]); responses are matched by `id` on TCP and by the common
+// envelope on HTTP.
 //
 // Control mapping (spec "Outputs" §4 and "Dimmer control" §6):
 //   - set on/off   -> set_output_state    (§4.3, replaces AT+ON/AT+OFF)

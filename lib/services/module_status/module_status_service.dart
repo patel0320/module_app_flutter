@@ -10,7 +10,7 @@
 // alive for the app's lifetime.
 //
 // Which wire protocol a module speaks is decided by [ModuleProtocolSelector]
-// from its firmware version (doc/Soleux_Control_API_Command_Specification_v0.2.md):
+// from its firmware version (doc/Soleux_Control_API_Command_Specification_v0.3.md):
 //
 //   - firmware >= 7.12              -> Control API (JSON) on legacy port + 3;
 //   - firmware <  7.12              -> legacy TCP AT (doc/PROTOCOLS.md §1);
