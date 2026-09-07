@@ -529,6 +529,10 @@ class DimmerChannelCard extends StatelessWidget {
 /// which drives the associated virtual input (`set_virtual_input_state`).
 /// Releasing the button also fires [onReleased] so the caller can re-fetch
 /// module info and refresh the input/output state shown on screen.
+///
+/// A press is only accepted once the previous press's release command
+/// (the `set_virtual_input_state` `false`) has received its response, so rapid
+/// repeats never pile up on the transport while a command is still in flight.
 class InputFieldCard extends StatefulWidget {
   const InputFieldCard({
     super.key,
@@ -539,7 +543,7 @@ class InputFieldCard extends StatefulWidget {
   });
 
   final PhysicalInput input;
-  final ValueChanged<bool> onHoldChanged;
+  final Future<void> Function(bool) onHoldChanged;
   final VoidCallback onEdit;
   final VoidCallback? onReleased;
 
@@ -549,11 +553,31 @@ class InputFieldCard extends StatefulWidget {
 
 class _InputFieldCardState extends State<InputFieldCard> {
   bool _pressed = false;
+  bool _busy = false;
 
-  void _setPressed(bool value) {
-    if (_pressed == value) return;
-    setState(() => _pressed = value);
-    widget.onHoldChanged(value);
+  void _press() {
+    if (_pressed || _busy) return;
+    setState(() => _pressed = true);
+    widget.onHoldChanged(true);
+  }
+
+  Future<void> _release() async {
+    if (!_pressed || _busy) return;
+    // Lock the button until the release command's response arrives; the next
+    // press can only happen once it has completed.
+    setState(() {
+      _pressed = false;
+      _busy = true;
+    });
+    await widget.onHoldChanged(false);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    widget.onReleased?.call();
+  }
+
+  void _cancel() {
+    if (!_pressed) return;
+    setState(() => _pressed = false);
   }
 
   @override
@@ -603,25 +627,24 @@ class _InputFieldCardState extends State<InputFieldCard> {
             const SizedBox(width: 8),
             Listener(
               behavior: HitTestBehavior.opaque,
-              onPointerDown: (_) => _setPressed(true),
-              onPointerUp: (_) {
-                _setPressed(false);
-                widget.onReleased?.call();
-              },
-              onPointerCancel: (_) => _setPressed(false),
+              onPointerDown: (_) => _press(),
+              onPointerUp: (_) => _release(),
+              onPointerCancel: (_) => _cancel(),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _pressed ? scheme.primary : scheme.secondaryContainer,
+                  color: _pressed || _busy
+                      ? scheme.primary
+                      : scheme.secondaryContainer,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.play_arrow,
                   size: 28,
-                  color: _pressed
+                  color: _pressed || _busy
                       ? scheme.onPrimary
                       : scheme.onSecondaryContainer,
                 ),
