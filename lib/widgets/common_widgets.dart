@@ -372,8 +372,7 @@ class ModuleStatusHeader extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800, color: color),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: color),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -563,13 +562,8 @@ class _InputFieldCardState extends State<InputFieldCard> {
     if (_busy) return;
     setState(() => _busy = true);
     await widget.onHoldChanged(true);
-    if (!mounted) return;
-    setState(() => _busy = false);
     await Future<void>.delayed(const Duration(milliseconds: _pressDelayMs));
-    if (!mounted) return;
-    setState(() => _busy = true);
     await widget.onHoldChanged(false);
-    if (!mounted) return;
     setState(() => _busy = false);
     widget.onReleased?.call();
   }
@@ -601,8 +595,7 @@ class _InputFieldCardState extends State<InputFieldCard> {
                           children: [
                             Text(widget.input.name,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16)),
+                                    fontWeight: FontWeight.w700, fontSize: 16)),
                             const SizedBox(height: 2),
                             Text(
                               widget.input.mode.label,
@@ -634,9 +627,7 @@ class _InputFieldCardState extends State<InputFieldCard> {
                 child: Icon(
                   Icons.play_arrow,
                   size: 28,
-                  color: _busy
-                      ? scheme.onPrimary
-                      : scheme.onSecondaryContainer,
+                  color: _busy ? scheme.onPrimary : scheme.onSecondaryContainer,
                 ),
               ),
             ),
