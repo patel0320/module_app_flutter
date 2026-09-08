@@ -32,6 +32,7 @@ import '../../models/models.dart';
 import '../module_store.dart';
 import '../notification_service.dart';
 import '../settings_store.dart';
+import '../status_log_store.dart';
 import 'module_heartbeat_service.dart';
 
 /// Thin wrapper around the [Workmanager] plugin.
@@ -93,6 +94,7 @@ abstract final class BackgroundStatusWorker {
       debugPrint('BackgroundStatusWorker: starting poll');
       await SettingsStore.shared.init();
       await LocalNotificationService.shared.initialize();
+      await StatusLogStore.shared.init();
 
       await ModuleStore.shared.init();
       final before = <String, ConnectionStatus>{
@@ -109,6 +111,11 @@ abstract final class BackgroundStatusWorker {
         final module = ModuleStore.shared.byId(entry.key);
         final now = module?.status;
         if (module == null || now == null || now == entry.value) continue;
+        if (now == ConnectionStatus.offline) {
+          await StatusLogStore.shared.recordOffline();
+        } else {
+          await StatusLogStore.shared.recordRestored();
+        }
         await notifier.showModuleStatusChanged(
             module, now == ConnectionStatus.online);
       }

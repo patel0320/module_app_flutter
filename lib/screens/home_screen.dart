@@ -4,7 +4,7 @@
 //  1. Quick access to scenarios flagged "Show in Home", reorderable by drag
 //     and drop.
 //  2. A prominent red banner when a module is offline, tapping it opens the
-//     System Status page.
+//     Notification History page.
 //  3. Real-time internal temperature monitoring per module with a similar
 //     alert banner when thresholds are exceeded.
 // Rooms (brief 2.5) are also surfaced here for quick access to their
@@ -491,8 +491,8 @@ class _GlowDot extends StatelessWidget {
   }
 }
 
-/// Red alert banner (offline / over-temperature) that opens System Status on
-/// tap -- the same prominent treatment for both alerts.
+/// Red alert banner (offline / over-temperature) that opens Notification
+/// History on tap -- the same prominent treatment for both alerts.
 class _AlertBanner extends StatelessWidget {
   const _AlertBanner(
       {required this.icon, required this.message, required this.onTap});

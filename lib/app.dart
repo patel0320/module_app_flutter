@@ -8,7 +8,7 @@ class _SystemStatusPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('System Status')),
+      appBar: AppBar(title: const Text('Notification History')),
       body: const Center(child: Text('Error & event log (30 days)')),
     );
   }

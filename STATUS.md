@@ -31,8 +31,8 @@ Ast: `✅` implemented · `🟡` partial (notes follow) · `❌` not implemented
 - [x] ✅ Quick-access scenarios (those with `showInHome == true`) on Home — `HomeScreen._QuickScenarioCard`.
 - [x] ✅ Drag-and-drop reordering — `ReorderableListView` + `ScenarioStore.move`.
 - [x] ✅ Prominent red banner for offline modules (`_AlertBanner`).
-- [x] ✅ Tapping banner navigates to **System Status** (`/system-status` route).
-- [x] 🟡 System Status page lists a `mockStatusLog()` only — not driven by real event history. *Real event feed not wired from `ModuleStatusService` failures into a separate System-Status log.*
+- [x] ✅ Tapping banner navigates to **Notification History** (`/system-status` route).
+- [x] ✅ Notification History records real OFFLINE / RESTORED / FIRMWARE events as they happen (`StatusLogStore` + `NotificationMonitor`), persists them to shared_preferences (`StatusLogRepository`), and raises the matching OS notification.
 - [x] ✅ Temperature card per module on Home; reads `ModuleStore.internalTempC`.
 - [x] ✅ Per-module min/max temperature thresholds (`tempMinC` / `tempMaxC`) — settable on `TemperatureModuleScreen`.
 - [x] ✅ Temperature alert renders as a second `_AlertBanner` (same component as offline).

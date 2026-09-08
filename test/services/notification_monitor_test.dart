@@ -8,10 +8,12 @@ import 'package:soleux_device_manager/models/models.dart';
 import 'package:soleux_device_manager/services/module_store.dart';
 import 'package:soleux_device_manager/services/notification_monitor.dart';
 import 'package:soleux_device_manager/services/settings_store.dart';
+import 'package:soleux_device_manager/services/status_log_store.dart';
 
 DeviceModule _module(String id,
         {ConnectionStatus status = ConnectionStatus.online,
-        double tempC = 30}) =>
+        double tempC = 30,
+        String? firmware}) =>
     DeviceModule(
       id: id,
       name: 'Relay $id',
@@ -22,6 +24,7 @@ DeviceModule _module(String id,
       internalTempC: tempC,
       tempMinC: 0,
       tempMaxC: 60,
+      firmware: firmware,
       channels: [
         ChannelOutput(id: '${id}c1', name: 'Cabin Light', icon: Icons.power),
       ],
@@ -87,6 +90,49 @@ void main() {
       await store.update('m2', (m) => m.status = ConnectionStatus.online);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(monitor.notificationCount, 0);
+      monitor.dispose();
+    });
+
+    test('records OFFLINE / RESTORED history entries for settled transitions',
+        () async {
+      final store =
+          await storeWith([_module('m1', status: ConnectionStatus.online)]);
+      final log = StatusLogStore.forTesting();
+      await log.init();
+      final monitor = NotificationMonitor.forTesting(store,
+          settleDuration: const Duration(milliseconds: 20), statusLog: log);
+      await log.clear();
+      monitor.start();
+      await store.commit();
+
+      await store.update('m1', (m) => m.status = ConnectionStatus.offline);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(log.entries.first.type, StatusLogType.offline);
+
+      await store.update('m1', (m) => m.status = ConnectionStatus.online);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(log.entries.first.type, StatusLogType.restored);
+      expect(log.entries, hasLength(2));
+      monitor.dispose();
+    });
+
+    test('records FIRMWARE history on a version change', () async {
+      final store = await storeWith(
+          [_module('f1', status: ConnectionStatus.online, firmware: '7.13')]);
+      final log = StatusLogStore.forTesting();
+      await log.init();
+      await log.clear();
+      final monitor = NotificationMonitor.forTesting(store,
+          settleDuration: const Duration(milliseconds: 20), statusLog: log);
+      monitor.start();
+      await store.commit();
+      expect(log.entries, isEmpty);
+
+      await store.update('f1', (m) => m.firmware = '7.14');
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(log.entries.first.type, StatusLogType.firmware);
+      expect(log.entries.first.message, contains('7.13'));
+      expect(log.entries.first.message, contains('7.14'));
       monitor.dispose();
     });
   });

@@ -72,6 +72,7 @@ class SettingsStore extends ChangeNotifier {
   bool _outputLeftOn = true;
   bool _temperature = true;
   bool _automationTriggered = false;
+  bool _firmwareUpdate = false;
 
   /// Which Control API command transport the app uses (TCP 5008 by default).
   CommandTransportMode _commandTransport = CommandTransportMode.tcp;
@@ -91,6 +92,7 @@ class SettingsStore extends ChangeNotifier {
   bool get outputLeftOn => _outputLeftOn;
   bool get temperature => _temperature;
   bool get automationTriggered => _automationTriggered;
+  bool get firmwareUpdate => _firmwareUpdate;
 
   /// The Control API command transport in use (TCP 5008 default; HTTP/HTTPS
   /// POST /api/v1/command selectable in Settings).
@@ -115,6 +117,7 @@ class SettingsStore extends ChangeNotifier {
   static const String _kKeyOutputOnThresholdHours =
       'settings_output_on_threshold_hours';
   static const String _kKeyCommandTransport = 'settings_command_transport';
+  static const String _kKeyFirmwareUpdate = 'settings_notify_firmware_update';
 
   /// Loads all saved preferences once and applies them to the global
   /// notifiers. Safe to call repeatedly.
@@ -140,12 +143,13 @@ class SettingsStore extends ChangeNotifier {
       _outputLeftOn = _prefs!.getBool(_kKeyOutputLeftOn) ?? true;
       _temperature = _prefs!.getBool(_kKeyTemperature) ?? true;
       _automationTriggered = _prefs!.getBool(_kKeyAutomation) ?? false;
+      _firmwareUpdate = _prefs!.getBool(_kKeyFirmwareUpdate) ?? false;
       _defaultTempThreshold =
           _prefs!.getDouble(_kKeyDefaultTempThreshold) ?? 65;
       _outputOnThresholdHours =
           _prefs!.getInt(_kKeyOutputOnThresholdHours) ?? 12;
-      _commandTransport = CommandTransportMode.values.asNameMap()[
-              _prefs!.getString(_kKeyCommandTransport)] ??
+      _commandTransport = CommandTransportMode.values
+              .asNameMap()[_prefs!.getString(_kKeyCommandTransport)] ??
           CommandTransportMode.tcp;
     } catch (e, st) {
       debugPrint('SettingsStore: loading preferences failed: $e\n$st');
@@ -198,6 +202,11 @@ class SettingsStore extends ChangeNotifier {
     return _persistAndNotify();
   }
 
+  Future<void> setFirmwareUpdate(bool value) {
+    _firmwareUpdate = value;
+    return _persistAndNotify();
+  }
+
   /// Sets the default temperature alert threshold (°C) for new modules,
   /// clamped to a sensible 0-100 range, and persists it.
   Future<void> setDefaultTemperatureThreshold(double value) {
@@ -227,6 +236,7 @@ class SettingsStore extends ChangeNotifier {
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
     await _prefs?.setBool(_kKeyTemperature, _temperature);
     await _prefs?.setBool(_kKeyAutomation, _automationTriggered);
+    await _prefs?.setBool(_kKeyFirmwareUpdate, _firmwareUpdate);
     await _prefs?.setDouble(_kKeyDefaultTempThreshold, _defaultTempThreshold);
     await _prefs?.setInt(_kKeyOutputOnThresholdHours, _outputOnThresholdHours);
     await _prefs?.setString(_kKeyCommandTransport, _commandTransport.name);

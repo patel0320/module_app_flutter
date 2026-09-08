@@ -43,6 +43,13 @@ class _NotificationsSettingsScreenState
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
+                    title: Text(l10n.notificationsFirmware),
+                    subtitle: Text(l10n.notificationsFirmwareDesc),
+                    value: store.firmwareUpdate,
+                    onChanged: (v) => store.setFirmwareUpdate(v),
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
                     title: Text(l10n.notificationsOutputLongOn),
                     subtitle: Text(l10n.notificationsOutputLongOnDesc),
                     value: store.outputLeftOn,

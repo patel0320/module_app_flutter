@@ -54,17 +54,10 @@ List<DeviceModule> mockModules() => [
         ],
         inputs: [
           PhysicalInput(
-              id: 'm1i1',
-              name: 'Switch 1',
-              mode: InputMode.maintained),
+              id: 'm1i1', name: 'Switch 1', mode: InputMode.maintained),
+          PhysicalInput(id: 'm1i2', name: 'Switch 2', mode: InputMode.pulse),
           PhysicalInput(
-              id: 'm1i2',
-              name: 'Switch 2',
-              mode: InputMode.pulse),
-          PhysicalInput(
-              id: 'm1i3',
-              name: 'Switch 3',
-              mode: InputMode.momentary),
+              id: 'm1i3', name: 'Switch 3', mode: InputMode.momentary),
         ],
       ),
       DeviceModule(
@@ -83,9 +76,7 @@ List<DeviceModule> mockModules() => [
         ],
         inputs: [
           PhysicalInput(
-              id: 'm2i1',
-              name: 'Switch 1',
-              mode: InputMode.maintained),
+              id: 'm2i1', name: 'Switch 1', mode: InputMode.maintained),
         ],
       ),
       DeviceModule(
@@ -442,40 +433,6 @@ List<EventLogEntry> mockEventLog() => [
           time: _ago(const Duration(days: 20)),
           title: 'Chandelier set to 15%',
           subtitle: 'Movie Night scenario'),
-    ];
-
-/// System Status error/event log - brief section I, point 2.
-List<StatusLogEntry> mockStatusLog() => [
-      StatusLogEntry(
-          time: _ago(const Duration(minutes: 1)),
-          moduleName: 'Engine Room Sensor',
-          message: 'Internal temperature exceeded threshold (62.0°C)',
-          isAlert: true),
-      StatusLogEntry(
-          time: _ago(const Duration(minutes: 30)),
-          moduleName: 'Salon Dimmer 220V',
-          message: 'Module went offline',
-          isAlert: true),
-      StatusLogEntry(
-          time: _ago(const Duration(hours: 2)),
-          moduleName: 'Bow Thruster Relay',
-          message: 'Module went offline',
-          isAlert: true),
-      StatusLogEntry(
-          time: _ago(const Duration(days: 1)),
-          moduleName: 'Salon Dimmer 220V',
-          message: 'Module reconnected',
-          isAlert: false),
-      StatusLogEntry(
-          time: _ago(const Duration(days: 3)),
-          moduleName: 'Bow Thruster Relay',
-          message: 'Module reconnected',
-          isAlert: false),
-      StatusLogEntry(
-          time: _ago(const Duration(days: 4)),
-          moduleName: 'Bow Thruster Relay',
-          message: 'Module went offline',
-          isAlert: true),
     ];
 
 /// Icon palette offered when naming/customizing an output - brief 2.2.

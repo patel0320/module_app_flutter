@@ -4,6 +4,7 @@
 // backend, database, or network layer behind these models - screens create
 // and mutate local copies in-memory only (see lib/data/mock_data.dart).
 import 'package:flutter/material.dart';
+import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 /// The five dedicated hardware module types described in the brief
 /// (section 2.3 "Extended Control Types").
@@ -639,19 +640,44 @@ class EventLogEntry {
       );
 }
 
-/// A single row in the System Status error/event log (brief section I, point 2).
+/// The kind of notification history event (feed from ModuleStatusService,
+/// firmware updates, etc.).
+enum StatusLogType {
+  offline,
+  restored,
+  firmware;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        StatusLogType.offline => l10n.statusLogOffline,
+        StatusLogType.restored => l10n.statusLogRestored,
+        StatusLogType.firmware => l10n.statusLogFirmware,
+      };
+}
+
+/// A single row in the Notification History (brief section I, point 2).
 class StatusLogEntry {
   StatusLogEntry({
     required this.time,
-    required this.moduleName,
+    required this.type,
     required this.message,
-    required this.isAlert,
   });
 
   final DateTime time;
-  final String moduleName;
+  final StatusLogType type;
   final String message;
 
-  /// True for offline / over-temperature alerts, false for recovery events.
-  final bool isAlert;
+  /// True for OFFLINE alerts, false for recovery events.
+  bool get isAlert => type == StatusLogType.offline;
+
+  Map<String, Object?> toJson() => {
+        'time': time.toIso8601String(),
+        'type': type.name,
+        'message': message,
+      };
+
+  factory StatusLogEntry.fromJson(Map<String, Object?> json) => StatusLogEntry(
+        time: DateTime.parse(json['time'] as String),
+        type: StatusLogType.values.byName(json['type'] as String),
+        message: json['message'] as String? ?? '',
+      );
 }

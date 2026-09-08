@@ -1,37 +1,59 @@
 // lib/screens/system_status_screen.dart
 //
-// "System Status" page reached by tapping the offline/temperature alert
-// banners on Home (brief section I, point 2: "a log of error messages").
+// "Notification History" page reached by tapping the offline/temperature alert
+// banners on Home (brief section I, point 2: "a log of error messages"). Rows
+// come from the app-wide status log, which records real OFFLINE / RESTORED /
+// FIRMWARE events as they happen (see StatusLogStore + NotificationMonitor).
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
-import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/status_log_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-class SystemStatusScreen extends StatelessWidget {
+class SystemStatusScreen extends StatefulWidget {
   const SystemStatusScreen({super.key});
 
   @override
+  State<SystemStatusScreen> createState() => _SystemStatusScreenState();
+}
+
+class _SystemStatusScreenState extends State<SystemStatusScreen> {
+  final StatusLogStore _store = StatusLogStore.shared;
+
+  @override
+  void initState() {
+    super.initState();
+    _store.init();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final entries = mockStatusLog()..sort((a, b) => b.time.compareTo(a.time));
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.systemStatusTitle)),
-      body: entries.isEmpty
-          ? EmptyState(
-              icon: Icons.verified_outlined, message: l10n.systemStatusNoIssues)
-          : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.outerPadding),
-              itemCount: entries.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.betweenCards),
-              itemBuilder: (context, index) =>
-                  _StatusTile(entry: entries[index], onSurface: onSurface),
-            ),
+      body: ListenableBuilder(
+        listenable: _store,
+        builder: (context, _) {
+          final entries = _store.entries;
+          if (entries.isEmpty) {
+            return EmptyState(
+                icon: Icons.verified_outlined,
+                message: l10n.systemStatusNoIssues);
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.outerPadding),
+            itemCount: entries.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AppSpacing.betweenCards),
+            itemBuilder: (context, index) =>
+                _StatusTile(entry: entries[index], onSurface: onSurface),
+          );
+        },
+      ),
     );
   }
 }
@@ -62,7 +84,7 @@ class _StatusTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.moduleName,
+                  Text(entry.type.label(l10n),
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(entry.message,

@@ -26,6 +26,7 @@ import '../models/models.dart';
 import 'module_store.dart';
 import 'notification_service.dart';
 import 'settings_store.dart';
+import 'status_log_store.dart';
 
 /// Observes [ModuleStore.shared] and emits local notifications for status,
 /// temperature and output-duration events.
@@ -34,8 +35,10 @@ class NotificationMonitor {
     ModuleStore? store,
     this.settleDuration = NotificationMonitor.settleDurationDefault,
     Duration? outputThreshold,
+    StatusLogStore? statusLog,
   })  : store = store ?? ModuleStore.shared,
-        _outputThresholdOverride = outputThreshold;
+        _outputThresholdOverride = outputThreshold,
+        _statusLog = statusLog ?? StatusLogStore.shared;
 
   /// App-wide shared instance used by the launch path and the background
   /// worker. Each isolate gets its own instance.
@@ -47,11 +50,13 @@ class NotificationMonitor {
     ModuleStore store, {
     Duration? settleDuration,
     Duration? outputThreshold,
+    StatusLogStore? statusLog,
   }) =>
       NotificationMonitor._(
         store: store,
         settleDuration: settleDuration ?? settleDurationDefault,
         outputThreshold: outputThreshold,
+        statusLog: statusLog,
       );
 
   /// How long a status change must hold before it is notified, so a quick
@@ -83,11 +88,19 @@ class NotificationMonitor {
 
   final ModuleStore store;
 
+  /// Where confirmed status / firmware events are recorded (the Notification
+  /// History persistence layer).
+  final StatusLogStore _statusLog;
+
   bool _started = false;
   bool _seeded = false;
 
   /// Last observed connection status per module id (baseline / seed state).
   final Map<String, ConnectionStatus> _lastStatus = {};
+
+  /// Last observed firmware version per module id (for FIRMWARE history
+  /// entries). Keys are seeded together with the status baseline.
+  final Map<String, String?> _lastFirmware = {};
 
   /// Whether the module's temperature was out of range in the last pass.
   final Map<String, bool> _lastOverTemp = {};
@@ -139,6 +152,7 @@ class NotificationMonitor {
     _detectStatusTransitions(modules);
     _evaluateTemperature(modules);
     _evaluateOutputs();
+    _detectFirmwareChanges(modules);
   }
 
   /// Records the current state as the baseline without notifying - this is
@@ -147,6 +161,7 @@ class NotificationMonitor {
     for (final module in store.modules) {
       _lastStatus[module.id] = module.status;
       _lastOverTemp[module.id] = module.isOverTemperature;
+      _lastFirmware[module.id] = module.firmware;
     }
     _evaluateOutputs();
     _seeded = true;
@@ -157,6 +172,7 @@ class NotificationMonitor {
 
     // Drop state for modules that were removed.
     _lastStatus.removeWhere((id, _) => !ids.contains(id));
+    _lastFirmware.removeWhere((id, _) => !ids.contains(id));
 
     for (final module in modules) {
       final baseline = _lastStatus[module.id];
@@ -212,9 +228,42 @@ class NotificationMonitor {
           current == ConnectionStatus.online && old != ConnectionStatus.online;
       if (!wentOffline && !backOnline) continue;
       notificationCount++;
+      // Record the real event in the Notification History, then surface the
+      // OS notification (gated by the notification preference).
+      if (wentOffline) {
+        _statusLog.recordOffline().ignore();
+      } else {
+        _statusLog.recordRestored().ignore();
+      }
       LocalNotificationService.shared
           .showModuleStatusChanged(module, current == ConnectionStatus.online)
           .ignore();
+    }
+  }
+
+  /// Compares each module's reported firmware against the last observed
+  /// version and raises a `FIRMWARE` history entry (plus the gated
+  /// notification) whenever it changes. The first time a version is seen an
+  /// "Firmware version reported" entry is written; later updates write a
+  /// "Firmware changed from A to B" entry.
+  void _detectFirmwareChanges(List<DeviceModule> modules) {
+    for (final module in modules) {
+      final version = module.firmware;
+      if (version == null || version.isEmpty) continue;
+      final previous = _lastFirmware[module.id];
+      if (version == previous) continue;
+      _lastFirmware[module.id] = version;
+      if (previous == null || previous.isEmpty) {
+        _statusLog.recordFirmwareReported(version).ignore();
+        LocalNotificationService.shared
+            .showFirmwareReported(module, version)
+            .ignore();
+      } else {
+        _statusLog.recordFirmwareChanged(previous, version).ignore();
+        LocalNotificationService.shared
+            .showFirmwareChanged(module, previous, version)
+            .ignore();
+      }
     }
   }
 

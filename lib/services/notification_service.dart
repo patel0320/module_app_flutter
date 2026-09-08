@@ -39,6 +39,7 @@ class LocalNotificationService with WidgetsBindingObserver {
   static const String channelTemperature = 'module_temperature';
   static const String channelOutputLeftOn = 'output_left_on';
   static const String channelAutomation = 'automation';
+  static const String channelFirmware = 'firmware';
 
   /// How long an output must remain ON before the "left ON too long" alert
   /// fires (an output that turns OFF resets the timer). Default matches the
@@ -139,6 +140,12 @@ class LocalNotificationService with WidgetsBindingObserver {
           description: 'A smart automation was triggered',
           importance: Importance.defaultImportance,
         ),
+        AndroidNotificationChannel(
+          channelFirmware,
+          'Firmware updates',
+          description: 'A module reported or changed its firmware version',
+          importance: Importance.defaultImportance,
+        ),
       ];
 
   /// The active [Locale] for building localized notification strings.
@@ -203,6 +210,29 @@ class LocalNotificationService with WidgetsBindingObserver {
     );
   }
 
+  /// Alerts the user that [module] reported firmware [version], iff the
+  /// "Firmware update" toggle is enabled.
+  Future<void> showFirmwareReported(DeviceModule module, String version) async {
+    if (!SettingsStore.shared.firmwareUpdate) return;
+    await _show(
+      channel: channelFirmware,
+      title: _l10n.notifyFirmwareReported(module.name, version),
+      body: _l10n.notifyFirmwareReportedBody,
+    );
+  }
+
+  /// Alerts the user that [module]'s firmware changed from [fromVersion] to
+  /// [toVersion], iff the "Firmware update" toggle is enabled.
+  Future<void> showFirmwareChanged(
+      DeviceModule module, String fromVersion, String toVersion) async {
+    if (!SettingsStore.shared.firmwareUpdate) return;
+    await _show(
+      channel: channelFirmware,
+      title: _l10n.notifyFirmwareChanged(module.name),
+      body: _l10n.notifyFirmwareChangedBody(fromVersion, toVersion),
+    );
+  }
+
   /// Localized strings for the active locale without needing a BuildContext.
   AppLocalizations get _l10n => lookupAppLocalizations(_locale);
 
@@ -244,6 +274,8 @@ class LocalNotificationService with WidgetsBindingObserver {
         return 'Output left ON';
       case channelAutomation:
         return 'Automations';
+      case channelFirmware:
+        return 'Firmware updates';
     }
     return channel;
   }
