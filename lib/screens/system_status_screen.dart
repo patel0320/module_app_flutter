@@ -84,10 +84,10 @@ class _StatusTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.type.label(l10n),
+                  Text(entry.deviceName,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(entry.message,
+                  Text('${entry.type.label(l10n)} \u00b7 ${entry.message}',
                       style:
                           TextStyle(color: onSurface.withValues(alpha: 0.7))),
                 ],

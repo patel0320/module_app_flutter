@@ -112,9 +112,9 @@ abstract final class BackgroundStatusWorker {
         final now = module?.status;
         if (module == null || now == null || now == entry.value) continue;
         if (now == ConnectionStatus.offline) {
-          await StatusLogStore.shared.recordOffline();
+          await StatusLogStore.shared.recordOffline(module.name);
         } else {
-          await StatusLogStore.shared.recordRestored();
+          await StatusLogStore.shared.recordRestored(module.name);
         }
         await notifier.showModuleStatusChanged(
             module, now == ConnectionStatus.online);

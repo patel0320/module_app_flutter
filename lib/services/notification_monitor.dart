@@ -231,9 +231,9 @@ class NotificationMonitor {
       // Record the real event in the Notification History, then surface the
       // OS notification (gated by the notification preference).
       if (wentOffline) {
-        _statusLog.recordOffline().ignore();
+        _statusLog.recordOffline(module.name).ignore();
       } else {
-        _statusLog.recordRestored().ignore();
+        _statusLog.recordRestored(module.name).ignore();
       }
       LocalNotificationService.shared
           .showModuleStatusChanged(module, current == ConnectionStatus.online)
@@ -254,12 +254,14 @@ class NotificationMonitor {
       if (version == previous) continue;
       _lastFirmware[module.id] = version;
       if (previous == null || previous.isEmpty) {
-        _statusLog.recordFirmwareReported(version).ignore();
+        _statusLog.recordFirmwareReported(module.name, version).ignore();
         LocalNotificationService.shared
             .showFirmwareReported(module, version)
             .ignore();
       } else {
-        _statusLog.recordFirmwareChanged(previous, version).ignore();
+        _statusLog
+            .recordFirmwareChanged(module.name, previous, version)
+            .ignore();
         LocalNotificationService.shared
             .showFirmwareChanged(module, previous, version)
             .ignore();

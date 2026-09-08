@@ -109,32 +109,38 @@ class StatusLogStore extends ChangeNotifier {
   }
 
   /// Records a module going offline.
-  Future<void> recordOffline() => record(StatusLogEntry(
+  Future<void> recordOffline(String deviceName) => record(StatusLogEntry(
         time: _nextTime(),
         type: StatusLogType.offline,
+        deviceName: deviceName,
         message: l10n.statusLogMsgOffline,
       ));
 
   /// Records a module coming back online.
-  Future<void> recordRestored() => record(StatusLogEntry(
+  Future<void> recordRestored(String deviceName) => record(StatusLogEntry(
         time: _nextTime(),
         type: StatusLogType.restored,
+        deviceName: deviceName,
         message: l10n.statusLogMsgRestored,
       ));
 
   /// Records a module reporting its firmware version for the first time
   /// (e.g. a fresh install or an OTA update landing on an unknown version).
-  Future<void> recordFirmwareReported(String version) => record(StatusLogEntry(
+  Future<void> recordFirmwareReported(String deviceName, String version) =>
+      record(StatusLogEntry(
         time: _nextTime(),
         type: StatusLogType.firmware,
+        deviceName: deviceName,
         message: l10n.statusLogMsgFirmwareReported(version),
       ));
 
   /// Records a module firmware version change (old -> new).
-  Future<void> recordFirmwareChanged(String fromVersion, String toVersion) =>
+  Future<void> recordFirmwareChanged(
+          String deviceName, String fromVersion, String toVersion) =>
       record(StatusLogEntry(
         time: _nextTime(),
         type: StatusLogType.firmware,
+        deviceName: deviceName,
         message: l10n.statusLogMsgFirmwareChanged(fromVersion, toVersion),
       ));
 

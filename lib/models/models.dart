@@ -659,11 +659,15 @@ class StatusLogEntry {
   StatusLogEntry({
     required this.time,
     required this.type,
+    required this.deviceName,
     required this.message,
   });
 
   final DateTime time;
   final StatusLogType type;
+
+  /// Name of the device/module the event belongs to.
+  final String deviceName;
   final String message;
 
   /// True for OFFLINE alerts, false for recovery events.
@@ -672,12 +676,14 @@ class StatusLogEntry {
   Map<String, Object?> toJson() => {
         'time': time.toIso8601String(),
         'type': type.name,
+        'deviceName': deviceName,
         'message': message,
       };
 
   factory StatusLogEntry.fromJson(Map<String, Object?> json) => StatusLogEntry(
         time: DateTime.parse(json['time'] as String),
         type: StatusLogType.values.byName(json['type'] as String),
+        deviceName: json['deviceName'] as String? ?? '',
         message: json['message'] as String? ?? '',
       );
 }

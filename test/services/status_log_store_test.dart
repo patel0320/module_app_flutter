@@ -19,10 +19,11 @@ void main() {
       await store.init();
       expect(store.entries, isEmpty, reason: 'must not seed demo history');
 
-      await store.recordOffline();
+      await store.recordOffline('Engine Room Sensor');
       expect(store.entries, hasLength(1));
       expect(store.entries.first.type, StatusLogType.offline);
       expect(store.entries.first.isAlert, isTrue);
+      expect(store.entries.first.deviceName, 'Engine Room Sensor');
     });
 
     test('records restored and firmware events with localized messages',
@@ -30,15 +31,17 @@ void main() {
       final store = StatusLogStore.forTesting();
       await store.init();
 
-      await store.recordRestored();
+      await store.recordRestored('Salon Dimmer 220V');
       expect(store.entries.first.type, StatusLogType.restored);
       expect(store.entries.first.isAlert, isFalse);
+      expect(store.entries.first.deviceName, 'Salon Dimmer 220V');
 
-      await store.recordFirmwareReported('7.14');
+      await store.recordFirmwareReported('Bow Thruster Relay', '7.14');
       expect(store.entries.first.type, StatusLogType.firmware);
+      expect(store.entries.first.deviceName, 'Bow Thruster Relay');
       expect(store.entries.first.message, contains('7.14'));
 
-      await store.recordFirmwareChanged('7.13', '7.14');
+      await store.recordFirmwareChanged('Bow Thruster Relay', '7.13', '7.14');
       expect(store.entries.first.message, contains('7.13'));
       expect(store.entries.first.message, contains('7.14'));
     });
@@ -47,7 +50,7 @@ void main() {
       final store = StatusLogStore.forTesting();
       await store.init();
       for (var i = 0; i < 3; i++) {
-        await store.recordOffline();
+        await store.recordOffline('Bow Thruster Relay');
       }
       final times = store.entries.map((e) => e.time).toList();
       for (var i = 1; i < times.length; i++) {
@@ -59,12 +62,13 @@ void main() {
     test('survives persistence across store instances', () async {
       final first = StatusLogStore.forTesting();
       await first.init();
-      await first.recordOffline();
+      await first.recordOffline('Engine Room Sensor');
 
       final second = StatusLogStore.forTesting();
       await second.init();
       expect(second.entries, hasLength(1));
       expect(second.entries.first.type, StatusLogType.offline);
+      expect(second.entries.first.deviceName, 'Engine Room Sensor');
     });
 
     test('drops entries older than the 30-day retention window', () async {
@@ -74,11 +78,13 @@ void main() {
       await store.record(StatusLogEntry(
         time: DateTime.now().subtract(const Duration(days: 29)),
         type: StatusLogType.restored,
+        deviceName: 'Salon Dimmer 220V',
         message: 'Device is online again',
       ));
       await store.record(StatusLogEntry(
         time: DateTime.now().subtract(const Duration(days: 45)),
         type: StatusLogType.offline,
+        deviceName: 'Bow Thruster Relay',
         message: 'Heartbeat or connection was lost',
       ));
 
@@ -91,7 +97,7 @@ void main() {
     test('clears the whole history', () async {
       final store = StatusLogStore.forTesting();
       await store.init();
-      await store.recordOffline();
+      await store.recordOffline('Engine Room Sensor');
       await store.clear();
       expect(store.entries, isEmpty);
     });

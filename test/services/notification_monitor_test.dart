@@ -108,10 +108,12 @@ void main() {
       await store.update('m1', (m) => m.status = ConnectionStatus.offline);
       await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(log.entries.first.type, StatusLogType.offline);
+      expect(log.entries.first.deviceName, 'Relay m1');
 
       await store.update('m1', (m) => m.status = ConnectionStatus.online);
       await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(log.entries.first.type, StatusLogType.restored);
+      expect(log.entries.first.deviceName, 'Relay m1');
       expect(log.entries, hasLength(2));
       monitor.dispose();
     });
@@ -131,6 +133,7 @@ void main() {
       await store.update('f1', (m) => m.firmware = '7.14');
       await Future<void>.delayed(const Duration(milliseconds: 40));
       expect(log.entries.first.type, StatusLogType.firmware);
+      expect(log.entries.first.deviceName, 'Relay f1');
       expect(log.entries.first.message, contains('7.13'));
       expect(log.entries.first.message, contains('7.14'));
       monitor.dispose();
