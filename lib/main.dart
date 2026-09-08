@@ -41,9 +41,43 @@ import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_palettes.dart';
 
+/// Application-wide navigator key, used by [AppLifecycleGate] to reach the
+/// navigator from outside any widget tree.
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Tracks the name of the currently-displayed route, so [AppLifecycleGate] can
+/// tell whether the app is still stuck on the splash without needing a widget
+/// context. Wired into [MaterialApp.navigatorObservers].
+final AppRouteTracker appRouteTracker = AppRouteTracker();
+
+/// Observes the navigator and mirrors the top route's [Route.settings.name]
+/// into [currentRouteName].
+class AppRouteTracker extends NavigatorObserver {
+  String? currentRouteName;
+
+  @override
+  void didPush(Route route, Route? previousRoute) =>
+      currentRouteName = route.settings.name;
+
+  @override
+  void didPop(Route route, Route? previousRoute) =>
+      currentRouteName = previousRoute?.settings.name;
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) =>
+      currentRouteName = newRoute?.settings.name;
+
+  @override
+  void didRemove(Route route, Route? previousRoute) =>
+      currentRouteName = previousRoute?.settings.name;
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge).ignore();
+  // Central gate that guarantees the app always moves past the splash - on a
+  // cold start and again whenever the app returns to the foreground.
+  AppLifecycleGate(appNavigatorKey).attach();
   // Kick off loading the persisted room, scenario, automation and module
   // lists before the first frame so the Rooms / Scenarios / Automations /
   // Home screens reflect storage immediately.
@@ -96,6 +130,8 @@ class AutomationApp extends StatelessWidget {
                   onGenerateTitle: (context) =>
                       AppLocalizations.of(context).appTitle,
                   debugShowCheckedModeBanner: false,
+                  navigatorKey: appNavigatorKey,
+                  navigatorObservers: [appRouteTracker],
                   theme: AppTheme.lightFor(themeId),
                   darkTheme: AppTheme.darkFor(themeId),
                   themeMode: mode,
@@ -260,5 +296,89 @@ class _RootShellState extends State<RootShell> with RestorationMixin {
         ],
       ),
     );
+  }
+}
+
+/// Central app-lifecycle gate that guarantees the app always moves past the
+/// splash, both on a cold start and whenever the app returns to the
+/// foreground.
+///
+/// The splash screen is only a branding layer: every landing-route decision
+/// lives here at the application level. This is what stops the app from being
+/// stuck on the splash after a background/foreground cycle:
+///
+///   - Android may kill the process while the app is backgrounded; returning
+///     to it performs a cold restart (with or without state restoration) that
+///     can rebuild the initial `/` route.
+///   - Whether that restart lands on the restored `/root` or - when
+///     restoration is unavailable or fails - back on the splash, this gate
+///     re-checks the current route on every `resumed` lifecycle event and,
+///     while the top route is still `/`, drives the landing navigation again.
+///
+/// The session bootstrap is time-boxed so a stalled platform-channel read can
+/// never strand the app on the splash forever.
+class AppLifecycleGate with WidgetsBindingObserver {
+  AppLifecycleGate(this._navigatorKey);
+
+  final GlobalKey<NavigatorState> _navigatorKey;
+
+  static const String splashRouteName = '/';
+  static const String rootRouteName = '/root';
+  static const String loginRouteName = '/login';
+
+  /// Minimum branding display time on a cold start.
+  static const Duration brandingDelay = Duration(milliseconds: 1400);
+
+  /// Upper bound for the session bootstrap.
+  static const Duration sessionLoadTimeout = Duration(seconds: 1);
+
+  final DateTime _startedAt = DateTime.now();
+  bool _forwarding = false;
+
+  /// Registers the lifecycle observer and kicks off a first check after the
+  /// navigator has been built. Called once from `main()`.
+  void attach() {
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _forwardIfOnSplash());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Returning to the foreground may reveal a stuck splash (background-kill
+    // restart, failed restoration, or a cold start interrupted mid-flight).
+    // Re-check the current route and push past it.
+    if (state == AppLifecycleState.resumed) _forwardIfOnSplash();
+  }
+
+  Future<void> _forwardIfOnSplash() async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || _forwarding) return;
+    // Only act while the splash is actually the top route; once /root or
+    // /login is showing this method is a no-op, so it is safe to call on every
+    // resume without ever disturbing normal navigation.
+    if (appRouteTracker.currentRouteName != splashRouteName) return;
+
+    // Let the branding show for its configured minimum on a cold start,
+    // re-checking once the remaining time has elapsed.
+    final remaining = brandingDelay - DateTime.now().difference(_startedAt);
+    if (remaining > Duration.zero) {
+      Future.delayed(remaining, _forwardIfOnSplash);
+      return;
+    }
+
+    _forwarding = true;
+    await SessionStore.shared
+        .init()
+        .timeout(sessionLoadTimeout, onTimeout: () {});
+    _forwarding = false;
+
+    // Re-verify we are still stuck on the splash after the await.
+    if (!navigator.mounted) return;
+    if (appRouteTracker.currentRouteName != splashRouteName) return;
+
+    // A persisted sign-in session (see SessionStore) takes the user straight
+    // to the main shell; first-time / signed-out launches go to sign-in.
+    navigator.restorablePushReplacementNamed(
+        SessionStore.shared.signedIn ? rootRouteName : loginRouteName);
   }
 }
