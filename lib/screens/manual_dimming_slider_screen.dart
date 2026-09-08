@@ -37,55 +37,59 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
       appBar: AppBar(title: Text(widget.scenario.name)),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        child: Column(
-          children: [
-            const Spacer(),
-            Icon(
-              Icons.lightbulb,
-              size: 96,
-              color: _value == 0 ? onSurface.withValues(alpha: 0.2) : onSurface,
-            ),
-            const SizedBox(height: 16),
-            Text('$_value%',
-                style:
-                    const TextStyle(fontSize: 64, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(
-              widget.scenario.sliderTargetName.isEmpty
-                  ? l10n.manualDimDefaultLabel
-                  : widget.scenario.sliderTargetName,
-              style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                const Icon(Icons.brightness_low),
-                Expanded(
-                  child: Slider(
-                    value: _value.toDouble(),
-                    min: 0,
-                    max: 100,
-                    divisions: 100,
-                    label: '$_value%',
-                    onChanged: (v) => _update(v.round()),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              const Spacer(),
+              Icon(
+                Icons.lightbulb,
+                size: 96,
+                color:
+                    _value == 0 ? onSurface.withValues(alpha: 0.2) : onSurface,
+              ),
+              const SizedBox(height: 16),
+              Text('$_value%',
+                  style: const TextStyle(
+                      fontSize: 64, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(
+                widget.scenario.sliderTargetName.isEmpty
+                    ? l10n.manualDimDefaultLabel
+                    : widget.scenario.sliderTargetName,
+                style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  const Icon(Icons.brightness_low),
+                  Expanded(
+                    child: Slider(
+                      value: _value.toDouble(),
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      label: '$_value%',
+                      onChanged: (v) => _update(v.round()),
+                    ),
                   ),
-                ),
-                const Icon(Icons.brightness_high),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                    child: OutlinedButton(
-                        onPressed: () => _update(0), child: Text(l10n.off))),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: FilledButton(
-                        onPressed: () => _update(100), child: Text(l10n.on))),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
+                  const Icon(Icons.brightness_high),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                      child: OutlinedButton(
+                          onPressed: () => _update(0), child: Text(l10n.off))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: FilledButton(
+                          onPressed: () => _update(100), child: Text(l10n.on))),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

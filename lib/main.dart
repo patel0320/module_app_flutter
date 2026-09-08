@@ -6,6 +6,7 @@
 // lib/data/mock_data.dart and mutated only in local widget state.
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
@@ -42,6 +43,7 @@ import 'theme/theme_palettes.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge).ignore();
   // Kick off loading the persisted room, scenario, automation and module
   // lists before the first frame so the Rooms / Scenarios / Automations /
   // Home screens reflect storage immediately.
@@ -105,6 +107,11 @@ class AutomationApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
+                  builder: (context, child) =>
+                      AnnotatedRegion<SystemUiOverlayStyle>(
+                    value: _systemUiOverlayStyle(context),
+                    child: child!,
+                  ),
                   scrollBehavior: const AppScrollBehavior(),
                   restorationScopeId: 'app',
                   initialRoute: '/',
@@ -151,6 +158,25 @@ class AppScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.trackpad,
         PointerDeviceKind.stylus,
       };
+}
+
+/// Returns the system overlay style for edge-to-edge rendering: transparent
+/// status and navigation bars whose icon brightness follows the current
+/// theme (dark icons on light themes, light icons on dark themes). Contrast
+/// enforcement is disabled so the OS never paints a translucent scrim over
+/// the app's own background at the very top/bottom of the screen.
+SystemUiOverlayStyle _systemUiOverlayStyle(BuildContext context) {
+  final bool isLight = Theme.of(context).brightness == Brightness.light;
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: isLight ? Brightness.dark : Brightness.light,
+    statusBarBrightness: isLight ? Brightness.light : Brightness.dark,
+    systemStatusBarContrastEnforced: false,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness:
+        isLight ? Brightness.dark : Brightness.light,
+    systemNavigationBarContrastEnforced: false,
+  );
 }
 
 /// Hosts the four primary tabs behind a single Material 3 [NavigationBar]:
