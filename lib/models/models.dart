@@ -286,6 +286,131 @@ class PhysicalInput {
       };
 }
 
+/// Network/LAN+Wi-Fi info reported by `get_device_state` `result.network`.
+class DeviceNetworkInfo {
+  const DeviceNetworkInfo({
+    this.lanIp = '',
+    this.lanGateway = '',
+    this.lanSubnet = '',
+    this.wifiSsid = '',
+    this.wifiIp = '',
+    this.wifiSubnet = '',
+    this.wifiGateway = '',
+  });
+
+  final String lanIp;
+  final String lanGateway;
+  final String lanSubnet;
+  final String wifiSsid;
+  final String wifiIp;
+  final String wifiSubnet;
+  final String wifiGateway;
+
+  factory DeviceNetworkInfo.fromJson(Map<String, dynamic> json) =>
+      DeviceNetworkInfo(
+        lanIp: json['lan_ip'] as String? ?? '',
+        lanGateway: json['lan_gateway'] as String? ?? '',
+        lanSubnet: json['lan_subnet'] as String? ?? '',
+        wifiSsid: json['wifi_ssid'] as String? ?? '',
+        wifiIp: json['wifi_ip'] as String? ?? '',
+        wifiSubnet: json['wifi_subnet'] as String? ?? '',
+        wifiGateway: json['wifi_gateway'] as String? ?? '',
+      );
+
+  Map<String, Object?> toJson() => {
+        'lan_ip': lanIp,
+        'lan_gateway': lanGateway,
+        'lan_subnet': lanSubnet,
+        'wifi_ssid': wifiSsid,
+        'wifi_ip': wifiIp,
+        'wifi_subnet': wifiSubnet,
+        'wifi_gateway': wifiGateway,
+      };
+}
+
+/// Full system snapshot reported by `get_device_state` `result.system`
+/// (+ `result.network`), held on [DeviceModule.systemInfo] so screens can show
+/// CPU/memory/temperature/uptime and network details from the live device.
+class DeviceSystemInfo {
+  const DeviceSystemInfo({
+    this.cpuUsagePercent,
+    this.uptime,
+    this.memoryUsagePercent,
+    this.cpuTempC,
+    this.internalTempC,
+    this.externalTempC,
+    this.time,
+    this.network,
+  });
+
+  /// CPU load, percent (0-100).
+  final double? cpuUsagePercent;
+
+  /// Human-readable uptime string, e.g. `75294 seconds`.
+  final String? uptime;
+
+  /// Memory load, percent (may be reported as a string, e.g. `19.35`).
+  final double? memoryUsagePercent;
+
+  /// Processor temperature (°C).
+  final double? cpuTempC;
+
+  /// Internal (enclosure) temperature (°C).
+  final double? internalTempC;
+
+  /// External/sensor temperature (°C), when the device exposes one.
+  final double? externalTempC;
+
+  /// Device clock time, e.g. `2026/09/09 15:44:42`.
+  final String? time;
+
+  /// LAN/Wi-Fi addressing info.
+  final DeviceNetworkInfo? network;
+
+  /// Builds the snapshot from the top-level `get_device_state` result: reads
+  /// `result.system` for the system fields and `result.network` for addressing.
+  factory DeviceSystemInfo.fromJson(Map<String, dynamic> result) {
+    final system = result['system'] is Map
+        ? Map<String, dynamic>.from(result['system'] as Map)
+        : const <String, dynamic>{};
+    final network = result['network'] is Map
+        ? Map<String, dynamic>.from(result['network'] as Map)
+        : null;
+    return DeviceSystemInfo(
+      cpuUsagePercent: _tempFrom(system['cpu_usage_percent']),
+      uptime: system['uptime'] as String?,
+      memoryUsagePercent: _tempFrom(system['memory_usage_percent']),
+      cpuTempC: _tempFrom(system['cpu_temp_c']),
+      internalTempC: _tempFrom(system['internal_temp_c']),
+      externalTempC: _tempFrom(system['external_temp_c']),
+      time: system['time'] as String?,
+      network: network == null ? null : DeviceNetworkInfo.fromJson(network),
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+        'system': {
+          if (cpuUsagePercent != null) 'cpu_usage_percent': cpuUsagePercent,
+          if (uptime != null) 'uptime': uptime,
+          if (memoryUsagePercent != null)
+            'memory_usage_percent': memoryUsagePercent,
+          if (cpuTempC != null) 'cpu_temp_c': cpuTempC,
+          if (internalTempC != null) 'internal_temp_c': internalTempC,
+          if (externalTempC != null) 'external_temp_c': externalTempC,
+          if (time != null) 'time': time,
+        },
+        if (network != null) 'network': network!.toJson(),
+      };
+}
+
+/// Parses a temperature/percentage that the device may report as a number or a
+/// numeric string, e.g. `3.8.7`-style invalid values degrade to null.
+double? _tempFrom(Object? value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
 /// A hardware module added to the system (brief section 2.1).
 class DeviceModule {
   DeviceModule({
@@ -383,6 +508,11 @@ class DeviceModule {
   double tempMinC;
   double tempMaxC;
 
+  /// Full live `get_device_state` system/network snapshot, when the last
+  /// refresh reported one. Used by module screens to show CPU/memory/temperature
+  /// and network details.
+  DeviceSystemInfo? systemInfo;
+
   final List<ChannelOutput> channels;
   final List<PhysicalInput> inputs;
 
@@ -409,6 +539,7 @@ class DeviceModule {
         'heartbeatPort': heartbeatPort,
         'caps': caps,
         'lastSeenAt': lastSeenAt?.toIso8601String(),
+        if (systemInfo != null) 'systemInfo': systemInfo!.toJson(),
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -445,7 +576,11 @@ class DeviceModule {
           for (final i in json['inputs'] as List? ?? const [])
             PhysicalInput.fromJson((i as Map).cast<String, Object?>()),
         ],
-      );
+      )
+    ..systemInfo = json['systemInfo'] is Map
+        ? DeviceSystemInfo.fromJson(
+            (json['systemInfo'] as Map).cast<String, dynamic>())
+        : null;
 }
 
 /// A single command executed by a scenario or automation.
