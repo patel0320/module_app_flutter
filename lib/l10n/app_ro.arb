@@ -364,6 +364,7 @@
   "actionPickerInputTarget": "Intrare",
   "actionPickerNoOutputs": "Nu există ieșiri controlabile.",
   "actionPickerNoInputs": "Nu există intrări controlabile.",
+  "actionPickerNoTargets": "Nu există ieșiri sau intrări controlabile.",
   "actionPickerModuleLabel": "Modul",
   "actionPickerOutputLabel": "Ieșire",
   "actionPickerInputLabel": "Intrare",

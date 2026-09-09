@@ -398,6 +398,7 @@
   "actionPickerInputTarget": "Input",
   "actionPickerNoOutputs": "No controllable outputs available.",
   "actionPickerNoInputs": "No controllable inputs available.",
+  "actionPickerNoTargets": "No controllable outputs or inputs available.",
   "actionPickerModuleLabel": "Module",
   "actionPickerOutputLabel": "Output",
   "actionPickerInputLabel": "Input",
