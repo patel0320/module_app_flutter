@@ -15,6 +15,8 @@
 // glass Card look and accents come from the active SmartHome palette, so this
 // screen matches every other screen in the app. Offline/temperature semantics
 // stay green/red for consistency.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
@@ -43,6 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
   /// (online/offline, temperature) refreshed on open is reflected here.
   List<DeviceModule> get _modules => ModuleStore.shared.modules;
 
+  /// Auto-dismiss timer for the alert banners: each newly-appearing alert
+  /// (offline / over-temperature) is shown for about 5 seconds, then fades
+  /// out of the screen.
+  Timer? _bannerTimer;
+
+  /// Whether the alert banners are currently visible.
+  bool _bannerVisible = true;
+
+  /// Whether an alert condition was present on the previous build, used to
+  /// detect the leading edge of a new alert episode so the banner re-shows.
+  bool _lastAlertsActive = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +65,26 @@ class _HomeScreenState extends State<HomeScreen> {
     // count reflects live status instead of a stale/persisted snapshot. The
     // store commits + notifies as results arrive, rebuilding this count.
     ModuleStatusService.shared.refreshAll().ignore();
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Detects the leading edge of an alert episode (no alert -> alert) and, on
+  /// that transition, shows the banner and schedules its auto-dismiss after
+  /// ~5 seconds. Called from build so it stays in sync with store updates.
+  void _syncAlertBanner(bool hasAlerts) {
+    final leadingEdge = hasAlerts && !_lastAlertsActive;
+    _lastAlertsActive = hasAlerts;
+    if (!leadingEdge) return;
+    _bannerVisible = true;
+    _bannerTimer?.cancel();
+    _bannerTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _bannerVisible = false);
+    });
   }
 
   /// Rooms order is shared with the Rooms screen via [RoomStore.shared].
@@ -177,7 +211,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final offlineModules =
+        _modules.where((m) => m.status == ConnectionStatus.offline).toList();
     final overTemp = _overTempModules;
+    _syncAlertBanner(offlineModules.isNotEmpty || overTemp.isNotEmpty);
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
 
@@ -226,44 +263,53 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                   children: [
-                    if (_modules
-                        .where((m) => m.status == ConnectionStatus.offline)
-                        .toList()
-                        .isNotEmpty) ...[
-                      _AlertBanner(
-                        icon: Icons.wifi_off_rounded,
-                        message: _modules
-                                    .where((m) =>
-                                        m.status == ConnectionStatus.offline)
-                                    .toList()
-                                    .length ==
-                                1
-                            ? l10n.homeModuleOffline(_modules
-                                .where(
-                                    (m) => m.status == ConnectionStatus.offline)
-                                .toList()
-                                .first
-                                .name)
-                            : l10n.homeModulesOffline(_modules
-                                .where(
-                                    (m) => m.status == ConnectionStatus.offline)
-                                .toList()
-                                .length),
-                        onTap: () => Navigator.of(context)
-                            .restorablePushNamed('/system-status'),
-                      ),
-                      const SizedBox(height: AppSpacing.betweenCards),
-                    ],
-                    if (overTemp.isNotEmpty) ...[
-                      _AlertBanner(
-                        icon: Icons.thermostat,
-                        message: l10n.homeTempOutOfRange(overTemp.first.name,
-                            overTemp.first.internalTempC.toStringAsFixed(1)),
-                        onTap: () => Navigator.of(context)
-                            .restorablePushNamed('/system-status'),
-                      ),
-                      const SizedBox(height: AppSpacing.betweenCards),
-                    ],
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      child: _bannerVisible &&
+                              (offlineModules.isNotEmpty ||
+                                  overTemp.isNotEmpty)
+                          ? Padding(
+                              key: const ValueKey('alerts'),
+                              padding:
+                                  const EdgeInsets.only(bottom: 12),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  if (offlineModules.isNotEmpty) ...[
+                                    _AlertBanner(
+                                      icon: Icons.wifi_off_rounded,
+                                      message: offlineModules.length == 1
+                                          ? l10n.homeModuleOffline(
+                                              offlineModules.first.name)
+                                          : l10n.homeModulesOffline(
+                                              offlineModules.length),
+                                      onTap: () => Navigator.of(context)
+                                          .restorablePushNamed(
+                                              '/system-status'),
+                                    ),
+                                    const SizedBox(
+                                        height: AppSpacing.betweenCards),
+                                  ],
+                                  if (overTemp.isNotEmpty) ...[
+                                    _AlertBanner(
+                                      icon: Icons.thermostat,
+                                      message: l10n.homeTempOutOfRange(
+                                          overTemp.first.name,
+                                          overTemp.first.internalTempC
+                                              .toStringAsFixed(1)),
+                                      onTap: () => Navigator.of(context)
+                                          .restorablePushNamed(
+                                              '/system-status'),
+                                    ),
+                                    const SizedBox(
+                                        height: AppSpacing.betweenCards),
+                                  ],
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     const SizedBox(height: 12),
                     _SectionLabel(l10n.homeSectionRooms),
                     const SizedBox(height: 10),
