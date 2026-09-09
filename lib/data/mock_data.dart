@@ -457,4 +457,5 @@ const List<IconData> kChannelIconChoices = [
   Icons.outdoor_grill,
   Icons.garage,
   Icons.emoji_objects,
+  Icons.touch_app_outlined,
 ];

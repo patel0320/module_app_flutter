@@ -204,6 +204,7 @@ const Map<String, IconData> kPersistableIcons = {
   'emoji_objects': Icons.emoji_objects,
   'tune': Icons.tune,
   'thermostat': Icons.thermostat,
+  'touch_app': Icons.touch_app_outlined,
 };
 
 Map<int, IconData>? _iconByCodePoint;
@@ -583,6 +584,19 @@ class DeviceModule {
         : null;
 }
 
+/// Desired state of an input action in a scenario: drive the virtual input
+/// `true` (ON), `false` (OFF) or pulse it (`true`, then `false` after a short
+/// delay).
+enum InputActionState { on, off, pulse }
+
+extension InputActionStateX on InputActionState {
+  String get label => switch (this) {
+        InputActionState.on => 'ON',
+        InputActionState.off => 'OFF',
+        InputActionState.pulse => 'Pulse',
+      };
+}
+
 /// A single command executed by a scenario or automation.
 class ScenarioAction {
   ScenarioAction({
@@ -592,6 +606,9 @@ class ScenarioAction {
     required this.isDimmerAction,
     this.turnOn = true,
     this.brightnessPct = 100,
+    this.isInputAction = false,
+    this.inputName = '',
+    this.inputState = InputActionState.on,
   });
 
   final String moduleName;
@@ -601,9 +618,18 @@ class ScenarioAction {
   final bool turnOn;
   final int brightnessPct;
 
-  String get summary => isDimmerAction
-      ? '$channelName -> $brightnessPct%'
-      : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
+  /// True when this action drives a virtual input instead of an output
+  /// channel. When set, [channelName] is unused and [inputName]/[inputState]
+  /// describe the target.
+  final bool isInputAction;
+  final String inputName;
+  final InputActionState inputState;
+
+  String get summary => isInputAction
+      ? '$inputName -> ${inputState.label}'
+      : isDimmerAction
+          ? '$channelName -> $brightnessPct%'
+          : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
 
   Map<String, Object?> toJson() => {
         'moduleName': moduleName,
@@ -612,6 +638,9 @@ class ScenarioAction {
         'isDimmerAction': isDimmerAction,
         'turnOn': turnOn,
         'brightnessPct': brightnessPct,
+        'isInputAction': isInputAction,
+        'inputName': inputName,
+        if (isInputAction) 'inputState': inputState.name,
       };
 
   factory ScenarioAction.fromJson(Map<String, Object?> json) => ScenarioAction(
@@ -621,6 +650,14 @@ class ScenarioAction {
         isDimmerAction: json['isDimmerAction'] as bool? ?? false,
         turnOn: json['turnOn'] as bool? ?? true,
         brightnessPct: json['brightnessPct'] as int? ?? 100,
+        isInputAction: json['isInputAction'] as bool? ?? false,
+        inputName: json['inputName'] as String? ?? '',
+        inputState: switch (json['inputState'] as String?) {
+          'on' => InputActionState.on,
+          'off' => InputActionState.off,
+          'pulse' => InputActionState.pulse,
+          _ => InputActionState.on,
+        },
       );
 }
 

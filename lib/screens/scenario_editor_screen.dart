@@ -236,7 +236,9 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     child: Card(
                       child: ListTile(
                         leading: IconAvatar(icon: _actions[i].icon),
-                        title: Text(_actions[i].channelName,
+                        title: Text(_actions[i].isInputAction
+                            ? _actions[i].inputName
+                            : _actions[i].channelName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(l10n.scenarioActionModuleSummary(
