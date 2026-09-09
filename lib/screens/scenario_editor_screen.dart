@@ -267,7 +267,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                   prefixIcon: const Icon(Icons.lightbulb_outline)),
               items: [
                 for (final t in dimmerTargets)
-                  DropdownMenuItem(value: t, child: Text(t))
+                  DropdownMenuItem(
+                      value: t,
+                      child: Text(t,
+                          maxLines: 1, overflow: TextOverflow.ellipsis))
               ],
               onChanged: (value) => setState(
                   () => _sliderTargetName = value ?? _sliderTargetName),

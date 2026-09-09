@@ -57,6 +57,8 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
                 widget.scenario.sliderTargetName.isEmpty
                     ? l10n.manualDimDefaultLabel
                     : widget.scenario.sliderTargetName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
               ),
               const Spacer(),
