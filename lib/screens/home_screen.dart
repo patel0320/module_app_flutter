@@ -829,9 +829,6 @@ class _RunButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(colors: [cs.primary, cs.primary]),
-          boxShadow: [
-            BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 14),
-          ],
         ),
         width: 52,
         height: 52,
