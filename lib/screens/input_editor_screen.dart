@@ -80,65 +80,67 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.input.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          Text(
-            l10n.inputEditorOnModule(widget.module.name),
-            style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _name,
-            decoration: InputDecoration(
-              labelText: l10n.inputEditorName,
-              prefixIcon: const Icon(Icons.edit_outlined),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            Text(
+              l10n.inputEditorOnModule(widget.module.name),
+              style: TextStyle(color: onSurface.withValues(alpha: 0.55)),
             ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.inputEditorBehavior),
-          Card(
-            child: RadioGroup<InputMode>(
-              groupValue: _mode,
-              onChanged: (value) =>
-                  setState(() => _mode = value ?? _mode),
-              child: Column(
-                children: [
-                  for (int i = 0; i < InputMode.values.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    RadioListTile<InputMode>(
-                      value: InputMode.values[i],
-                      title: Text(InputMode.values[i].label,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text(InputMode.values[i].description),
-                    ),
-                  ],
-                ],
+            const SizedBox(height: 20),
+            TextField(
+              controller: _name,
+              decoration: InputDecoration(
+                labelText: l10n.inputEditorName,
+                prefixIcon: const Icon(Icons.edit_outlined),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              l10n.inputEditorBehaviorHint,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: onSurface.withValues(alpha: 0.55)),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.inputEditorBehavior),
+            Card(
+              child: RadioGroup<InputMode>(
+                groupValue: _mode,
+                onChanged: (value) => setState(() => _mode = value ?? _mode),
+                child: Column(
+                  children: [
+                    for (int i = 0; i < InputMode.values.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      RadioListTile<InputMode>(
+                        value: InputMode.values[i],
+                        title: Text(InputMode.values[i].label,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(InputMode.values[i].description),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: SwitchListTile(
-              value: _enabled,
-              onChanged: (value) => setState(() => _enabled = value),
-              title: Text(l10n.inputEditorEnabled,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Text(l10n.inputEditorEnabledHint),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                l10n.inputEditorBehaviorHint,
+                style: TextStyle(
+                    fontSize: 12, color: onSurface.withValues(alpha: 0.55)),
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
-          FilledButton(onPressed: _save, child: Text(l10n.save)),
-        ],
+            const SizedBox(height: 24),
+            Card(
+              child: SwitchListTile(
+                value: _enabled,
+                onChanged: (value) => setState(() => _enabled = value),
+                title: Text(l10n.inputEditorEnabled,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(l10n.inputEditorEnabledHint),
+              ),
+            ),
+            const SizedBox(height: 32),
+            FilledButton(onPressed: _save, child: Text(l10n.save)),
+          ],
+        ),
       ),
     );
   }

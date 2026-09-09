@@ -35,24 +35,27 @@ class _SystemStatusScreenState extends State<SystemStatusScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.systemStatusTitle)),
-      body: ListenableBuilder(
-        listenable: _store,
-        builder: (context, _) {
-          final entries = _store.entries;
-          if (entries.isEmpty) {
-            return EmptyState(
-                icon: Icons.verified_outlined,
-                message: l10n.systemStatusNoIssues);
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.outerPadding),
-            itemCount: entries.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.betweenCards),
-            itemBuilder: (context, index) =>
-                _StatusTile(entry: entries[index], onSurface: onSurface),
-          );
-        },
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: _store,
+          builder: (context, _) {
+            final entries = _store.entries;
+            if (entries.isEmpty) {
+              return EmptyState(
+                  icon: Icons.verified_outlined,
+                  message: l10n.systemStatusNoIssues);
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(AppSpacing.outerPadding),
+              itemCount: entries.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.betweenCards),
+              itemBuilder: (context, index) =>
+                  _StatusTile(entry: entries[index], onSurface: onSurface),
+            );
+          },
+        ),
       ),
     );
   }

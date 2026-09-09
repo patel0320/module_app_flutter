@@ -68,25 +68,29 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
         final automations = _store.automations;
         return Scaffold(
           appBar: AppBar(title: Text(l10n.automationsTitle)),
-          body: automations.isEmpty
-              ? Center(
-                  child: EmptyState(
-                      icon: Icons.rule_outlined, message: l10n.automationsEmpty))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.outerPadding),
-                  itemCount: automations.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.betweenCards),
-                  itemBuilder: (context, index) {
-                    final automation = automations[index];
-                    return _AutomationCard(
-                      automation: automation,
-                      onTap: () => _edit(automation),
-                      onDelete: () => _delete(automation),
-                      onEnabledChanged: (v) => _setEnabled(automation, v),
-                    );
-                  },
-                ),
+          body: SafeArea(
+            top: false,
+            child: automations.isEmpty
+                ? Center(
+                    child: EmptyState(
+                        icon: Icons.rule_outlined,
+                        message: l10n.automationsEmpty))
+                : ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.outerPadding),
+                    itemCount: automations.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.betweenCards),
+                    itemBuilder: (context, index) {
+                      final automation = automations[index];
+                      return _AutomationCard(
+                        automation: automation,
+                        onTap: () => _edit(automation),
+                        onDelete: () => _delete(automation),
+                        onEnabledChanged: (v) => _setEnabled(automation, v),
+                      );
+                    },
+                  ),
+          ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: null,
             onPressed: _create,

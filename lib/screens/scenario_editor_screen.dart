@@ -144,152 +144,157 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     return Scaffold(
       appBar: AppBar(
           title: Text(_isNew ? l10n.scenarioNewTitle : l10n.scenarioEditTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          Center(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(48),
-              onTap: _pickIcon,
-              child: Stack(
-                children: [
-                  IconAvatar(icon: _icon, size: 84, filled: true),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor:
-                          Theme.of(context).scaffoldBackgroundColor,
-                      child: Icon(Icons.edit, size: 14, color: onSurface),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            Center(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(48),
+                onTap: _pickIcon,
+                child: Stack(
+                  children: [
+                    IconAvatar(icon: _icon, size: 84, filled: true),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
+                        child: Icon(Icons.edit, size: 14, color: onSurface),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-                labelText: l10n.scenarioNameLabel,
-                prefixIcon: const Icon(Icons.label_outline)),
-          ),
-          const SizedBox(height: 20),
-          SectionHeader(l10n.scenarioTypeSection),
-          SegmentedButton<ScenarioType>(
-            segments: [
-              ButtonSegment(
-                  value: ScenarioType.tapToRun,
-                  label: Text(l10n.scenarioTypeTapToRun),
-                  icon: const Icon(Icons.touch_app_outlined)),
-              ButtonSegment(
-                  value: ScenarioType.manualSlider,
-                  label: Text(l10n.scenarioTypeManualSlider),
-                  icon: const Icon(Icons.tune)),
-            ],
-            selected: {_type},
-            onSelectionChanged: (s) => setState(() => _type = s.first),
-          ),
-          const SizedBox(height: 20),
-          DropdownButtonFormField<String>(
-            initialValue:
-                roomOptions.contains(_roomName) ? _roomName : roomOptions.first,
-            decoration: InputDecoration(
-                labelText: l10n.scenarioRoomLabel,
-                prefixIcon: const Icon(Icons.meeting_room_outlined)),
-            items: [
-              for (final room in roomOptions)
-                DropdownMenuItem(value: room, child: Text(room))
-            ],
-            onChanged: (value) =>
-                setState(() => _roomName = value ?? _roomName),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.showOnHome),
-            subtitle: Text(l10n.scenarioPinHint),
-            value: _showInHome,
-            onChanged: (v) => setState(() => _showInHome = v),
-          ),
-          const SizedBox(height: 12),
-          if (_type == ScenarioType.tapToRun) ...[
-            SectionHeader(
-              l10n.scenarioActionsSection,
-              trailing: TextButton.icon(
-                  onPressed: _addAction,
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.add)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                  labelText: l10n.scenarioNameLabel,
+                  prefixIcon: const Icon(Icons.label_outline)),
             ),
-            if (_actions.isEmpty)
-              EmptyState(
-                  icon: Icons.flash_on_outlined,
-                  message: l10n.scenarioActionsEmpty)
-            else
-              for (int i = 0; i < _actions.length; i++)
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                  child: Card(
-                    child: ListTile(
-                      leading: IconAvatar(icon: _actions[i].icon),
-                      title: Text(_actions[i].channelName,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text(l10n.scenarioActionModuleSummary(
-                          _actions[i].moduleName, _actions[i].summary)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: l10n.scenarioEditActionTooltip,
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () => _editAction(i),
-                          ),
-                          IconButton(
-                            tooltip: l10n.scenarioDeleteActionTooltip,
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () =>
-                                setState(() => _actions.removeAt(i)),
-                          ),
-                        ],
+            const SizedBox(height: 20),
+            SectionHeader(l10n.scenarioTypeSection),
+            SegmentedButton<ScenarioType>(
+              segments: [
+                ButtonSegment(
+                    value: ScenarioType.tapToRun,
+                    label: Text(l10n.scenarioTypeTapToRun),
+                    icon: const Icon(Icons.touch_app_outlined)),
+                ButtonSegment(
+                    value: ScenarioType.manualSlider,
+                    label: Text(l10n.scenarioTypeManualSlider),
+                    icon: const Icon(Icons.tune)),
+              ],
+              selected: {_type},
+              onSelectionChanged: (s) => setState(() => _type = s.first),
+            ),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              initialValue: roomOptions.contains(_roomName)
+                  ? _roomName
+                  : roomOptions.first,
+              decoration: InputDecoration(
+                  labelText: l10n.scenarioRoomLabel,
+                  prefixIcon: const Icon(Icons.meeting_room_outlined)),
+              items: [
+                for (final room in roomOptions)
+                  DropdownMenuItem(value: room, child: Text(room))
+              ],
+              onChanged: (value) =>
+                  setState(() => _roomName = value ?? _roomName),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.showOnHome),
+              subtitle: Text(l10n.scenarioPinHint),
+              value: _showInHome,
+              onChanged: (v) => setState(() => _showInHome = v),
+            ),
+            const SizedBox(height: 12),
+            if (_type == ScenarioType.tapToRun) ...[
+              SectionHeader(
+                l10n.scenarioActionsSection,
+                trailing: TextButton.icon(
+                    onPressed: _addAction,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.add)),
+              ),
+              if (_actions.isEmpty)
+                EmptyState(
+                    icon: Icons.flash_on_outlined,
+                    message: l10n.scenarioActionsEmpty)
+              else
+                for (int i = 0; i < _actions.length; i++)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                    child: Card(
+                      child: ListTile(
+                        leading: IconAvatar(icon: _actions[i].icon),
+                        title: Text(_actions[i].channelName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(l10n.scenarioActionModuleSummary(
+                            _actions[i].moduleName, _actions[i].summary)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: l10n.scenarioEditActionTooltip,
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () => _editAction(i),
+                            ),
+                            IconButton(
+                              tooltip: l10n.scenarioDeleteActionTooltip,
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () =>
+                                  setState(() => _actions.removeAt(i)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-          ] else ...[
-            SectionHeader(l10n.scenarioSliderTargetSection),
-            DropdownButtonFormField<String>(
-              initialValue: dimmerTargets.contains(_sliderTargetName)
-                  ? _sliderTargetName
-                  : null,
-              decoration: InputDecoration(
-                  labelText: l10n.scenarioDimmerOutputLabel,
-                  prefixIcon: const Icon(Icons.lightbulb_outline)),
-              items: [
-                for (final t in dimmerTargets)
-                  DropdownMenuItem(
-                      value: t,
-                      child: Text(t,
-                          maxLines: 1, overflow: TextOverflow.ellipsis))
-              ],
-              onChanged: (value) => setState(
-                  () => _sliderTargetName = value ?? _sliderTargetName),
-            ),
-            const SizedBox(height: 16),
-            Text(l10n.scenarioDefaultBrightness(_sliderValue),
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            Slider(
-              value: _sliderValue.toDouble(),
-              min: 0,
-              max: 100,
-              divisions: 100,
-              label: '$_sliderValue%',
-              onChanged: (v) => setState(() => _sliderValue = v.round()),
-            ),
+            ] else ...[
+              SectionHeader(l10n.scenarioSliderTargetSection),
+              DropdownButtonFormField<String>(
+                initialValue: dimmerTargets.contains(_sliderTargetName)
+                    ? _sliderTargetName
+                    : null,
+                decoration: InputDecoration(
+                    labelText: l10n.scenarioDimmerOutputLabel,
+                    prefixIcon: const Icon(Icons.lightbulb_outline)),
+                items: [
+                  for (final t in dimmerTargets)
+                    DropdownMenuItem(
+                        value: t,
+                        child: Text(t,
+                            maxLines: 1, overflow: TextOverflow.ellipsis))
+                ],
+                onChanged: (value) => setState(
+                    () => _sliderTargetName = value ?? _sliderTargetName),
+              ),
+              const SizedBox(height: 16),
+              Text(l10n.scenarioDefaultBrightness(_sliderValue),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Slider(
+                value: _sliderValue.toDouble(),
+                min: 0,
+                max: 100,
+                divisions: 100,
+                label: '$_sliderValue%',
+                onChanged: (v) => setState(() => _sliderValue = v.round()),
+              ),
+            ],
+            const SizedBox(height: 24),
+            FilledButton(onPressed: _save, child: Text(l10n.scenarioSave)),
           ],
-          const SizedBox(height: 24),
-          FilledButton(onPressed: _save, child: Text(l10n.scenarioSave)),
-        ],
+        ),
       ),
     );
   }

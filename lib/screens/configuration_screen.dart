@@ -100,33 +100,36 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
           ),
         ],
       ),
-      body: ListenableBuilder(
-        listenable: _store,
-        builder: (context, _) {
-          final modules = _store.modules;
-          if (!_store.loaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (modules.isEmpty) {
-            return EmptyState(
-                icon: Icons.dns_outlined, message: l10n.configEmpty);
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.outerPadding),
-            itemCount: modules.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.betweenCards),
-            itemBuilder: (context, index) {
-              final module = modules[index];
-              return _ModuleCard(
-                module: module,
-                onTap: () => openModuleDetail(context, module),
-                onRename: () => _renameModule(module),
-                onRemove: () => _removeModule(module),
-              );
-            },
-          );
-        },
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: _store,
+          builder: (context, _) {
+            final modules = _store.modules;
+            if (!_store.loaded) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (modules.isEmpty) {
+              return EmptyState(
+                  icon: Icons.dns_outlined, message: l10n.configEmpty);
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(AppSpacing.outerPadding),
+              itemCount: modules.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppSpacing.betweenCards),
+              itemBuilder: (context, index) {
+                final module = modules[index];
+                return _ModuleCard(
+                  module: module,
+                  onTap: () => openModuleDetail(context, module),
+                  onRename: () => _renameModule(module),
+                  onRemove: () => _removeModule(module),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
@@ -213,7 +216,8 @@ class _ModuleCard extends StatelessWidget {
                             color: switch (status) {
                               ConnectionStatus.online => AppColors.online,
                               ConnectionStatus.suspect => AppColors.suspect,
-                              ConnectionStatus.offline => AppColors.offlineAlert,
+                              ConnectionStatus.offline =>
+                                AppColors.offlineAlert,
                             },
                           ),
                         ),

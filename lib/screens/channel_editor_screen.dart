@@ -74,99 +74,102 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.channel.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          Text(widget.module.name,
-              style: TextStyle(color: onSurface.withValues(alpha: 0.55))),
-          const SizedBox(height: 16),
-          Center(
-              child: IconAvatar(icon: _selectedIcon, size: 72, filled: true)),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-                labelText: l10n.channelNameLabel,
-                prefixIcon: const Icon(Icons.label_outline)),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.channelChooseIcon),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              for (final icon in kChannelIconChoices)
-                InkWell(
-                  borderRadius: BorderRadius.circular(28),
-                  onTap: () => setState(() => _selectedIcon = icon),
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: icon == _selectedIcon
-                          ? onSurface
-                          : Colors.transparent,
-                      border: Border.all(
-                          color: onSurface.withValues(
-                              alpha: icon == _selectedIcon ? 0 : 0.25)),
-                    ),
-                    child: Icon(icon,
-                        color: icon == _selectedIcon
-                            ? Theme.of(context).colorScheme.surface
-                            : onSurface),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.channelEditorBehavior),
-          Card(
-            child: SwitchListTile(
-              value: _enabled,
-              onChanged: (value) => setState(() => _enabled = value),
-              title: Text(l10n.channelEditorEnabled,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Text(l10n.channelEditorEnabledHint),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            Text(widget.module.name,
+                style: TextStyle(color: onSurface.withValues(alpha: 0.55))),
+            const SizedBox(height: 16),
+            Center(
+                child: IconAvatar(icon: _selectedIcon, size: 72, filled: true)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                  labelText: l10n.channelNameLabel,
+                  prefixIcon: const Icon(Icons.label_outline)),
             ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.channelEditorInitialState),
-          Card(
-            child: RadioGroup<OutputInitialState>(
-              groupValue: _initialState,
-              onChanged: (value) =>
-                  setState(() => _initialState = value ?? _initialState),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  RadioListTile<OutputInitialState>(
-                    value: OutputInitialState.on,
-                    title: Text(l10n.on,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.channelEditorInitialOnHint),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.channelChooseIcon),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final icon in kChannelIconChoices)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(28),
+                    onTap: () => setState(() => _selectedIcon = icon),
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: icon == _selectedIcon
+                            ? onSurface
+                            : Colors.transparent,
+                        border: Border.all(
+                            color: onSurface.withValues(
+                                alpha: icon == _selectedIcon ? 0 : 0.25)),
+                      ),
+                      child: Icon(icon,
+                          color: icon == _selectedIcon
+                              ? Theme.of(context).colorScheme.surface
+                              : onSurface),
+                    ),
                   ),
-                  const Divider(height: 1),
-                  RadioListTile<OutputInitialState>(
-                    value: OutputInitialState.off,
-                    title: Text(l10n.off,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.channelEditorInitialOffHint),
-                  ),
-                  const Divider(height: 1),
-                  RadioListTile<OutputInitialState>(
-                    value: OutputInitialState.lastState,
-                    title: Text(l10n.channelEditorInitialLastState,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.channelEditorInitialLastStateHint),
-                  ),
-                ],
+              ],
+            ),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.channelEditorBehavior),
+            Card(
+              child: SwitchListTile(
+                value: _enabled,
+                onChanged: (value) => setState(() => _enabled = value),
+                title: Text(l10n.channelEditorEnabled,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(l10n.channelEditorEnabledHint),
               ),
             ),
-          ),
-          const SizedBox(height: 32),
-          FilledButton(onPressed: _save, child: Text(l10n.save)),
-        ],
+            const SizedBox(height: 24),
+            SectionHeader(l10n.channelEditorInitialState),
+            Card(
+              child: RadioGroup<OutputInitialState>(
+                groupValue: _initialState,
+                onChanged: (value) =>
+                    setState(() => _initialState = value ?? _initialState),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<OutputInitialState>(
+                      value: OutputInitialState.on,
+                      title: Text(l10n.on,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(l10n.channelEditorInitialOnHint),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<OutputInitialState>(
+                      value: OutputInitialState.off,
+                      title: Text(l10n.off,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(l10n.channelEditorInitialOffHint),
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<OutputInitialState>(
+                      value: OutputInitialState.lastState,
+                      title: Text(l10n.channelEditorInitialLastState,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(l10n.channelEditorInitialLastStateHint),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            FilledButton(onPressed: _save, child: Text(l10n.save)),
+          ],
+        ),
       ),
     );
   }

@@ -119,9 +119,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   bool _alreadyAdded(DeviceModule candidate, List<DeviceModule> existing) {
     for (final m in existing) {
       if (m.id == candidate.id) return true;
-      if (m.mac != null &&
-          candidate.mac != null &&
-          m.mac == candidate.mac) {
+      if (m.mac != null && candidate.mac != null && m.mac == candidate.mac) {
         return true;
       }
       if (m.serial != null &&
@@ -129,7 +127,8 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
           m.serial == candidate.serial) {
         return true;
       }
-      if (m.ipAddress == candidate.ipAddress && m.tcpPort == candidate.tcpPort) {
+      if (m.ipAddress == candidate.ipAddress &&
+          m.tcpPort == candidate.tcpPort) {
         return true;
       }
     }
@@ -218,157 +217,162 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.addModuleTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          SectionHeader(
-            l10n.addModuleDiscovered,
-            trailing: IconButton(
-              tooltip: l10n.addModuleRefreshTooltip,
-              onPressed: _scanning ? null : _refreshDiscovery,
-              icon: Icon(
-                _scanning ? Icons.sync : Icons.refresh,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            SectionHeader(
+              l10n.addModuleDiscovered,
+              trailing: IconButton(
+                tooltip: l10n.addModuleRefreshTooltip,
+                onPressed: _scanning ? null : _refreshDiscovery,
+                icon: Icon(
+                  _scanning ? Icons.sync : Icons.refresh,
+                ),
               ),
             ),
-          ),
-          if (_scanning)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
+            if (_scanning)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2.6)),
+                      const SizedBox(height: 12),
+                      Text(l10n.addModuleListening),
+                    ],
+                  ),
+                ),
+              )
+            else if (_discovered.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
                 child: Column(
                   children: [
-                    const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(strokeWidth: 2.6)),
-                    const SizedBox(height: 12),
-                    Text(l10n.addModuleListening),
+                    EmptyState(
+                        icon: Icons.wifi_find_outlined,
+                        message: l10n.addModuleNoneFound),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.addModuleDcpHint,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            )
-          else if (_discovered.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Column(
-                children: [
-                  EmptyState(
-                      icon: Icons.wifi_find_outlined,
-                      message: l10n.addModuleNoneFound),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.addModuleDcpHint,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            for (final module in _discovered)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        IconAvatar(icon: module.type.icon),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(module.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text(
-                                  (module.firmware != null &&
-                                          module.firmware!.isNotEmpty)
-                                      ? l10n.addModuleFamilyMeta(
-                                          module.type.label, module.firmware!)
-                                      : l10n.configModuleSummary(
-                                          module.type.label, module.ipAddress),
+              )
+            else
+              for (final module in _discovered)
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          IconAvatar(icon: module.type.icon),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(module.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(
+                                    (module.firmware != null &&
+                                            module.firmware!.isNotEmpty)
+                                        ? l10n.addModuleFamilyMeta(
+                                            module.type.label, module.firmware!)
+                                        : l10n.configModuleSummary(
+                                            module.type.label,
+                                            module.ipAddress),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            onSurface.withValues(alpha: 0.55))),
+                                const SizedBox(height: 2),
+                                Text(
+                                  module.ipAddress,
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          onSurface.withValues(alpha: 0.55))),
-                              const SizedBox(height: 2),
-                              Text(
-                                module.ipAddress,
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: onSurface.withValues(alpha: 0.45)),
-                              ),
-                            ],
+                                      fontSize: 11,
+                                      color: onSurface.withValues(alpha: 0.45)),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        FilledButton(
-                            onPressed: () => _addDiscovered(module),
-                            child: Text(l10n.addModuleButton)),
-                      ],
+                          FilledButton(
+                              onPressed: () => _addDiscovered(module),
+                              child: Text(l10n.addModuleButton)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.addModuleManualSection),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-                labelText: l10n.addModuleNameOptional,
-                prefixIcon: const Icon(Icons.edit_outlined)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _ipController,
-            decoration: InputDecoration(
-                labelText: l10n.ipAddress,
-                hintText: '192.168.1.120',
-                prefixIcon: const Icon(Icons.lan_outlined)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _tcpPortController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-                labelText: l10n.tcpPort,
-                hintText: '5005',
-                prefixIcon: const Icon(Icons.router_outlined)),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<ModuleType>(
-            initialValue: _manualType,
-            decoration: InputDecoration(
-                labelText: l10n.addModuleType,
-                prefixIcon: const Icon(Icons.category_outlined)),
-            items: [
-              for (final type in ModuleType.values)
-                DropdownMenuItem(value: type, child: Text(type.label)),
-            ],
-            onChanged: (value) =>
-                setState(() => _manualType = value ?? _manualType),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _tempThresholdController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-                labelText: l10n.tempThresholdLabel,
-                helperText: l10n.addModuleTempThresholdDefault(
-                    SettingsStore.shared.defaultTemperatureThreshold.toInt()),
-                prefixIcon: const Icon(Icons.thermostat_outlined)),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-              onPressed: _addManual,
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addModuleAddAction)),
-        ],
+            const SizedBox(height: 24),
+            SectionHeader(l10n.addModuleManualSection),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                  labelText: l10n.addModuleNameOptional,
+                  prefixIcon: const Icon(Icons.edit_outlined)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ipController,
+              decoration: InputDecoration(
+                  labelText: l10n.ipAddress,
+                  hintText: '192.168.1.120',
+                  prefixIcon: const Icon(Icons.lan_outlined)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tcpPortController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                  labelText: l10n.tcpPort,
+                  hintText: '5005',
+                  prefixIcon: const Icon(Icons.router_outlined)),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<ModuleType>(
+              initialValue: _manualType,
+              decoration: InputDecoration(
+                  labelText: l10n.addModuleType,
+                  prefixIcon: const Icon(Icons.category_outlined)),
+              items: [
+                for (final type in ModuleType.values)
+                  DropdownMenuItem(value: type, child: Text(type.label)),
+              ],
+              onChanged: (value) =>
+                  setState(() => _manualType = value ?? _manualType),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tempThresholdController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                  labelText: l10n.tempThresholdLabel,
+                  helperText: l10n.addModuleTempThresholdDefault(
+                      SettingsStore.shared.defaultTemperatureThreshold.toInt()),
+                  prefixIcon: const Icon(Icons.thermostat_outlined)),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+                onPressed: _addManual,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addModuleAddAction)),
+          ],
+        ),
       ),
     );
   }

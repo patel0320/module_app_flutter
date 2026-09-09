@@ -65,73 +65,78 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.eventHistoryTitle)),
-      body: ListenableBuilder(
-        listenable: _store,
-        builder: (context, _) {
-          final entries = _store.entries;
-          final rows = _buildRows(entries);
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: _store,
+          builder: (context, _) {
+            final entries = _store.entries;
+            final rows = _buildRows(entries);
 
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                color: onSurface.withValues(alpha: 0.05),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.outerPadding, vertical: 10),
-                child: Text(
-                  l10n.eventHistoryShowing,
-                  style: TextStyle(
-                      fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+            return Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  color: onSurface.withValues(alpha: 0.05),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.outerPadding, vertical: 10),
+                  child: Text(
+                    l10n.eventHistoryShowing,
+                    style: TextStyle(
+                        fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: rows.isEmpty
-                    ? EmptyState(
-                        icon: Icons.history, message: l10n.eventHistoryEmpty)
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-                        itemCount: rows.length,
-                        itemBuilder: (context, index) {
-                          final row = rows[index];
-                          if (row is String) {
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                  top: index == 0 ? 0 : 12, bottom: 8),
-                              child: Text(
-                                row,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
-                                    color: onSurface.withValues(alpha: 0.5)),
-                              ),
-                            );
-                          }
-                          final entry = row as EventLogEntry;
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: AppSpacing.betweenCards),
-                            child: Card(
-                              child: ListTile(
-                                leading: const Icon(Icons.bolt_outlined),
-                                title: Text(entry.title,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w600)),
-                                subtitle: Text(entry.subtitle),
-                                trailing: Text(
-                                  _timeHHmmss(entry.time),
+                Expanded(
+                  child: rows.isEmpty
+                      ? EmptyState(
+                          icon: Icons.history, message: l10n.eventHistoryEmpty)
+                      : ListView.builder(
+                          padding:
+                              const EdgeInsets.all(AppSpacing.outerPadding),
+                          itemCount: rows.length,
+                          itemBuilder: (context, index) {
+                            final row = rows[index];
+                            if (row is String) {
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                    top: index == 0 ? 0 : 12, bottom: 8),
+                                child: Text(
+                                  row,
                                   style: TextStyle(
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 12,
                                       color: onSurface.withValues(alpha: 0.5)),
                                 ),
+                              );
+                            }
+                            final entry = row as EventLogEntry;
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.betweenCards),
+                              child: Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.bolt_outlined),
+                                  title: Text(entry.title,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                  subtitle: Text(entry.subtitle),
+                                  trailing: Text(
+                                    _timeHHmmss(entry.time),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            onSurface.withValues(alpha: 0.5)),
+                                  ),
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

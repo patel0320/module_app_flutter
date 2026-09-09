@@ -51,8 +51,7 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
   /// `false` on touch end (set_virtual_input_state). Results in no state
   /// change when the module is offline.
   Future<void> _holdInput(DeviceModule module, int index, bool held) =>
-      ModuleStatusService.shared
-          .setVirtualInputState(module.id, index, held);
+      ModuleStatusService.shared.setVirtualInputState(module.id, index, held);
 
   Future<void> _editModuleInfo() async {
     final saved = await showEditModuleInfoDialog(context, widget.module);
@@ -117,42 +116,44 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
                   onPressed: _editModuleInfo),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(AppSpacing.outerPadding),
-            children: [
-              ModuleStatusHeader(module: module),
-              const SizedBox(height: 24),
-              SectionHeader(l10n.relayOutputsHeader(module.channels.length)),
-              for (int i = 0; i < module.channels.length; i++)
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                  child: _OutputRow(
-                    channel: module.channels[i],
-                    index: i,
-                    onToggle: () =>
-                        _toggleOutput(module, i, !module.channels[i].isOn),
-                    onEdit: () => _editChannel(module.channels[i], i),
-                  ),
-                ),
-              if (module.inputs.isNotEmpty) ...[
+          body: SafeArea(
+            top: false,
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.outerPadding),
+              children: [
+                ModuleStatusHeader(module: module),
                 const SizedBox(height: 24),
-                SectionHeader(l10n.moduleInputs(module.inputs.length)),
-                for (int i = 0; i < module.inputs.length; i++)
-                  if (module.inputs[i].enabled)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          bottom: AppSpacing.betweenCards),
-                      child: InputFieldCard(
-                        input: module.inputs[i],
-                        onHoldChanged: (held) =>
-                            _holdInput(module, i, held),
-                        onReleased: _refresh,
-                        onEdit: () => _editInput(module.inputs[i], i),
-                      ),
+                SectionHeader(l10n.relayOutputsHeader(module.channels.length)),
+                for (int i = 0; i < module.channels.length; i++)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                    child: _OutputRow(
+                      channel: module.channels[i],
+                      index: i,
+                      onToggle: () =>
+                          _toggleOutput(module, i, !module.channels[i].isOn),
+                      onEdit: () => _editChannel(module.channels[i], i),
                     ),
+                  ),
+                if (module.inputs.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  SectionHeader(l10n.moduleInputs(module.inputs.length)),
+                  for (int i = 0; i < module.inputs.length; i++)
+                    if (module.inputs[i].enabled)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.betweenCards),
+                        child: InputFieldCard(
+                          input: module.inputs[i],
+                          onHoldChanged: (held) => _holdInput(module, i, held),
+                          onReleased: _refresh,
+                          onEdit: () => _editInput(module.inputs[i], i),
+                        ),
+                      ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

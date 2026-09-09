@@ -9,37 +9,43 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const _Section(label: 'Account', children: [
-            ListTile(leading: Icon(Icons.person), title: Text('Sign in')),
-            ListTile(
-                leading: Icon(Icons.person_add), title: Text('Create account')),
-            ListTile(
-                leading: Icon(Icons.lock_reset), title: Text('Reset password')),
-          ]),
-          const _Section(label: 'Backup & Sync', children: [
-            ListTile(
-                leading: Icon(Icons.cloud_upload), title: Text('Back up now')),
-            ListTile(
-                leading: Icon(Icons.cloud_download), title: Text('Restore')),
-          ]),
-          _Section(label: 'Notifications', children: [
-            ListTile(
-              leading: const Icon(Icons.notifications),
-              title: const Text('Offline & temperature alerts'),
-              trailing: Switch(value: true, onChanged: (_) {}),
-            ),
-          ]),
-          const _Section(label: 'Language', children: [
-            ListTile(
-              leading: Icon(Icons.language),
-              title: Text('English'),
-              trailing: Icon(Icons.check, color: AppColors.controlOn),
-            ),
-          ]),
-        ],
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const _Section(label: 'Account', children: [
+              ListTile(leading: Icon(Icons.person), title: Text('Sign in')),
+              ListTile(
+                  leading: Icon(Icons.person_add),
+                  title: Text('Create account')),
+              ListTile(
+                  leading: Icon(Icons.lock_reset),
+                  title: Text('Reset password')),
+            ]),
+            const _Section(label: 'Backup & Sync', children: [
+              ListTile(
+                  leading: Icon(Icons.cloud_upload),
+                  title: Text('Back up now')),
+              ListTile(
+                  leading: Icon(Icons.cloud_download), title: Text('Restore')),
+            ]),
+            _Section(label: 'Notifications', children: [
+              ListTile(
+                leading: const Icon(Icons.notifications),
+                title: const Text('Offline & temperature alerts'),
+                trailing: Switch(value: true, onChanged: (_) {}),
+              ),
+            ]),
+            const _Section(label: 'Language', children: [
+              ListTile(
+                leading: Icon(Icons.language),
+                title: Text('English'),
+                trailing: Icon(Icons.check, color: AppColors.controlOn),
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }

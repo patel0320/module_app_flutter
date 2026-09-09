@@ -112,88 +112,93 @@ class _AccountScreenState extends State<AccountScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          SectionHeader(l10n.accountProfileSection),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-                labelText: l10n.accountFullName,
-                prefixIcon: const Icon(Icons.person_outline)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _emailController,
-            readOnly: true,
-            decoration: InputDecoration(
-                labelText: l10n.accountEmail,
-                prefixIcon: const Icon(Icons.mail_outline)),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-              onPressed: _saveProfile, child: Text(l10n.accountSaveChanges)),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _changePassword,
-            icon: const Icon(Icons.lock_reset_outlined),
-            label: Text(l10n.accountChangePassword),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.accountCloudSection),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.cloud_done_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: Text(l10n.accountLastBackup(
-                              formatLogTimestamp(_lastBackup, l10n)))),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.accountBackupDesc,
-                    style: TextStyle(
-                        fontSize: 12, color: onSurface.withValues(alpha: 0.6)),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                            onPressed: _restoreBackup,
-                            child: Text(l10n.restore)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _backingUp ? null : _backupNow,
-                          child: _backingUp
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                )
-                              : Text(l10n.accountBackUpNow),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            SectionHeader(l10n.accountProfileSection),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                  labelText: l10n.accountFullName,
+                  prefixIcon: const Icon(Icons.person_outline)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailController,
+              readOnly: true,
+              decoration: InputDecoration(
+                  labelText: l10n.accountEmail,
+                  prefixIcon: const Icon(Icons.mail_outline)),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+                onPressed: _saveProfile, child: Text(l10n.accountSaveChanges)),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _changePassword,
+              icon: const Icon(Icons.lock_reset_outlined),
+              label: Text(l10n.accountChangePassword),
+            ),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.accountCloudSection),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.cloud_done_outlined),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Text(l10n.accountLastBackup(
+                                formatLogTimestamp(_lastBackup, l10n)))),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.accountBackupDesc,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: onSurface.withValues(alpha: 0.6)),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                              onPressed: _restoreBackup,
+                              child: Text(l10n.restore)),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _backingUp ? null : _backupNow,
+                            child: _backingUp
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                    ),
+                                  )
+                                : Text(l10n.accountBackUpNow),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -79,49 +79,52 @@ class _DimmerDcScreenState extends State<DimmerDcScreen> {
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],
       ),
-      body: ListenableBuilder(
-        listenable: ModuleStore.shared,
-        builder: (context, _) {
-          final live =
-              ModuleStore.shared.byId(widget.module.id) ?? widget.module;
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.outerPadding),
-            children: [
-              ModuleStatusHeader(module: live),
-              const SizedBox(height: 8),
-              Text(
-                l10n.dimmerDcSubtitle,
-                style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.55)),
-              ),
-              const SizedBox(height: 16),
-              DimmerControlsSection(
-                module: live,
-                onEditChannel: (index) =>
-                    _editChannel(live.channels[index], index),
-              ),
-              if (live.inputs.any((i) => i.enabled)) ...[
-                const SizedBox(height: 24),
-                SectionHeader(l10n.moduleInputs(live.inputs.length)),
-                for (int i = 0; i < live.inputs.length; i++)
-                  if (live.inputs[i].enabled)
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                      child: InputFieldCard(
-                        input: live.inputs[i],
-                        onHoldChanged: (held) => _holdInput(module, i, held),
-                        onReleased: _refresh,
-                        onEdit: () => _editInput(live.inputs[i], i),
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: ModuleStore.shared,
+          builder: (context, _) {
+            final live =
+                ModuleStore.shared.byId(widget.module.id) ?? widget.module;
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.outerPadding),
+              children: [
+                ModuleStatusHeader(module: live),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.dimmerDcSubtitle,
+                  style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55)),
+                ),
+                const SizedBox(height: 16),
+                DimmerControlsSection(
+                  module: live,
+                  onEditChannel: (index) =>
+                      _editChannel(live.channels[index], index),
+                ),
+                if (live.inputs.any((i) => i.enabled)) ...[
+                  const SizedBox(height: 24),
+                  SectionHeader(l10n.moduleInputs(live.inputs.length)),
+                  for (int i = 0; i < live.inputs.length; i++)
+                    if (live.inputs[i].enabled)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.betweenCards),
+                        child: InputFieldCard(
+                          input: live.inputs[i],
+                          onHoldChanged: (held) => _holdInput(module, i, held),
+                          onReleased: _refresh,
+                          onEdit: () => _editInput(live.inputs[i], i),
+                        ),
                       ),
-                    ),
+                ],
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

@@ -95,35 +95,39 @@ class ScenariosScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: scenarios.isEmpty
-              ? Center(
-                  child: EmptyState(
-                    icon: Icons.auto_awesome_outlined,
-                    message: l10n.scenariosEmpty,
+          body: SafeArea(
+            top: false,
+            child: scenarios.isEmpty
+                ? Center(
+                    child: EmptyState(
+                      icon: Icons.auto_awesome_outlined,
+                      message: l10n.scenariosEmpty,
+                    ),
+                  )
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.all(AppSpacing.outerPadding),
+                    itemCount: scenarios.length,
+                    buildDefaultDragHandles: false,
+                    onReorderItem: _store.reorder,
+                    itemBuilder: (context, index) {
+                      final scenario = scenarios[index];
+                      return Padding(
+                        key: ValueKey(scenario.id),
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.betweenCards),
+                        child: _ScenarioCard(
+                          scenario: scenario,
+                          index: index,
+                          onRun: () => _runScenario(context, scenario),
+                          onEdit: () => _editScenario(context, scenario),
+                          onDelete: () => _deleteScenario(context, scenario),
+                          onShowInHomeChanged: (v) =>
+                              _setShowInHome(scenario, v),
+                        ),
+                      );
+                    },
                   ),
-                )
-              : ReorderableListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.outerPadding),
-                  itemCount: scenarios.length,
-                  buildDefaultDragHandles: false,
-                  onReorderItem: _store.reorder,
-                  itemBuilder: (context, index) {
-                    final scenario = scenarios[index];
-                    return Padding(
-                      key: ValueKey(scenario.id),
-                      padding: const EdgeInsets.only(
-                          bottom: AppSpacing.betweenCards),
-                      child: _ScenarioCard(
-                        scenario: scenario,
-                        index: index,
-                        onRun: () => _runScenario(context, scenario),
-                        onEdit: () => _editScenario(context, scenario),
-                        onDelete: () => _deleteScenario(context, scenario),
-                        onShowInHomeChanged: (v) => _setShowInHome(scenario, v),
-                      ),
-                    );
-                  },
-                ),
+          ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: null,
             onPressed: () => _createScenario(context),

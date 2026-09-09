@@ -23,70 +23,73 @@ class AppearanceSettingsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsAppearance)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          SectionHeader(l10n.settingsTheme),
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: themeModeNotifier,
-            builder: (context, mode, _) => Card(
-              child: RadioGroup<ThemeMode>(
-                groupValue: mode,
-                onChanged: (v) => _select(v!),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            SectionHeader(l10n.settingsTheme),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeModeNotifier,
+              builder: (context, mode, _) => Card(
+                child: RadioGroup<ThemeMode>(
+                  groupValue: mode,
+                  onChanged: (v) => _select(v!),
+                  child: Column(
+                    children: [
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.light,
+                        title: Text(l10n.settingsLight),
+                        secondary: const Icon(Icons.light_mode_outlined),
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.dark,
+                        title: Text(l10n.settingsDark),
+                        secondary: const Icon(Icons.dark_mode_outlined),
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.system,
+                        title: Text(l10n.settingsAuto),
+                        secondary: const Icon(Icons.settings_suggest_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.homeSectionTheme),
+            const SizedBox(height: 4),
+            Text(
+              l10n.homeChoosePalette,
+              style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<HomeThemeId>(
+              valueListenable: homeThemeIdNotifier,
+              builder: (context, selected, _) => Card(
                 child: Column(
                   children: [
-                    RadioListTile<ThemeMode>(
-                      value: ThemeMode.light,
-                      title: Text(l10n.settingsLight),
-                      secondary: const Icon(Icons.light_mode_outlined),
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<ThemeMode>(
-                      value: ThemeMode.dark,
-                      title: Text(l10n.settingsDark),
-                      secondary: const Icon(Icons.dark_mode_outlined),
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<ThemeMode>(
-                      value: ThemeMode.system,
-                      title: Text(l10n.settingsAuto),
-                      secondary: const Icon(Icons.settings_suggest_outlined),
-                    ),
+                    for (final palette in HomeThemePalettes.all)
+                      _ThemeTile(
+                        palette: palette,
+                        selected: palette.id == selected,
+                        isLast: palette == HomeThemePalettes.all.last,
+                      ),
                   ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.homeSectionTheme),
-          const SizedBox(height: 4),
-          Text(
-            l10n.homeChoosePalette,
-            style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ValueListenableBuilder<HomeThemeId>(
-            valueListenable: homeThemeIdNotifier,
-            builder: (context, selected, _) => Card(
-              child: Column(
-                children: [
-                  for (final palette in HomeThemePalettes.all)
-                    _ThemeTile(
-                      palette: palette,
-                      selected: palette.id == selected,
-                      isLast: palette == HomeThemePalettes.all.last,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

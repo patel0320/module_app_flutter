@@ -48,62 +48,65 @@ class RoomsScreen extends StatelessWidget {
         final l10n = AppLocalizations.of(context);
         return Scaffold(
           appBar: AppBar(title: Text(l10n.roomsTitle)),
-          body: rooms.isEmpty
-              ? Center(
-                  child: EmptyState(
-                    icon: Icons.meeting_room_outlined,
-                    message: l10n.roomsEmpty,
-                  ),
-                )
-              : ReorderableListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.outerPadding),
-                  itemCount: rooms.length,
-                  buildDefaultDragHandles: false,
-                  onReorderItem: _store.reorder,
-                  itemBuilder: (context, index) {
-                    final room = rooms[index];
-                    return Padding(
-                      key: ValueKey(room.id),
-                      padding: const EdgeInsets.only(
-                          bottom: AppSpacing.betweenCards),
-                      child: Card(
-                        child: ListTile(
-                          leading: ReorderableDragStartListener(
-                            index: index,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: Icon(
-                                Icons.drag_indicator,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                                size: 22,
+          body: SafeArea(
+            top: false,
+            child: rooms.isEmpty
+                ? Center(
+                    child: EmptyState(
+                      icon: Icons.meeting_room_outlined,
+                      message: l10n.roomsEmpty,
+                    ),
+                  )
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.all(AppSpacing.outerPadding),
+                    itemCount: rooms.length,
+                    buildDefaultDragHandles: false,
+                    onReorderItem: _store.reorder,
+                    itemBuilder: (context, index) {
+                      final room = rooms[index];
+                      return Padding(
+                        key: ValueKey(room.id),
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.betweenCards),
+                        child: Card(
+                          child: ListTile(
+                            leading: ReorderableDragStartListener(
+                              index: index,
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  Icons.drag_indicator,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                  size: 22,
+                                ),
                               ),
                             ),
-                          ),
-                          title: Text(room.name,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text(l10n.homeHoldDragReorder),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: () => _renameRoom(context, room),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => _deleteRoom(context, room),
-                              ),
-                            ],
+                            title: Text(room.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            subtitle: Text(l10n.homeHoldDragReorder),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () => _renameRoom(context, room),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () => _deleteRoom(context, room),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+          ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: null,
             onPressed: () => _addRoom(context),

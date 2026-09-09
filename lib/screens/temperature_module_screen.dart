@@ -49,93 +49,98 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          ModuleStatusHeader(module: module),
-          const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  l10n.tempValueCelsius(
-                      module.internalTempC.toStringAsFixed(1)),
-                  style: TextStyle(
-                    fontSize: 56,
-                    fontWeight: FontWeight.w800,
-                    color: alert ? AppColors.offlineAlert : onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  statusLabel,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: alert ? AppColors.offlineAlert : AppColors.online),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.tempThresholdsHeader),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            ModuleStatusHeader(module: module),
+            const SizedBox(height: 24),
+            Center(
               child: Column(
                 children: [
-                  _ThresholdSlider(
-                    label: l10n.tempMinimum,
-                    value: module.tempMinC,
-                    onChanged: (v) => setState(() => module.tempMinC = v),
+                  Text(
+                    l10n.tempValueCelsius(
+                        module.internalTempC.toStringAsFixed(1)),
+                    style: TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w800,
+                      color: alert ? AppColors.offlineAlert : onSurface,
+                    ),
                   ),
-                  _ThresholdSlider(
-                    label: l10n.tempMaximum,
-                    value: module.tempMaxC,
-                    onChanged: (v) => setState(() => module.tempMaxC = v),
+                  const SizedBox(height: 4),
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color:
+                            alert ? AppColors.offlineAlert : AppColors.online),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.tempFunctionsHeader),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: Text(l10n.tempFuncHighLow),
-                  subtitle: Text(l10n.tempFuncHighLowDesc),
-                  value: _alertsEnabled,
-                  onChanged: (v) => setState(() => _alertsEnabled = v),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  title: Text(l10n.tempFuncDisplay),
-                  subtitle: Text(l10n.tempFuncDisplayDesc),
-                  trailing: const Icon(Icons.check_circle_outline),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  title: Text(l10n.tempFuncThermostat),
-                  subtitle: Text(l10n.tempFuncThermostatDesc),
-                  trailing: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: onSurface.withValues(alpha: 0.25)),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.tempThresholdsHeader),
+            Card(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    _ThresholdSlider(
+                      label: l10n.tempMinimum,
+                      value: module.tempMinC,
+                      onChanged: (v) => setState(() => module.tempMinC = v),
                     ),
-                    child: Text(l10n.comingSoon,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w700)),
-                  ),
-                  enabled: false,
+                    _ThresholdSlider(
+                      label: l10n.tempMaximum,
+                      value: module.tempMaxC,
+                      onChanged: (v) => setState(() => module.tempMaxC = v),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            SectionHeader(l10n.tempFunctionsHeader),
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: Text(l10n.tempFuncHighLow),
+                    subtitle: Text(l10n.tempFuncHighLowDesc),
+                    value: _alertsEnabled,
+                    onChanged: (v) => setState(() => _alertsEnabled = v),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: Text(l10n.tempFuncDisplay),
+                    subtitle: Text(l10n.tempFuncDisplayDesc),
+                    trailing: const Icon(Icons.check_circle_outline),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: Text(l10n.tempFuncThermostat),
+                    subtitle: Text(l10n.tempFuncThermostatDesc),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: onSurface.withValues(alpha: 0.25)),
+                      ),
+                      child: Text(l10n.comingSoon,
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                    enabled: false,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

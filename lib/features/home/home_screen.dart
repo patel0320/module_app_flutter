@@ -17,31 +17,34 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (offlineCount > 0)
-            OfflineAlertBanner(count: offlineCount)
-          else
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (offlineCount > 0)
+              OfflineAlertBanner(count: offlineCount)
+            else
+              const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-          const SizedBox(height: 16),
-          Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          for (final (scenario, roomName) in scenarios)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: HomeQuickActionCard(
-                  scenario: scenario, roomName: roomName),
-            ),
-          const SizedBox(height: 16),
-          Text('Temperature', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          for (final entry in temperatureModules)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: TemperatureCard(module: entry.$1, temperature: entry.$2),
-            ),
-        ],
+            for (final (scenario, roomName) in scenarios)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child:
+                    HomeQuickActionCard(scenario: scenario, roomName: roomName),
+              ),
+            const SizedBox(height: 16),
+            Text('Temperature', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            for (final entry in temperatureModules)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TemperatureCard(module: entry.$1, temperature: entry.$2),
+              ),
+          ],
+        ),
       ),
     );
   }

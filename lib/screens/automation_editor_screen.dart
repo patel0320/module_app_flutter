@@ -50,9 +50,8 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
       if (!mounted) return;
       setState(() {
         _modules = ModuleStore.shared.modules;
-        _deviceChannelName = _channelNames.isNotEmpty
-            ? _deviceChannelName
-            : _channelNames.first;
+        _deviceChannelName =
+            _channelNames.isNotEmpty ? _deviceChannelName : _channelNames.first;
       });
     });
   }
@@ -136,102 +135,107 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
       appBar: AppBar(
           title: Text(
               _isNew ? l10n.automationNewTitle : l10n.automationEditTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-                labelText: l10n.automationNameLabel,
-                prefixIcon: const Icon(Icons.label_outline)),
-          ),
-          const SizedBox(height: 20),
-          SectionHeader(l10n.automationSectionIf),
-          SegmentedButton<AutomationTriggerType>(
-            segments: [
-              ButtonSegment(
-                  value: AutomationTriggerType.time,
-                  label: Text(l10n.automationTriggerTime),
-                  icon: const Icon(Icons.schedule)),
-              ButtonSegment(
-                  value: AutomationTriggerType.deviceState,
-                  label: Text(l10n.automationTriggerDevice),
-                  icon: const Icon(Icons.sensors)),
-            ],
-            selected: {_triggerType},
-            onSelectionChanged: (s) => setState(() => _triggerType = s.first),
-          ),
-          const SizedBox(height: 16),
-          if (_triggerType == AutomationTriggerType.time)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.access_time),
-                title: Text(l10n.automationTriggerTimeLabel),
-                subtitle: Text(_time.format(context)),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _pickTime,
-              ),
-            )
-          else ...[
-            DropdownButtonFormField<String>(
-              initialValue: channelNames.contains(_deviceChannelName)
-                  ? _deviceChannelName
-                  : null,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            TextField(
+              controller: _nameController,
               decoration: InputDecoration(
-                  labelText: l10n.automationWhenOutputLabel,
-                  prefixIcon: const Icon(Icons.sensors)),
-              items: [
-                for (final c in channelNames)
-                  DropdownMenuItem(value: c, child: Text(c))
-              ],
-              onChanged: (v) =>
-                  setState(() => _deviceChannelName = v ?? _deviceChannelName),
+                  labelText: l10n.automationNameLabel,
+                  prefixIcon: const Icon(Icons.label_outline)),
             ),
-            const SizedBox(height: 12),
-            SegmentedButton<bool>(
+            const SizedBox(height: 20),
+            SectionHeader(l10n.automationSectionIf),
+            SegmentedButton<AutomationTriggerType>(
               segments: [
-                ButtonSegment(value: true, label: Text(l10n.automationTurnsOn)),
                 ButtonSegment(
-                    value: false, label: Text(l10n.automationTurnsOff)),
+                    value: AutomationTriggerType.time,
+                    label: Text(l10n.automationTriggerTime),
+                    icon: const Icon(Icons.schedule)),
+                ButtonSegment(
+                    value: AutomationTriggerType.deviceState,
+                    label: Text(l10n.automationTriggerDevice),
+                    icon: const Icon(Icons.sensors)),
               ],
-              selected: {_deviceTurnsOn},
-              onSelectionChanged: (s) =>
-                  setState(() => _deviceTurnsOn = s.first),
+              selected: {_triggerType},
+              onSelectionChanged: (s) => setState(() => _triggerType = s.first),
             ),
-          ],
-          const SizedBox(height: 24),
-          SectionHeader(
-            l10n.automationSectionThen,
-            trailing: TextButton.icon(
-                onPressed: _addAction,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.add)),
-          ),
-          if (_actions.isEmpty)
-            EmptyState(
-                icon: Icons.flash_on_outlined,
-                message: l10n.automationActionsEmpty)
-          else
-            for (int i = 0; i < _actions.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                child: Card(
-                  child: ListTile(
-                    leading: IconAvatar(icon: _actions[i].icon),
-                    title: Text(_actions[i].channelName,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.scenarioActionModuleSummary(
-                        _actions[i].moduleName, _actions[i].summary)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => setState(() => _actions.removeAt(i)),
+            const SizedBox(height: 16),
+            if (_triggerType == AutomationTriggerType.time)
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.access_time),
+                  title: Text(l10n.automationTriggerTimeLabel),
+                  subtitle: Text(_time.format(context)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _pickTime,
+                ),
+              )
+            else ...[
+              DropdownButtonFormField<String>(
+                initialValue: channelNames.contains(_deviceChannelName)
+                    ? _deviceChannelName
+                    : null,
+                decoration: InputDecoration(
+                    labelText: l10n.automationWhenOutputLabel,
+                    prefixIcon: const Icon(Icons.sensors)),
+                items: [
+                  for (final c in channelNames)
+                    DropdownMenuItem(value: c, child: Text(c))
+                ],
+                onChanged: (v) => setState(
+                    () => _deviceChannelName = v ?? _deviceChannelName),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                      value: true, label: Text(l10n.automationTurnsOn)),
+                  ButtonSegment(
+                      value: false, label: Text(l10n.automationTurnsOff)),
+                ],
+                selected: {_deviceTurnsOn},
+                onSelectionChanged: (s) =>
+                    setState(() => _deviceTurnsOn = s.first),
+              ),
+            ],
+            const SizedBox(height: 24),
+            SectionHeader(
+              l10n.automationSectionThen,
+              trailing: TextButton.icon(
+                  onPressed: _addAction,
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.add)),
+            ),
+            if (_actions.isEmpty)
+              EmptyState(
+                  icon: Icons.flash_on_outlined,
+                  message: l10n.automationActionsEmpty)
+            else
+              for (int i = 0; i < _actions.length; i++)
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                  child: Card(
+                    child: ListTile(
+                      leading: IconAvatar(icon: _actions[i].icon),
+                      title: Text(_actions[i].channelName,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text(l10n.scenarioActionModuleSummary(
+                          _actions[i].moduleName, _actions[i].summary)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => setState(() => _actions.removeAt(i)),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          const SizedBox(height: 24),
-          FilledButton(onPressed: _save, child: Text(l10n.automationSave)),
-        ],
+            const SizedBox(height: 24),
+            FilledButton(onPressed: _save, child: Text(l10n.automationSave)),
+          ],
+        ),
       ),
     );
   }

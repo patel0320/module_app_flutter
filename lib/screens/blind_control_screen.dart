@@ -81,39 +81,42 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          ModuleStatusHeader(module: module),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.blindHeader),
-          for (final channel in module.channels)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-              child: _BlindCard(
-                channel: channel,
-                motion: _motionOf(channel),
-                onUp: () => _press(channel, _Motion.up),
-                onDown: () => _press(channel, _Motion.down),
-              ),
-            ),
-          if (module.inputs.any((i) => i.enabled)) ...[
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            ModuleStatusHeader(module: module),
             const SizedBox(height: 24),
-            SectionHeader(l10n.moduleInputs(module.inputs.length)),
-            for (int i = 0; i < module.inputs.length; i++)
-              if (module.inputs[i].enabled)
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                  child: InputFieldCard(
-                    input: module.inputs[i],
-                    onHoldChanged: (held) => _holdInput(module, i, held),
-                    onReleased: _refresh,
-                    onEdit: () => _editInput(module.inputs[i], i),
-                  ),
+            SectionHeader(l10n.blindHeader),
+            for (final channel in module.channels)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                child: _BlindCard(
+                  channel: channel,
+                  motion: _motionOf(channel),
+                  onUp: () => _press(channel, _Motion.up),
+                  onDown: () => _press(channel, _Motion.down),
                 ),
+              ),
+            if (module.inputs.any((i) => i.enabled)) ...[
+              const SizedBox(height: 24),
+              SectionHeader(l10n.moduleInputs(module.inputs.length)),
+              for (int i = 0; i < module.inputs.length; i++)
+                if (module.inputs[i].enabled)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(bottom: AppSpacing.betweenCards),
+                    child: InputFieldCard(
+                      input: module.inputs[i],
+                      onHoldChanged: (held) => _holdInput(module, i, held),
+                      onReleased: _refresh,
+                      onEdit: () => _editInput(module.inputs[i], i),
+                    ),
+                  ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

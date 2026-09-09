@@ -59,149 +59,153 @@ class SettingsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.outerPadding),
-        children: [
-          Card(
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(12),
-              leading: CircleAvatar(
-                radius: 26,
-                backgroundColor: onSurface,
-                child: Text('AP',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.surface,
-                        fontWeight: FontWeight.w800)),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.outerPadding),
+          children: [
+            Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(12),
+                leading: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: onSurface,
+                  child: Text('AP',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.surface,
+                          fontWeight: FontWeight.w800)),
+                ),
+                title: const Text('Alex Popescu',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                subtitle: const Text('alex.popescu@example.com'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context)
+                    .restorablePushNamed('/settings/account'),
               ),
-              title: const Text('Alex Popescu',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              subtitle: const Text('alex.popescu@example.com'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context)
-                  .restorablePushNamed('/settings/account'),
             ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.settingsPreferences),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: Text(l10n.settingsNotifications),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context)
-                      .restorablePushNamed('/settings/notifications'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.language_outlined),
-                  title: Text(l10n.settingsLanguage),
-                  subtitle: Text(l10n.settingsLanguageEn),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context)
-                      .restorablePushNamed('/settings/language'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.history_outlined),
-                  title: Text(l10n.settingsClearEventHistory),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _clearEventHistory(context),
-                ),
-                const Divider(height: 1),
-                ValueListenableBuilder<ThemeMode>(
-                  valueListenable: themeModeNotifier,
-                  builder: (context, mode, _) => ListTile(
-                    leading: const Icon(Icons.contrast_outlined),
-                    title: Text(l10n.settingsAppearance),
-                    subtitle: Text(appearanceLabel(mode, l10n)),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.settingsPreferences),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: Text(l10n.settingsNotifications),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context)
-                        .restorablePushNamed('/settings/appearance'),
+                        .restorablePushNamed('/settings/notifications'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.language_outlined),
+                    title: Text(l10n.settingsLanguage),
+                    subtitle: Text(l10n.settingsLanguageEn),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context)
+                        .restorablePushNamed('/settings/language'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.history_outlined),
+                    title: Text(l10n.settingsClearEventHistory),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _clearEventHistory(context),
+                  ),
+                  const Divider(height: 1),
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeModeNotifier,
+                    builder: (context, mode, _) => ListTile(
+                      leading: const Icon(Icons.contrast_outlined),
+                      title: Text(l10n.settingsAppearance),
+                      subtitle: Text(appearanceLabel(mode, l10n)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context)
+                          .restorablePushNamed('/settings/appearance'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.settingsLocation),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.other_houses_outlined),
+                title: Text(l10n.settingsHome),
+                subtitle: Text(l10n.settingsSingleLocation),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SectionHeader(l10n.settingsCommandProtocol),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l10n.settingsCommandProtocolHint,
+                style: TextStyle(
+                  color: onSurface.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            ListenableBuilder(
+              listenable: SettingsStore.shared,
+              builder: (context, _) => Card(
+                child: RadioGroup<CommandTransportMode>(
+                  groupValue: SettingsStore.shared.commandTransport,
+                  onChanged: (v) {
+                    if (v != null) SettingsStore.shared.setCommandTransport(v);
+                  },
+                  child: Column(
+                    children: [
+                      RadioListTile<CommandTransportMode>(
+                        value: CommandTransportMode.tcp,
+                        title: Text(l10n.settingsCommandProtocolTcp),
+                        subtitle: Text(l10n.settingsCommandProtocolTcpHint),
+                        secondary: const Icon(Icons.dns_outlined),
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<CommandTransportMode>(
+                        value: CommandTransportMode.http,
+                        title: Text(l10n.settingsCommandProtocolHttp),
+                        subtitle: Text(l10n.settingsCommandProtocolHttpHint),
+                        secondary: const Icon(Icons.http_outlined),
+                      ),
+                      const Divider(height: 1),
+                      RadioListTile<CommandTransportMode>(
+                        value: CommandTransportMode.https,
+                        title: Text(l10n.settingsCommandProtocolHttps),
+                        subtitle: Text(l10n.settingsCommandProtocolHttpsHint),
+                        secondary: const Icon(Icons.https_outlined),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.settingsLocation),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.other_houses_outlined),
-              title: Text(l10n.settingsHome),
-              subtitle: Text(l10n.settingsSingleLocation),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SectionHeader(l10n.settingsCommandProtocol),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              l10n.settingsCommandProtocolHint,
-              style: TextStyle(
-                color: onSurface.withValues(alpha: 0.6),
-                fontSize: 13,
               ),
             ),
-          ),
-          ListenableBuilder(
-            listenable: SettingsStore.shared,
-            builder: (context, _) => Card(
-              child: RadioGroup<CommandTransportMode>(
-                groupValue: SettingsStore.shared.commandTransport,
-                onChanged: (v) {
-                  if (v != null) SettingsStore.shared.setCommandTransport(v);
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<CommandTransportMode>(
-                      value: CommandTransportMode.tcp,
-                      title: Text(l10n.settingsCommandProtocolTcp),
-                      subtitle: Text(l10n.settingsCommandProtocolTcpHint),
-                      secondary: const Icon(Icons.dns_outlined),
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<CommandTransportMode>(
-                      value: CommandTransportMode.http,
-                      title: Text(l10n.settingsCommandProtocolHttp),
-                      subtitle: Text(l10n.settingsCommandProtocolHttpHint),
-                      secondary: const Icon(Icons.http_outlined),
-                    ),
-                    const Divider(height: 1),
-                    RadioListTile<CommandTransportMode>(
-                      value: CommandTransportMode.https,
-                      title: Text(l10n.settingsCommandProtocolHttps),
-                      subtitle: Text(l10n.settingsCommandProtocolHttpsHint),
-                      secondary: const Icon(Icons.https_outlined),
-                    ),
-                  ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.offlineAlert,
+                  side: const BorderSide(
+                      color: AppColors.offlineAlert, width: 1.4),
                 ),
+                onPressed: () => _signOut(context),
+                icon: const Icon(Icons.logout),
+                label: Text(l10n.settingsSignOut),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.offlineAlert,
-                side:
-                    const BorderSide(color: AppColors.offlineAlert, width: 1.4),
-              ),
-              onPressed: () => _signOut(context),
-              icon: const Icon(Icons.logout),
-              label: Text(l10n.settingsSignOut),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(l10n.appVersion,
+                  style: TextStyle(
+                      fontSize: 12, color: onSurface.withValues(alpha: 0.4))),
             ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(l10n.appVersion,
-                style: TextStyle(
-                    fontSize: 12, color: onSurface.withValues(alpha: 0.4))),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

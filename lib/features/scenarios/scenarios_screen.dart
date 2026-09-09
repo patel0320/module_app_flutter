@@ -18,20 +18,23 @@ class ScenariosScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Event history (30 days)',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          const Card(
-            color: AppColors.surface,
-            child: ListTile(
-              leading: Icon(Icons.history, color: Colors.grey),
-              title: Text('No events recorded yet'),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Event history (30 days)',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const Card(
+              color: AppColors.surface,
+              child: ListTile(
+                leading: Icon(Icons.history, color: Colors.grey),
+                title: Text('No events recorded yet'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
