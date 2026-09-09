@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!leadingEdge) return;
     _bannerVisible = true;
     _bannerTimer?.cancel();
-    _bannerTimer = Timer(const Duration(seconds: 5), () {
+    _bannerTimer = Timer(const Duration(seconds: 20), () {
       if (mounted) setState(() => _bannerVisible = false);
     });
   }
@@ -266,15 +266,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 400),
                       child: _bannerVisible &&
-                              (offlineModules.isNotEmpty ||
-                                  overTemp.isNotEmpty)
+                              (offlineModules.isNotEmpty || overTemp.isNotEmpty)
                           ? Padding(
                               key: const ValueKey('alerts'),
-                              padding:
-                                  const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (offlineModules.isNotEmpty) ...[
                                     _AlertBanner(
