@@ -24,9 +24,17 @@ class TemperatureModuleScreen extends StatefulWidget {
 class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
   bool _alertsEnabled = true;
 
+  bool _editDialogOpen = false;
+
   Future<void> _editModuleInfo() async {
-    final saved = await showEditModuleInfoDialog(context, widget.module);
-    if (saved) setState(() {});
+    if (_editDialogOpen) return;
+    _editDialogOpen = true;
+    try {
+      final saved = await showEditModuleInfoDialog(context, widget.module);
+      if (saved && mounted) setState(() {});
+    } finally {
+      _editDialogOpen = false;
+    }
   }
 
   @override
