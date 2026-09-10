@@ -668,7 +668,7 @@ class Scenario {
     required this.name,
     required this.icon,
     required this.type,
-    this.roomName = 'No room',
+    this.roomName = 'General',
     this.showInHome = false,
     List<ScenarioAction>? actions,
     this.sliderTargetName = '',
@@ -704,7 +704,10 @@ class Scenario {
         name: json['name'] as String,
         icon: iconFromJson(json['icon']),
         type: ScenarioType.values.byName(json['type'] as String),
-        roomName: json['roomName'] as String? ?? 'No room',
+        roomName: switch (json['roomName']) {
+          null || 'No room' => 'General',
+          final value => value as String,
+        },
         showInHome: json['showInHome'] as bool? ?? false,
         actions: [
           for (final a in json['actions'] as List? ?? const [])

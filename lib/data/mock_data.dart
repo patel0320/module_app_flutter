@@ -259,7 +259,7 @@ List<Scenario> mockScenarios() => [
         name: 'All Off',
         icon: Icons.power_settings_new,
         type: ScenarioType.tapToRun,
-        roomName: 'No room',
+        roomName: 'General',
         showInHome: true,
         actions: [
           ScenarioAction(

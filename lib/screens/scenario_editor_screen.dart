@@ -30,7 +30,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   late final TextEditingController _nameController =
       TextEditingController(text: widget.scenario?.name ?? '');
   late IconData _icon = widget.scenario?.icon ?? Icons.auto_awesome_outlined;
-  late String _roomName = widget.scenario?.roomName ?? 'No room';
+  late String _roomName = widget.scenario?.roomName ?? 'General';
   late bool _showInHome = widget.scenario?.showInHome ?? false;
   late ScenarioType _type = widget.scenario?.type ?? ScenarioType.tapToRun;
   late final List<ScenarioAction> _actions =
@@ -139,7 +139,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final l10n = AppLocalizations.of(context);
-    final roomOptions = ['No room', ..._rooms.map((r) => r.name)];
+    final roomOptions = ['General', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
 
     return Scaffold(
