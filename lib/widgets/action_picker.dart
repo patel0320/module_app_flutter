@@ -50,6 +50,11 @@ Future<ScenarioAction?> showAddActionSheet(
         module = inputModules.first;
         input = module!.inputs.first;
       }
+      // Dimmer inputs only support Pulse.
+      if (module?.type == ModuleType.dimmerDc ||
+          module?.type == ModuleType.dimmerAc) {
+        inputState = InputActionState.pulse;
+      }
     } else {
       channel = _matchChannel(module?.channels, initial.channelName);
       if (module != null &&
@@ -78,6 +83,9 @@ Future<ScenarioAction?> showAddActionSheet(
     builder: (sheetContext) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
+          final bool isDimmerModule = module?.type == ModuleType.dimmerDc ||
+              module?.type == ModuleType.dimmerAc;
+
           void switchTarget(bool toInput) {
             setSheetState(() {
               isInputTarget = toInput;
@@ -92,6 +100,11 @@ Future<ScenarioAction?> showAddActionSheet(
                   module = inputModules.first;
                   input = module!.inputs.first;
                 }
+                // Dimmer inputs only support Pulse.
+                if (module?.type == ModuleType.dimmerDc ||
+                    module?.type == ModuleType.dimmerAc) {
+                  inputState = InputActionState.pulse;
+                }
               } else {
                 input = null;
                 channel = module?.channels.isNotEmpty == true
@@ -105,9 +118,7 @@ Future<ScenarioAction?> showAddActionSheet(
             });
           }
 
-          final bool isDimmer = !isInputTarget &&
-              (module?.type == ModuleType.dimmerDc ||
-                  module?.type == ModuleType.dimmerAc);
+          final bool isDimmer = isDimmerModule && !isInputTarget;
           final l10n = AppLocalizations.of(context);
 
           return SafeArea(
@@ -145,6 +156,11 @@ Future<ScenarioAction?> showAddActionSheet(
                           input = m?.inputs.isNotEmpty == true
                               ? m!.inputs.first
                               : null;
+                          // Dimmer inputs only support Pulse.
+                          if (m?.type == ModuleType.dimmerDc ||
+                              m?.type == ModuleType.dimmerAc) {
+                            inputState = InputActionState.pulse;
+                          }
                         } else {
                           channel = m?.channels.isNotEmpty == true
                               ? m!.channels.first
@@ -210,17 +226,23 @@ Future<ScenarioAction?> showAddActionSheet(
                           style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 8),
                       SegmentedButton<InputActionState>(
-                        segments: [
-                          ButtonSegment(
-                              value: InputActionState.on,
-                              label: Text(l10n.on)),
-                          ButtonSegment(
-                              value: InputActionState.off,
-                              label: Text(l10n.off)),
-                          ButtonSegment(
-                              value: InputActionState.pulse,
-                              label: Text(l10n.pulse)),
-                        ],
+                        segments: isDimmerModule
+                            ? [
+                                ButtonSegment(
+                                    value: InputActionState.pulse,
+                                    label: Text(l10n.pulse)),
+                              ]
+                            : [
+                                ButtonSegment(
+                                    value: InputActionState.on,
+                                    label: Text(l10n.on)),
+                                ButtonSegment(
+                                    value: InputActionState.off,
+                                    label: Text(l10n.off)),
+                                ButtonSegment(
+                                    value: InputActionState.pulse,
+                                    label: Text(l10n.pulse)),
+                              ],
                         selected: {inputState},
                         onSelectionChanged: (s) =>
                             setSheetState(() => inputState = s.first),
