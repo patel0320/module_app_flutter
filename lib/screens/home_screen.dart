@@ -90,6 +90,14 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Rooms order is shared with the Rooms screen via [RoomStore.shared].
   List<Room> get _rooms => RoomStore.shared.rooms;
 
+  /// Home quick-access rooms: the "General" catch-all pinned first, then the
+  /// persisted rooms in stored order. "General" holds every scenario that has
+  /// no specific room assigned.
+  List<Room> get _homeRooms => [
+        Room(id: 'room-general', name: 'General'),
+        ..._rooms,
+      ];
+
   /// Single source of truth for scenarios lives in [ScenarioStore.shared];
   /// the Home quick-access list below is a filtered *view* over this same
   /// list of object references, so slider edits made from a Home card stay
@@ -310,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     _SectionLabel(l10n.homeSectionRooms),
                     const SizedBox(height: 10),
-                    if (_rooms.isEmpty)
+                    if (_homeRooms.isEmpty)
                       EmptyState(
                         icon: Icons.meeting_room_outlined,
                         message: l10n.roomsEmpty,
@@ -320,11 +328,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 56,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          itemCount: _rooms.length,
+                          itemCount: _homeRooms.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(width: 10),
                           itemBuilder: (context, index) {
-                            final room = _rooms[index];
+                            final room = _homeRooms[index];
                             return _RoomChip(
                                 room: room,
                                 onTap: () => _showRoomScenarios(room));
