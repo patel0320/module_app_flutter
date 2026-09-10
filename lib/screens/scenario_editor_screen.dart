@@ -269,6 +269,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 initialValue: dimmerTargets.contains(_sliderTargetName)
                     ? _sliderTargetName
                     : null,
+                isExpanded: true,
                 decoration: InputDecoration(
                     labelText: l10n.scenarioDimmerOutputLabel,
                     prefixIcon: const Icon(Icons.lightbulb_outline)),
@@ -278,6 +279,14 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                         value: t,
                         child: Text(t,
                             maxLines: 1, overflow: TextOverflow.ellipsis))
+                ],
+                selectedItemBuilder: (context) => [
+                  for (final t in dimmerTargets)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(t,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    )
                 ],
                 onChanged: (value) => setState(
                     () => _sliderTargetName = value ?? _sliderTargetName),
