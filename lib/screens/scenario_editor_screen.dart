@@ -302,8 +302,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 max: 100,
                 divisions: sliderTarget?.brightnessSliderDivisions ?? 100,
                 label: '$_sliderValue%',
-                onChanged: (v) => setState(() => _sliderValue =
-                    sliderTarget?.snapBrightness(v.round()) ?? v.round()),
+                onChanged: sliderTarget == null
+                    ? null
+                    : (v) => setState(() => _sliderValue =
+                        sliderTarget.snapBrightness(v.round())),
               ),
             ],
             const SizedBox(height: 24),
