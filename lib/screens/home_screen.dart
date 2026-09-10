@@ -371,17 +371,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _homeScenarios[i].sliderValue = value;
                                   ScenarioStore.shared.commit();
                                 }),
-                                onOpenSlider: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => ManualDimmingSliderScreen(
-                                          scenario: _homeScenarios[i])),
-                                ),
-                                onEdit: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => ScenarioEditorScreen(
-                                        scenario: _homeScenarios[i]),
-                                  ),
-                                ),
+                                onOpenSlider: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            ManualDimmingSliderScreen(
+                                                scenario: _homeScenarios[i])),
+                                  );
+                                  await ScenarioStore.shared.commit();
+                                },
+                                onEdit: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ScenarioEditorScreen(
+                                          scenario: _homeScenarios[i]),
+                                    ),
+                                  );
+                                  await ScenarioStore.shared.commit();
+                                },
                               ),
                             ),
                         ],
