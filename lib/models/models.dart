@@ -134,6 +134,7 @@ class ChannelOutput {
     this.isOn = false,
     this.brightness = 0,
     this.enabled = true,
+    this.stepSize = 1,
     this.initialState = OutputInitialState.lastState,
   });
 
@@ -147,11 +148,31 @@ class ChannelOutput {
   /// Dimmer brightness percentage, 0-100 (0 = OFF, 100 = fully ON).
   int brightness;
 
+  /// Brightness step size (0-100) this output's dimmer slider moves in;
+  /// pulled from the device's `output_off_delay` (default 1).
+  int stepSize;
+
   /// Whether the output is shown / controllable on the module screen.
   bool enabled;
 
   /// State the output settles in after the module starts (`initial_state`).
   OutputInitialState initialState;
+
+  /// [stepSize] clamped to a usable slider range.
+  int get effectiveStepSize =>
+      stepSize < 1 ? 1 : (stepSize > 100 ? 100 : stepSize);
+
+  /// Number of discrete brightness stops a 0-100 slider needs to move in
+  /// [effectiveStepSize] increments.
+  int get brightnessSliderDivisions =>
+      (100 ~/ effectiveStepSize).clamp(1, 100).toInt();
+
+  /// Rounds a raw brightness percentage to the nearest [effectiveStepSize]
+  /// multiple, clamped to 0-100.
+  int snapBrightness(int value) =>
+      ((value / effectiveStepSize).round() * effectiveStepSize)
+          .clamp(0, 100)
+          .toInt();
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -159,6 +180,7 @@ class ChannelOutput {
         'icon': iconToJson(icon),
         'isOn': isOn,
         'brightness': brightness,
+        'stepSize': stepSize,
         'enabled': enabled,
         'initialState': initialState.name,
       };
@@ -169,6 +191,7 @@ class ChannelOutput {
         icon: iconFromJson(json['icon']),
         isOn: json['isOn'] as bool? ?? false,
         brightness: json['brightness'] as int? ?? 0,
+        stepSize: (json['stepSize'] as num?)?.toInt() ?? 1,
         enabled: json['enabled'] as bool? ?? true,
         initialState: OutputInitialState.fromWire(json['initialState']),
       );
@@ -204,6 +227,7 @@ const Map<String, IconData> kPersistableIcons = {
   'emoji_objects': Icons.emoji_objects,
   'tune': Icons.tune,
   'thermostat': Icons.thermostat,
+  'touch_app': Icons.touch_app_outlined,
 };
 
 Map<int, IconData>? _iconByCodePoint;
@@ -286,6 +310,131 @@ class PhysicalInput {
       };
 }
 
+/// Network/LAN+Wi-Fi info reported by `get_device_state` `result.network`.
+class DeviceNetworkInfo {
+  const DeviceNetworkInfo({
+    this.lanIp = '',
+    this.lanGateway = '',
+    this.lanSubnet = '',
+    this.wifiSsid = '',
+    this.wifiIp = '',
+    this.wifiSubnet = '',
+    this.wifiGateway = '',
+  });
+
+  final String lanIp;
+  final String lanGateway;
+  final String lanSubnet;
+  final String wifiSsid;
+  final String wifiIp;
+  final String wifiSubnet;
+  final String wifiGateway;
+
+  factory DeviceNetworkInfo.fromJson(Map<String, dynamic> json) =>
+      DeviceNetworkInfo(
+        lanIp: json['lan_ip'] as String? ?? '',
+        lanGateway: json['lan_gateway'] as String? ?? '',
+        lanSubnet: json['lan_subnet'] as String? ?? '',
+        wifiSsid: json['wifi_ssid'] as String? ?? '',
+        wifiIp: json['wifi_ip'] as String? ?? '',
+        wifiSubnet: json['wifi_subnet'] as String? ?? '',
+        wifiGateway: json['wifi_gateway'] as String? ?? '',
+      );
+
+  Map<String, Object?> toJson() => {
+        'lan_ip': lanIp,
+        'lan_gateway': lanGateway,
+        'lan_subnet': lanSubnet,
+        'wifi_ssid': wifiSsid,
+        'wifi_ip': wifiIp,
+        'wifi_subnet': wifiSubnet,
+        'wifi_gateway': wifiGateway,
+      };
+}
+
+/// Full system snapshot reported by `get_device_state` `result.system`
+/// (+ `result.network`), held on [DeviceModule.systemInfo] so screens can show
+/// CPU/memory/temperature/uptime and network details from the live device.
+class DeviceSystemInfo {
+  const DeviceSystemInfo({
+    this.cpuUsagePercent,
+    this.uptime,
+    this.memoryUsagePercent,
+    this.cpuTempC,
+    this.internalTempC,
+    this.externalTempC,
+    this.time,
+    this.network,
+  });
+
+  /// CPU load, percent (0-100).
+  final double? cpuUsagePercent;
+
+  /// Human-readable uptime string, e.g. `75294 seconds`.
+  final String? uptime;
+
+  /// Memory load, percent (may be reported as a string, e.g. `19.35`).
+  final double? memoryUsagePercent;
+
+  /// Processor temperature (°C).
+  final double? cpuTempC;
+
+  /// Internal (enclosure) temperature (°C).
+  final double? internalTempC;
+
+  /// External/sensor temperature (°C), when the device exposes one.
+  final double? externalTempC;
+
+  /// Device clock time, e.g. `2026/09/09 15:44:42`.
+  final String? time;
+
+  /// LAN/Wi-Fi addressing info.
+  final DeviceNetworkInfo? network;
+
+  /// Builds the snapshot from the top-level `get_device_state` result: reads
+  /// `result.system` for the system fields and `result.network` for addressing.
+  factory DeviceSystemInfo.fromJson(Map<String, dynamic> result) {
+    final system = result['system'] is Map
+        ? Map<String, dynamic>.from(result['system'] as Map)
+        : const <String, dynamic>{};
+    final network = result['network'] is Map
+        ? Map<String, dynamic>.from(result['network'] as Map)
+        : null;
+    return DeviceSystemInfo(
+      cpuUsagePercent: _tempFrom(system['cpu_usage_percent']),
+      uptime: system['uptime'] as String?,
+      memoryUsagePercent: _tempFrom(system['memory_usage_percent']),
+      cpuTempC: _tempFrom(system['cpu_temp_c']),
+      internalTempC: _tempFrom(system['internal_temp_c']),
+      externalTempC: _tempFrom(system['external_temp_c']),
+      time: system['time'] as String?,
+      network: network == null ? null : DeviceNetworkInfo.fromJson(network),
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+        'system': {
+          if (cpuUsagePercent != null) 'cpu_usage_percent': cpuUsagePercent,
+          if (uptime != null) 'uptime': uptime,
+          if (memoryUsagePercent != null)
+            'memory_usage_percent': memoryUsagePercent,
+          if (cpuTempC != null) 'cpu_temp_c': cpuTempC,
+          if (internalTempC != null) 'internal_temp_c': internalTempC,
+          if (externalTempC != null) 'external_temp_c': externalTempC,
+          if (time != null) 'time': time,
+        },
+        if (network != null) 'network': network!.toJson(),
+      };
+}
+
+/// Parses a temperature/percentage that the device may report as a number or a
+/// numeric string, e.g. `3.8.7`-style invalid values degrade to null.
+double? _tempFrom(Object? value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
 /// A hardware module added to the system (brief section 2.1).
 class DeviceModule {
   DeviceModule({
@@ -302,6 +451,7 @@ class DeviceModule {
     this.firmware,
     this.serial,
     this.mac,
+    this.connectionType = 'local_network',
     this.apiPort,
     this.apiHttpPort,
     this.apiVersion,
@@ -327,6 +477,10 @@ class DeviceModule {
 
   /// Ethernet MAC address (authoritative when reported by DCP).
   String? mac;
+
+  /// How the client reaches this module: `local_network`, `remote`, or
+  /// `cloud`. Null until set from the edit-module-info dialog.
+  String? connectionType;
 
   /// Control API v3 TCP port when advertised by discovery (normally 5008).
   int? apiPort;
@@ -383,6 +537,11 @@ class DeviceModule {
   double tempMinC;
   double tempMaxC;
 
+  /// Full live `get_device_state` system/network snapshot, when the last
+  /// refresh reported one. Used by module screens to show CPU/memory/temperature
+  /// and network details.
+  DeviceSystemInfo? systemInfo;
+
   final List<ChannelOutput> channels;
   final List<PhysicalInput> inputs;
 
@@ -403,12 +562,14 @@ class DeviceModule {
         'firmware': firmware,
         'serial': serial,
         'mac': mac,
+        'connectionType': connectionType,
         'apiPort': apiPort,
         'apiHttpPort': apiHttpPort,
         'apiVersion': apiVersion,
         'heartbeatPort': heartbeatPort,
         'caps': caps,
         'lastSeenAt': lastSeenAt?.toIso8601String(),
+        if (systemInfo != null) 'systemInfo': systemInfo!.toJson(),
         'channels': channels.map((c) => c.toJson()).toList(),
         'inputs': inputs.map((i) => i.toJson()).toList(),
       };
@@ -427,6 +588,7 @@ class DeviceModule {
         firmware: json['firmware'] as String?,
         serial: json['serial'] as String?,
         mac: json['mac'] as String?,
+        connectionType: json['connectionType'] as String? ?? 'local_network',
         apiPort: (json['apiPort'] as num?)?.toInt(),
         apiHttpPort: (json['apiHttpPort'] as num?)?.toInt(),
         apiVersion: (json['apiVersion'] as num?)?.toInt(),
@@ -445,7 +607,41 @@ class DeviceModule {
           for (final i in json['inputs'] as List? ?? const [])
             PhysicalInput.fromJson((i as Map).cast<String, Object?>()),
         ],
-      );
+      )
+    ..systemInfo = json['systemInfo'] is Map
+        ? DeviceSystemInfo.fromJson(
+            (json['systemInfo'] as Map).cast<String, dynamic>())
+        : null;
+}
+
+/// Desired state of an input action in a scenario: drive the virtual input
+/// `true` (ON), `false` (OFF) or pulse it (`true`, then `false` after a short
+/// delay).
+enum InputActionState { on, off, pulse }
+
+extension InputActionStateX on InputActionState {
+  String get label => switch (this) {
+        InputActionState.on => 'ON',
+        InputActionState.off => 'OFF',
+        InputActionState.pulse => 'Pulse',
+      };
+}
+
+/// Resolves the [ChannelOutput] a manual-dimmer scenario's [Scenario.sliderTargetName]
+/// points at. Target names use the `"<channel> - <module>"` format produced by
+/// the scenario editor; returns null when no dimmer output matches.
+ChannelOutput? dimmerTargetChannel(
+    List<DeviceModule> modules, String targetName) {
+  for (final module in modules) {
+    if (module.type != ModuleType.dimmerDc &&
+        module.type != ModuleType.dimmerAc) {
+      continue;
+    }
+    for (final channel in module.channels) {
+      if ('${channel.name} - ${module.name}' == targetName) return channel;
+    }
+  }
+  return null;
 }
 
 /// A single command executed by a scenario or automation.
@@ -457,6 +653,9 @@ class ScenarioAction {
     required this.isDimmerAction,
     this.turnOn = true,
     this.brightnessPct = 100,
+    this.isInputAction = false,
+    this.inputName = '',
+    this.inputState = InputActionState.on,
   });
 
   final String moduleName;
@@ -466,9 +665,18 @@ class ScenarioAction {
   final bool turnOn;
   final int brightnessPct;
 
-  String get summary => isDimmerAction
-      ? '$channelName -> $brightnessPct%'
-      : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
+  /// True when this action drives a virtual input instead of an output
+  /// channel. When set, [channelName] is unused and [inputName]/[inputState]
+  /// describe the target.
+  final bool isInputAction;
+  final String inputName;
+  final InputActionState inputState;
+
+  String get summary => isInputAction
+      ? '$inputName -> ${inputState.label}'
+      : isDimmerAction
+          ? '$channelName -> $brightnessPct%'
+          : '$channelName -> ${turnOn ? 'ON' : 'OFF'}';
 
   Map<String, Object?> toJson() => {
         'moduleName': moduleName,
@@ -477,6 +685,9 @@ class ScenarioAction {
         'isDimmerAction': isDimmerAction,
         'turnOn': turnOn,
         'brightnessPct': brightnessPct,
+        'isInputAction': isInputAction,
+        'inputName': inputName,
+        if (isInputAction) 'inputState': inputState.name,
       };
 
   factory ScenarioAction.fromJson(Map<String, Object?> json) => ScenarioAction(
@@ -486,6 +697,14 @@ class ScenarioAction {
         isDimmerAction: json['isDimmerAction'] as bool? ?? false,
         turnOn: json['turnOn'] as bool? ?? true,
         brightnessPct: json['brightnessPct'] as int? ?? 100,
+        isInputAction: json['isInputAction'] as bool? ?? false,
+        inputName: json['inputName'] as String? ?? '',
+        inputState: switch (json['inputState'] as String?) {
+          'on' => InputActionState.on,
+          'off' => InputActionState.off,
+          'pulse' => InputActionState.pulse,
+          _ => InputActionState.on,
+        },
       );
 }
 
@@ -496,7 +715,7 @@ class Scenario {
     required this.name,
     required this.icon,
     required this.type,
-    this.roomName = 'No room',
+    this.roomName = 'General',
     this.showInHome = false,
     List<ScenarioAction>? actions,
     this.sliderTargetName = '',
@@ -532,7 +751,10 @@ class Scenario {
         name: json['name'] as String,
         icon: iconFromJson(json['icon']),
         type: ScenarioType.values.byName(json['type'] as String),
-        roomName: json['roomName'] as String? ?? 'No room',
+        roomName: switch (json['roomName']) {
+          null || 'No room' => 'General',
+          final value => value as String,
+        },
         showInHome: json['showInHome'] as bool? ?? false,
         actions: [
           for (final a in json['actions'] as List? ?? const [])

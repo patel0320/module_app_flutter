@@ -67,5 +67,61 @@ void main() {
       expect(result.actions.first.success, isFalse);
       expect(result.actions.first.detail, contains('not connected'));
     });
+
+    test('resolves an input action by input name', () async {
+      await ModuleStore.shared.init();
+      final runner = ScenarioRunner.shared;
+
+      final result = await runner.run(Scenario(
+        id: 's3',
+        name: 'Test Input',
+        icon: Icons.touch_app_outlined,
+        type: ScenarioType.tapToRun,
+        actions: [
+          ScenarioAction(
+            moduleName: 'Main Cabin Relay',
+            channelName: '',
+            icon: Icons.touch_app_outlined,
+            isDimmerAction: false,
+            isInputAction: true,
+            inputName: 'Switch 2',
+            inputState: InputActionState.pulse,
+          ),
+        ],
+      ));
+
+      expect(result.actions, hasLength(1));
+      // Input resolved on the seeded module; no live socket => failed,
+      // "not connected" (not "input not found").
+      expect(result.actions.first.success, isFalse);
+      expect(result.actions.first.detail, contains('not connected'));
+    });
+
+    test('reports an unknown input as a failed action', () async {
+      await ModuleStore.shared.init();
+      final runner = ScenarioRunner.shared;
+
+      final result = await runner.run(Scenario(
+        id: 's4',
+        name: 'Test Bad Input',
+        icon: Icons.touch_app_outlined,
+        type: ScenarioType.tapToRun,
+        actions: [
+          ScenarioAction(
+            moduleName: 'Main Cabin Relay',
+            channelName: '',
+            icon: Icons.touch_app_outlined,
+            isDimmerAction: false,
+            isInputAction: true,
+            inputName: 'No Such Input',
+            inputState: InputActionState.on,
+          ),
+        ],
+      ));
+
+      expect(result.actions, hasLength(1));
+      expect(result.actions.first.success, isFalse);
+      expect(result.actions.first.detail, contains('Input "No Such Input" not found'));
+    });
   });
 }

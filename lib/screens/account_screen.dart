@@ -58,10 +58,16 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                Navigator.pop(context, false);
+              },
               child: Text(AppLocalizations.of(context).cancel)),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                Navigator.pop(context, true);
+              },
               child: Text(AppLocalizations.of(context).update)),
         ],
       ),

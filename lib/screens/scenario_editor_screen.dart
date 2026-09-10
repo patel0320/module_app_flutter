@@ -30,7 +30,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   late final TextEditingController _nameController =
       TextEditingController(text: widget.scenario?.name ?? '');
   late IconData _icon = widget.scenario?.icon ?? Icons.auto_awesome_outlined;
-  late String _roomName = widget.scenario?.roomName ?? 'No room';
+  late String _roomName = widget.scenario?.roomName ?? 'General';
   late bool _showInHome = widget.scenario?.showInHome ?? false;
   late ScenarioType _type = widget.scenario?.type ?? ScenarioType.tapToRun;
   late final List<ScenarioAction> _actions =
@@ -102,6 +102,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   }
 
   void _save() {
+    FocusScope.of(context).unfocus();
     final String name = _nameController.text.trim().isEmpty
         ? AppLocalizations.of(context).scenarioUntitled
         : _nameController.text.trim();
@@ -138,8 +139,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final l10n = AppLocalizations.of(context);
-    final roomOptions = ['No room', ..._rooms.map((r) => r.name)];
+    final roomOptions = ['General', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
+    final sliderTarget =
+        dimmerTargetChannel(_modules, _sliderTargetName);
 
     return Scaffold(
       appBar: AppBar(
@@ -236,7 +239,9 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     child: Card(
                       child: ListTile(
                         leading: IconAvatar(icon: _actions[i].icon),
-                        title: Text(_actions[i].channelName,
+                        title: Text(_actions[i].isInputAction
+                            ? _actions[i].inputName
+                            : _actions[i].channelName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(l10n.scenarioActionModuleSummary(
@@ -266,6 +271,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 initialValue: dimmerTargets.contains(_sliderTargetName)
                     ? _sliderTargetName
                     : null,
+                isExpanded: true,
                 decoration: InputDecoration(
                     labelText: l10n.scenarioDimmerOutputLabel,
                     prefixIcon: const Icon(Icons.lightbulb_outline)),
@@ -275,6 +281,14 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                         value: t,
                         child: Text(t,
                             maxLines: 1, overflow: TextOverflow.ellipsis))
+                ],
+                selectedItemBuilder: (context) => [
+                  for (final t in dimmerTargets)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(t,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    )
                 ],
                 onChanged: (value) => setState(
                     () => _sliderTargetName = value ?? _sliderTargetName),
@@ -286,9 +300,12 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 value: _sliderValue.toDouble(),
                 min: 0,
                 max: 100,
-                divisions: 100,
+                divisions: sliderTarget?.brightnessSliderDivisions ?? 100,
                 label: '$_sliderValue%',
-                onChanged: (v) => setState(() => _sliderValue = v.round()),
+                onChanged: sliderTarget == null
+                    ? null
+                    : (v) => setState(() => _sliderValue =
+                        sliderTarget.snapBrightness(v.round())),
               ),
             ],
             const SizedBox(height: 24),

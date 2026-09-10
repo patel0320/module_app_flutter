@@ -248,10 +248,16 @@ Future<String?> showTextInputDialog(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              Navigator.pop(context);
+            },
             child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
-          onPressed: () => Navigator.pop(context, controller.text.trim()),
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.pop(context, controller.text.trim());
+          },
           child: Text(confirmLabel),
         ),
       ],
@@ -264,81 +270,201 @@ Future<String?> showTextInputDialog(
 /// Returns true when the user saved; the passed [module] is updated directly.
 Future<bool> showEditModuleInfoDialog(
     BuildContext context, DeviceModule module) async {
-  final nameController = TextEditingController(text: module.name);
-  final ipController = TextEditingController(text: module.ipAddress);
-  final portController = TextEditingController(text: module.tcpPort.toString());
-  final tempController =
-      TextEditingController(text: module.tempMaxC.toStringAsFixed(0));
-
-  final bool? saved = await showDialog<bool>(
+  final result = await showDialog<ModuleInfoResult>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(AppLocalizations.of(context).moduleInfoTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            autofocus: true,
-            decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).moduleName,
-                prefixIcon: const Icon(Icons.edit_outlined)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: ipController,
-            decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).ipAddress,
-                prefixIcon: const Icon(Icons.lan_outlined)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: portController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).tcpPort,
-                prefixIcon: const Icon(Icons.router_outlined)),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: tempController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).tempThresholdLabel,
-                prefixIcon: const Icon(Icons.thermostat_outlined)),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel)),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(AppLocalizations.of(context).save),
-        ),
-      ],
-    ),
+    builder: (_) => _ModuleInfoDialog(module: module),
   );
 
-  final String name = nameController.text.trim();
-  final String ip = ipController.text.trim();
-  final int? port = int.tryParse(portController.text.trim());
-  final double? tempThreshold = double.tryParse(tempController.text.trim());
-  nameController.dispose();
-  ipController.dispose();
-  portController.dispose();
-  tempController.dispose();
-
-  if (saved == true) {
-    if (name.isNotEmpty) module.name = name;
-    if (ip.isNotEmpty) module.ipAddress = ip;
+  if (result?.saved == true) {
+    if (result!.name.isNotEmpty) module.name = result.name;
+    if (result.ip.isNotEmpty) module.ipAddress = result.ip;
+    if (result.connectionType != null) {
+      module.connectionType = result.connectionType;
+    }
+    final port = result.port;
     if (port != null) module.tcpPort = port;
+    final tempThreshold = result.tempThreshold;
     if (tempThreshold != null && tempThreshold > 0) {
       module.tempMaxC = tempThreshold.clamp(0, 100);
     }
   }
-  return saved == true;
+  return result?.saved == true;
+}
+
+/// Result payload collected once the dialog is fully closed, so the
+/// controllers only live (and are disposed) inside the dialog's own State.
+class ModuleInfoResult {
+  const ModuleInfoResult({
+    required this.saved,
+    required this.name,
+    required this.ip,
+    this.connectionType,
+    this.port,
+    this.tempThreshold,
+  });
+
+  final bool saved;
+  final String name;
+  final String ip;
+  final String? connectionType;
+  final int? port;
+  final double? tempThreshold;
+}
+
+class _ModuleInfoDialog extends StatefulWidget {
+  const _ModuleInfoDialog({required this.module});
+
+  final DeviceModule module;
+
+  @override
+  State<_ModuleInfoDialog> createState() => _ModuleInfoDialogState();
+}
+
+class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _ipController;
+  late final TextEditingController _portController;
+  late final TextEditingController _tempController;
+  late String? _connectionType;
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.module;
+    _nameController = TextEditingController(text: m.name);
+    _ipController = TextEditingController(text: m.ipAddress);
+    _portController = TextEditingController(text: m.tcpPort.toString());
+    _tempController =
+        TextEditingController(text: m.tempMaxC.toStringAsFixed(0));
+    _connectionType =
+        const {'local_network', 'remote', 'cloud'}.contains(m.connectionType)
+            ? m.connectionType
+            : 'local_network';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _ipController.dispose();
+    _portController.dispose();
+    _tempController.dispose();
+    super.dispose();
+  }
+
+  void _submit(bool saved) {
+    FocusScope.of(context).unfocus();
+    Navigator.pop(
+      context,
+      saved
+          ? ModuleInfoResult(
+              saved: true,
+              name: _nameController.text.trim(),
+              ip: _ipController.text.trim(),
+              connectionType: _connectionType,
+              port: int.tryParse(_portController.text.trim()),
+              tempThreshold: double.tryParse(_tempController.text.trim()),
+            )
+          : const ModuleInfoResult(saved: false, name: '', ip: ''),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.moduleInfoTitle),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).moduleName,
+                  prefixIcon: const Icon(Icons.edit_outlined)),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _connectionType,
+              isExpanded: true,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).connectionType,
+                  prefixIcon: const Icon(Icons.public_outlined)),
+              items: [
+                DropdownMenuItem(
+                  value: 'local_network',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionLocalNetwork,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'remote',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionRemote,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'cloud',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionCloud,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) => setState(() => _connectionType = value),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ipController,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).ipAddress,
+                  prefixIcon: const Icon(Icons.lan_outlined)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _portController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).tcpPort,
+                  prefixIcon: const Icon(Icons.router_outlined)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tempController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).tempThresholdLabel,
+                  prefixIcon: const Icon(Icons.thermostat_outlined)),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => _submit(false),
+            child: Text(AppLocalizations.of(context).cancel)),
+        FilledButton(
+          onPressed: () => _submit(true),
+          child: Text(AppLocalizations.of(context).save),
+        ),
+      ],
+    );
+  }
 }
 
 /// Compact status header (online/offline + IP/room + internal temperature)
@@ -495,10 +621,12 @@ class DimmerChannelCard extends StatelessWidget {
                     value: channel.brightness.toDouble(),
                     min: 0,
                     max: 100,
-                    divisions: 100,
+                    divisions: channel.brightnessSliderDivisions,
                     label: '${channel.brightness}%',
-                    onChanged: (v) => onChanged(v.round()),
-                    onChangeEnd: (v) => onChangeEnd?.call(v.round()),
+                    onChanged: (v) =>
+                        onChanged(channel.snapBrightness(v.round())),
+                    onChangeEnd: (v) =>
+                        onChangeEnd?.call(channel.snapBrightness(v.round())),
                   ),
                 ),
                 IconButton(

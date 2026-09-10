@@ -53,9 +53,17 @@ class _RelayControlScreenState extends State<RelayControlScreen> {
   Future<void> _holdInput(DeviceModule module, int index, bool held) =>
       ModuleStatusService.shared.setVirtualInputState(module.id, index, held);
 
+  bool _editDialogOpen = false;
+
   Future<void> _editModuleInfo() async {
-    final saved = await showEditModuleInfoDialog(context, widget.module);
-    if (saved) setState(() {});
+    if (_editDialogOpen) return;
+    _editDialogOpen = true;
+    try {
+      final saved = await showEditModuleInfoDialog(context, widget.module);
+      if (saved && mounted) setState(() {});
+    } finally {
+      _editDialogOpen = false;
+    }
   }
 
   /// Sends the ON/OFF relay command to the module through whichever transport

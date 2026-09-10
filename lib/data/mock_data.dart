@@ -259,7 +259,7 @@ List<Scenario> mockScenarios() => [
         name: 'All Off',
         icon: Icons.power_settings_new,
         type: ScenarioType.tapToRun,
-        roomName: 'No room',
+        roomName: 'General',
         showInHome: true,
         actions: [
           ScenarioAction(
@@ -457,4 +457,5 @@ const List<IconData> kChannelIconChoices = [
   Icons.outdoor_grill,
   Icons.garage,
   Icons.emoji_objects,
+  Icons.touch_app_outlined,
 ];

@@ -148,11 +148,15 @@ class _NotificationsSettingsScreenState
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              FocusScope.of(ctx).unfocus();
+              Navigator.of(ctx).pop();
+            },
             child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
+              FocusScope.of(ctx).unfocus();
               final parsed = int.tryParse(controller.text.trim());
               if (parsed == null) return;
               Navigator.of(ctx).pop(parsed.clamp(1, 168));

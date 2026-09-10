@@ -35,6 +35,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   final _tcpPortController = TextEditingController(text: '5005');
   late final TextEditingController _tempThresholdController;
   ModuleType _manualType = ModuleType.relay;
+  String _connectionType = 'local_network';
 
   @override
   void initState() {
@@ -184,10 +185,12 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   }
 
   void _addDiscovered(DeviceModule module) {
+    FocusScope.of(context).unfocus();
     Navigator.of(context).pop(module);
   }
 
   void _addManual() {
+    FocusScope.of(context).unfocus();
     if (_ipController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).addModuleEnterIp)),
@@ -200,6 +203,7 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
           ? _manualType.label
           : _nameController.text.trim(),
       type: _manualType,
+      connectionType: _connectionType,
       ipAddress: _ipController.text.trim(),
       tcpPort: int.tryParse(_tcpPortController.text.trim()) ?? 5005,
       status: ConnectionStatus.online,
@@ -325,6 +329,51 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
               decoration: InputDecoration(
                   labelText: l10n.addModuleNameOptional,
                   prefixIcon: const Icon(Icons.edit_outlined)),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _connectionType,
+              isExpanded: true,
+              decoration: InputDecoration(
+                  labelText: l10n.connectionType,
+                  prefixIcon: const Icon(Icons.public_outlined)),
+              items: [
+                DropdownMenuItem(
+                  value: 'local_network',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      l10n.connectionLocalNetwork,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'remote',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      l10n.connectionRemote,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'cloud',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      l10n.connectionCloud,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _connectionType = value ?? _connectionType),
             ),
             const SizedBox(height: 12),
             TextField(

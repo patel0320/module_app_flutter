@@ -102,6 +102,56 @@ void main() {
     expect(module.channels[0].brightness, 60);
   });
 
+  test('dimmer outputs take the brightness step from output_off_delay', () {
+    final module = DeviceModule(
+      id: 'd1',
+      name: 'Dimmer',
+      type: ModuleType.dimmerDc,
+      ipAddress: '192.168.1.20',
+      status: ConnectionStatus.online,
+      roomName: 'Lobby',
+      internalTempC: 0,
+      channels: [
+        ChannelOutput(id: 'd1c1', name: 'Lobby Lights', icon: Icons.lightbulb),
+        ChannelOutput(id: 'd1c2', name: 'Ceiling', icon: Icons.lightbulb),
+      ],
+    );
+    const config = SoleuxRelayConfiguration(
+      outputCount: 2,
+      outputs: [
+        SoleuxOutputState(channel: 0, name: 'Lobby Lights', stepSize: 5),
+        SoleuxOutputState(channel: 1, name: 'Ceiling'),
+      ],
+    );
+    fetcher.applyConfiguration(module, config);
+    expect(module.channels[0].stepSize, 5);
+    expect(module.channels[0].brightnessSliderDivisions, 20);
+    expect(module.channels[0].snapBrightness(58), 60);
+    // Missing output_off_delay defaults to step 1.
+    expect(module.channels[1].stepSize, 1);
+    expect(module.channels[1].brightnessSliderDivisions, 100);
+  });
+
+  test('slider target name resolves back to its dimmer channel', () {
+    final module = DeviceModule(
+      id: 'd1',
+      name: 'Cabin Dimmer 12V',
+      type: ModuleType.dimmerDc,
+      ipAddress: '192.168.1.20',
+      status: ConnectionStatus.online,
+      roomName: 'Cabin',
+      internalTempC: 0,
+      channels: [
+        ChannelOutput(
+            id: 'd1c1', name: 'Mood Light', icon: Icons.lightbulb, stepSize: 5),
+      ],
+    );
+    final channel = dimmerTargetChannel([module], 'Mood Light - Cabin Dimmer 12V');
+    expect(channel, isNotNull);
+    expect(channel!.stepSize, 5);
+    expect(dimmerTargetChannel([module], 'Mood Light - Other'), isNull);
+  });
+
   test('trims channels beyond the reported count', () {
     final module = relayModule(8);
     fetcher.applyConfiguration(

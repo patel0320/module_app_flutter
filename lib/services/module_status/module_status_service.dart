@@ -1244,9 +1244,9 @@ class ModuleStatusService {
 
   /// Fetches the implemented Relay configuration dump (the currently available
   /// "relay state/configuration operations" subset) and applies it to [live].
-  /// Dimmer modules additionally expose their requested/actual levels and per
-  /// channel state through the dimmer catalogue, so their levels are fetched
-  /// right after so the store reflects real brightness/on-off.
+  /// The complete live snapshot (`get_device_state`) is then fetched right after
+  /// so the store reflects device temperature and, for dimmers, real
+  /// brightness/on-off.
   Future<void> _fetchRelayConfiguration(
       SoleuxControlApiService unit, DeviceModule live) async {
     try {
@@ -1262,25 +1262,44 @@ class ModuleStatusService {
       debugPrint('Module ${live.name} (${live.id}) relay configuration fetch '
           'failed: $e\n$st');
     }
-    await _fetchDimmerLevels(unit, live);
+    await _fetchDeviceState(unit, live);
   }
 
-  /// `get_device_state` - reads every dimmer set/actual PWM level and state and
-  /// applies them to [live]'s channels. No-op for non-dimmer modules.
-  Future<void> _fetchDimmerLevels(
+  /// `get_device_state` - fetches the complete synchronization snapshot and
+  /// applies its live data to [live]:
+  ///   - the full system/network info is stored on [DeviceModule.systemInfo] so
+  ///     screens can surface CPU/memory/temperature/uptime and network details;
+  ///   - the internal module temperature is mirrored onto
+  ///     [DeviceModule.internalTempC] (falling back to `external_temp_c`);
+  ///   - every dimmer set/actual PWM level and state is applied for dimmers.
+  Future<void> _fetchDeviceState(
       SoleuxControlApiService unit, DeviceModule live) async {
-    if (live.type != ModuleType.dimmerDc && live.type != ModuleType.dimmerAc) {
-      return;
-    }
     try {
       final response =
-          await unit.getDimmerLevels(timeout: const Duration(seconds: 3));
-      if (response.ok) {
-        final raw = response.result?['outputs'];
+          await unit.getDeviceState(timeout: const Duration(seconds: 3));
+      if (!response.ok) {
+        debugPrint('Module ${live.name} (${live.id}) device state fetch '
+            'rejected: ${response.error?.summary}');
+        return;
+      }
+      final result = response.result;
+      if (result == null) return;
+      if (result['system'] is Map || result['network'] is Map) {
+        live.systemInfo = DeviceSystemInfo.fromJson(
+            Map<String, dynamic>.from(result));
+        if (live.systemInfo!.internalTempC != null) {
+          live.internalTempC = live.systemInfo!.internalTempC!;
+        } else if (live.systemInfo!.externalTempC != null) {
+          live.internalTempC = live.systemInfo!.externalTempC!;
+        }
+      }
+      if (live.type == ModuleType.dimmerDc || live.type == ModuleType.dimmerAc) {
+        final raw = result['outputs'];
         if (raw is List) _applyDimmerOutputs(live.id, raw);
       }
+      _scheduleCommit();
     } catch (e, st) {
-      debugPrint('Module ${live.name} (${live.id}) dimmer levels fetch '
+      debugPrint('Module ${live.name} (${live.id}) device state fetch '
           'failed: $e\n$st');
     }
   }

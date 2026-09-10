@@ -90,6 +90,14 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Rooms order is shared with the Rooms screen via [RoomStore.shared].
   List<Room> get _rooms => RoomStore.shared.rooms;
 
+  /// Home quick-access rooms: the "General" catch-all pinned first, then the
+  /// persisted rooms in stored order. "General" holds every scenario that has
+  /// no specific room assigned.
+  List<Room> get _homeRooms => [
+        Room(id: 'room-general', name: 'General'),
+        ..._rooms,
+      ];
+
   /// Single source of truth for scenarios lives in [ScenarioStore.shared];
   /// the Home quick-access list below is a filtered *view* over this same
   /// list of object references, so slider edits made from a Home card stay
@@ -310,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     _SectionLabel(l10n.homeSectionRooms),
                     const SizedBox(height: 10),
-                    if (_rooms.isEmpty)
+                    if (_homeRooms.isEmpty)
                       EmptyState(
                         icon: Icons.meeting_room_outlined,
                         message: l10n.roomsEmpty,
@@ -320,11 +328,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 56,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          itemCount: _rooms.length,
+                          itemCount: _homeRooms.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(width: 10),
                           itemBuilder: (context, index) {
-                            final room = _rooms[index];
+                            final room = _homeRooms[index];
                             return _RoomChip(
                                 room: room,
                                 onTap: () => _showRoomScenarios(room));
@@ -371,17 +379,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _homeScenarios[i].sliderValue = value;
                                   ScenarioStore.shared.commit();
                                 }),
-                                onOpenSlider: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => ManualDimmingSliderScreen(
-                                          scenario: _homeScenarios[i])),
-                                ),
-                                onEdit: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => ScenarioEditorScreen(
-                                        scenario: _homeScenarios[i]),
-                                  ),
-                                ),
+                                onOpenSlider: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            ManualDimmingSliderScreen(
+                                                scenario: _homeScenarios[i])),
+                                  );
+                                  await ScenarioStore.shared.commit();
+                                },
+                                onEdit: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ScenarioEditorScreen(
+                                          scenario: _homeScenarios[i]),
+                                    ),
+                                  );
+                                  await ScenarioStore.shared.commit();
+                                },
                               ),
                             ),
                         ],
@@ -643,6 +658,8 @@ class _QuickScenarioCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final isSlider = scenario.type == ScenarioType.manualSlider;
+    final sliderChannel = dimmerTargetChannel(
+        ModuleStore.shared.modules, scenario.sliderTargetName);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -729,9 +746,12 @@ class _QuickScenarioCard extends StatelessWidget {
                             value: scenario.sliderValue.toDouble(),
                             min: 0,
                             max: 100,
-                            divisions: 100,
+                            divisions:
+                                sliderChannel?.brightnessSliderDivisions ?? 100,
                             label: '${scenario.sliderValue}%',
-                            onChanged: (v) => onSliderChanged(v.round()),
+                            onChanged: (v) => onSliderChanged(
+                                sliderChannel?.snapBrightness(v.round()) ??
+                                    v.round()),
                           ),
                         ),
                       ),
@@ -829,9 +849,6 @@ class _RunButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(colors: [cs.primary, cs.primary]),
-          boxShadow: [
-            BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 14),
-          ],
         ),
         width: 52,
         height: 52,
