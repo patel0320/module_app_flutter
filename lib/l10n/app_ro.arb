@@ -117,6 +117,10 @@
 
   "moduleInfoTitle": "Editează informații modul",
   "moduleName": "Nume modul",
+  "connectionType": "Conexiune",
+  "connectionLocalNetwork": "Conexiune rețea locală",
+  "connectionRemote": "Conexiune la distanță",
+  "connectionCloud": "Conexiune cloud",
   "ipAddress": "Adresă IP",
   "tcpPort": "Port TCP",
 

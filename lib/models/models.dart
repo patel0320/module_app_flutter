@@ -451,6 +451,7 @@ class DeviceModule {
     this.firmware,
     this.serial,
     this.mac,
+    this.connectionType = 'local_network',
     this.apiPort,
     this.apiHttpPort,
     this.apiVersion,
@@ -476,6 +477,10 @@ class DeviceModule {
 
   /// Ethernet MAC address (authoritative when reported by DCP).
   String? mac;
+
+  /// How the client reaches this module: `local_network`, `remote`, or
+  /// `cloud`. Null until set from the edit-module-info dialog.
+  String? connectionType;
 
   /// Control API v3 TCP port when advertised by discovery (normally 5008).
   int? apiPort;
@@ -557,6 +562,7 @@ class DeviceModule {
         'firmware': firmware,
         'serial': serial,
         'mac': mac,
+        'connectionType': connectionType,
         'apiPort': apiPort,
         'apiHttpPort': apiHttpPort,
         'apiVersion': apiVersion,
@@ -582,6 +588,7 @@ class DeviceModule {
         firmware: json['firmware'] as String?,
         serial: json['serial'] as String?,
         mac: json['mac'] as String?,
+        connectionType: json['connectionType'] as String? ?? 'local_network',
         apiPort: (json['apiPort'] as num?)?.toInt(),
         apiHttpPort: (json['apiHttpPort'] as num?)?.toInt(),
         apiVersion: (json['apiVersion'] as num?)?.toInt(),

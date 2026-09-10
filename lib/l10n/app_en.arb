@@ -117,6 +117,10 @@
 
   "moduleInfoTitle": "Edit module info",
   "moduleName": "Module name",
+  "connectionType": "Connection",
+  "connectionLocalNetwork": "Local Network Connection",
+  "connectionRemote": "Remote Connection",
+  "connectionCloud": "Cloud Connection",
   "ipAddress": "IP address",
   "tcpPort": "TCP port",
 

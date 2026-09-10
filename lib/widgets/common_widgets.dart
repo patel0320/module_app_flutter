@@ -278,6 +278,9 @@ Future<bool> showEditModuleInfoDialog(
   if (result?.saved == true) {
     if (result!.name.isNotEmpty) module.name = result.name;
     if (result.ip.isNotEmpty) module.ipAddress = result.ip;
+    if (result.connectionType != null) {
+      module.connectionType = result.connectionType;
+    }
     final port = result.port;
     if (port != null) module.tcpPort = port;
     final tempThreshold = result.tempThreshold;
@@ -295,6 +298,7 @@ class ModuleInfoResult {
     required this.saved,
     required this.name,
     required this.ip,
+    this.connectionType,
     this.port,
     this.tempThreshold,
   });
@@ -302,6 +306,7 @@ class ModuleInfoResult {
   final bool saved;
   final String name;
   final String ip;
+  final String? connectionType;
   final int? port;
   final double? tempThreshold;
 }
@@ -320,6 +325,7 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
   late final TextEditingController _ipController;
   late final TextEditingController _portController;
   late final TextEditingController _tempController;
+  late String? _connectionType;
 
   @override
   void initState() {
@@ -330,6 +336,10 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
     _portController = TextEditingController(text: m.tcpPort.toString());
     _tempController =
         TextEditingController(text: m.tempMaxC.toStringAsFixed(0));
+    _connectionType =
+        const {'local_network', 'remote', 'cloud'}.contains(m.connectionType)
+            ? m.connectionType
+            : 'local_network';
   }
 
   @override
@@ -350,6 +360,7 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
               saved: true,
               name: _nameController.text.trim(),
               ip: _ipController.text.trim(),
+              connectionType: _connectionType,
               port: int.tryParse(_portController.text.trim()),
               tempThreshold: double.tryParse(_tempController.text.trim()),
             )
@@ -372,6 +383,29 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
               decoration: InputDecoration(
                   labelText: AppLocalizations.of(context).moduleName,
                   prefixIcon: const Icon(Icons.edit_outlined)),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _connectionType,
+              decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).connectionType,
+                  prefixIcon: const Icon(Icons.public_outlined)),
+              items: [
+                DropdownMenuItem(
+                  value: 'local_network',
+                  child: Text(
+                      AppLocalizations.of(context).connectionLocalNetwork),
+                ),
+                DropdownMenuItem(
+                  value: 'remote',
+                  child: Text(AppLocalizations.of(context).connectionRemote),
+                ),
+                DropdownMenuItem(
+                  value: 'cloud',
+                  child: Text(AppLocalizations.of(context).connectionCloud),
+                ),
+              ],
+              onChanged: (value) => setState(() => _connectionType = value),
             ),
             const SizedBox(height: 12),
             TextField(
