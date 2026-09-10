@@ -387,22 +387,43 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _connectionType,
+              isExpanded: true,
               decoration: InputDecoration(
                   labelText: AppLocalizations.of(context).connectionType,
                   prefixIcon: const Icon(Icons.public_outlined)),
               items: [
                 DropdownMenuItem(
                   value: 'local_network',
-                  child: Text(
-                      AppLocalizations.of(context).connectionLocalNetwork),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionLocalNetwork,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
                 DropdownMenuItem(
                   value: 'remote',
-                  child: Text(AppLocalizations.of(context).connectionRemote),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionRemote,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
                 DropdownMenuItem(
                   value: 'cloud',
-                  child: Text(AppLocalizations.of(context).connectionCloud),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      AppLocalizations.of(context).connectionCloud,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
                 ),
               ],
               onChanged: (value) => setState(() => _connectionType = value),

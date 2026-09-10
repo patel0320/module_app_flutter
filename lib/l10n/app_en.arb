@@ -117,7 +117,7 @@
 
   "moduleInfoTitle": "Edit module info",
   "moduleName": "Module name",
-  "connectionType": "Connection",
+  "connectionType": "Connection Type",
   "connectionLocalNetwork": "Local Network Connection",
   "connectionRemote": "Remote Connection",
   "connectionCloud": "Cloud Connection",
@@ -228,7 +228,7 @@
   "addModuleListening": "Listening for self-discovery broadcast...",
   "addModuleNoneFound": "No new modules found on the network.",
   "addModuleButton": "Add",
-  "addModuleManualSection": "Add manually by IP address",
+  "addModuleManualSection": "Add module manually",
   "addModuleNameOptional": "Module name (optional)",
   "addModuleType": "Module type",
   "addModuleAddAction": "Add module",

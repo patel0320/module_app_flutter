@@ -117,7 +117,7 @@
 
   "moduleInfoTitle": "Editează informații modul",
   "moduleName": "Nume modul",
-  "connectionType": "Conexiune",
+  "connectionType": "Tip conexiune",
   "connectionLocalNetwork": "Conexiune rețea locală",
   "connectionRemote": "Conexiune la distanță",
   "connectionCloud": "Conexiune cloud",
@@ -211,7 +211,7 @@
   "addModuleListening": "Se ascultă transmisia de auto-descoperire...",
   "addModuleNoneFound": "Nu s-au găsit module noi în rețea.",
   "addModuleButton": "Adaugă",
-  "addModuleManualSection": "Adaugă manual după adresa IP",
+  "addModuleManualSection": "Adaugă modul manual",
   "addModuleNameOptional": "Nume modul (opțional)",
   "addModuleType": "Tip modul",
   "addModuleAddAction": "Adaugă modul",
