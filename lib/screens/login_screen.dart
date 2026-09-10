@@ -30,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _submit() {
+    FocusScope.of(context).unfocus();
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,10 +94,13 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const ForgotPasswordScreen()),
-                  ),
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen()),
+                    );
+                  },
                   child: Text(l10n.loginForgot),
                 ),
               ),
@@ -108,9 +112,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(l10n.loginNoAccount),
                   TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    ),
+                    onPressed: () {
+                      FocusScope.of(context).unfocus();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterScreen()),
+                      );
+                    },
                     child: Text(l10n.loginCreateOne),
                   ),
                 ],

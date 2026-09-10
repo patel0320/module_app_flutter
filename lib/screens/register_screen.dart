@@ -31,6 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _submit() {
+    FocusScope.of(context).unfocus();
     if (_nameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {

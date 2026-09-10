@@ -48,6 +48,7 @@ class _ChannelEditorScreenState extends State<ChannelEditorScreen> {
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
     final trimmed = _nameController.text.trim();
     // Apply to the shared channel instance, then push the config to the device.
     widget.channel.name = trimmed.isEmpty ? widget.channel.name : trimmed;

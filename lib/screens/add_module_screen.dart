@@ -184,10 +184,12 @@ class _AddModuleScreenState extends State<AddModuleScreen> {
   }
 
   void _addDiscovered(DeviceModule module) {
+    FocusScope.of(context).unfocus();
     Navigator.of(context).pop(module);
   }
 
   void _addManual() {
+    FocusScope.of(context).unfocus();
     if (_ipController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).addModuleEnterIp)),

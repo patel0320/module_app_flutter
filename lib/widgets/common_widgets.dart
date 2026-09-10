@@ -248,10 +248,16 @@ Future<String?> showTextInputDialog(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              Navigator.pop(context);
+            },
             child: Text(AppLocalizations.of(context).cancel)),
         FilledButton(
-          onPressed: () => Navigator.pop(context, controller.text.trim()),
+          onPressed: () {
+            FocusScope.of(context).unfocus();
+            Navigator.pop(context, controller.text.trim());
+          },
           child: Text(confirmLabel),
         ),
       ],
@@ -336,6 +342,7 @@ class _ModuleInfoDialogState extends State<_ModuleInfoDialog> {
   }
 
   void _submit(bool saved) {
+    FocusScope.of(context).unfocus();
     Navigator.pop(
       context,
       saved

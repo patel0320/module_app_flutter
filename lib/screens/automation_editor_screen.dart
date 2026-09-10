@@ -85,6 +85,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   }
 
   void _save() {
+    FocusScope.of(context).unfocus();
     final String name = _nameController.text.trim().isEmpty
         ? AppLocalizations.of(context).automationUntitled
         : _nameController.text.trim();

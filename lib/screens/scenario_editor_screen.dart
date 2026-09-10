@@ -102,6 +102,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   }
 
   void _save() {
+    FocusScope.of(context).unfocus();
     final String name = _nameController.text.trim().isEmpty
         ? AppLocalizations.of(context).scenarioUntitled
         : _nameController.text.trim();

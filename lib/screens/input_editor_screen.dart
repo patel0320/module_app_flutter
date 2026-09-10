@@ -46,6 +46,7 @@ class _InputEditorScreenState extends State<InputEditorScreen> {
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
     final name = _name.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
