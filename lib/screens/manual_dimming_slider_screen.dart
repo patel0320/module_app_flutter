@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 
 class ManualDimmingSliderScreen extends StatefulWidget {
@@ -22,10 +23,15 @@ class ManualDimmingSliderScreen extends StatefulWidget {
 class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
   late int _value = widget.scenario.sliderValue;
 
+  ChannelOutput? get _target => dimmerTargetChannel(
+      ModuleStore.shared.modules, widget.scenario.sliderTargetName);
+
   void _update(int value) {
+    final snapped = _target?.snapBrightness(value) ?? value;
+    final v = snapped.clamp(0, 100).toInt();
     setState(() {
-      _value = value.clamp(0, 100);
-      widget.scenario.sliderValue = _value;
+      _value = v;
+      widget.scenario.sliderValue = v;
     });
   }
 
@@ -70,7 +76,7 @@ class _ManualDimmingSliderScreenState extends State<ManualDimmingSliderScreen> {
                       value: _value.toDouble(),
                       min: 0,
                       max: 100,
-                      divisions: 100,
+                      divisions: _target?.brightnessSliderDivisions ?? 100,
                       label: '$_value%',
                       onChanged: (v) => _update(v.round()),
                     ),

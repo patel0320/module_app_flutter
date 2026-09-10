@@ -134,6 +134,7 @@ class ChannelOutput {
     this.isOn = false,
     this.brightness = 0,
     this.enabled = true,
+    this.stepSize = 1,
     this.initialState = OutputInitialState.lastState,
   });
 
@@ -147,11 +148,31 @@ class ChannelOutput {
   /// Dimmer brightness percentage, 0-100 (0 = OFF, 100 = fully ON).
   int brightness;
 
+  /// Brightness step size (0-100) this output's dimmer slider moves in;
+  /// pulled from the device's `output_off_delay` (default 1).
+  int stepSize;
+
   /// Whether the output is shown / controllable on the module screen.
   bool enabled;
 
   /// State the output settles in after the module starts (`initial_state`).
   OutputInitialState initialState;
+
+  /// [stepSize] clamped to a usable slider range.
+  int get effectiveStepSize =>
+      stepSize < 1 ? 1 : (stepSize > 100 ? 100 : stepSize);
+
+  /// Number of discrete brightness stops a 0-100 slider needs to move in
+  /// [effectiveStepSize] increments.
+  int get brightnessSliderDivisions =>
+      (100 ~/ effectiveStepSize).clamp(1, 100).toInt();
+
+  /// Rounds a raw brightness percentage to the nearest [effectiveStepSize]
+  /// multiple, clamped to 0-100.
+  int snapBrightness(int value) =>
+      ((value / effectiveStepSize).round() * effectiveStepSize)
+          .clamp(0, 100)
+          .toInt();
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -159,6 +180,7 @@ class ChannelOutput {
         'icon': iconToJson(icon),
         'isOn': isOn,
         'brightness': brightness,
+        'stepSize': stepSize,
         'enabled': enabled,
         'initialState': initialState.name,
       };
@@ -169,6 +191,7 @@ class ChannelOutput {
         icon: iconFromJson(json['icon']),
         isOn: json['isOn'] as bool? ?? false,
         brightness: json['brightness'] as int? ?? 0,
+        stepSize: (json['stepSize'] as num?)?.toInt() ?? 1,
         enabled: json['enabled'] as bool? ?? true,
         initialState: OutputInitialState.fromWire(json['initialState']),
       );
@@ -595,6 +618,23 @@ extension InputActionStateX on InputActionState {
         InputActionState.off => 'OFF',
         InputActionState.pulse => 'Pulse',
       };
+}
+
+/// Resolves the [ChannelOutput] a manual-dimmer scenario's [Scenario.sliderTargetName]
+/// points at. Target names use the `"<channel> - <module>"` format produced by
+/// the scenario editor; returns null when no dimmer output matches.
+ChannelOutput? dimmerTargetChannel(
+    List<DeviceModule> modules, String targetName) {
+  for (final module in modules) {
+    if (module.type != ModuleType.dimmerDc &&
+        module.type != ModuleType.dimmerAc) {
+      continue;
+    }
+    for (final channel in module.channels) {
+      if ('${channel.name} - ${module.name}' == targetName) return channel;
+    }
+  }
+  return null;
 }
 
 /// A single command executed by a scenario or automation.

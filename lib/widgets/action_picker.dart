@@ -254,10 +254,10 @@ Future<ScenarioAction?> showAddActionSheet(
                         value: brightness.toDouble(),
                         min: 0,
                         max: 100,
-                        divisions: 20,
+                        divisions: channel?.brightnessSliderDivisions ?? 100,
                         label: '$brightness%',
-                        onChanged: (v) =>
-                            setSheetState(() => brightness = v.round()),
+                        onChanged: (v) => setSheetState(() => brightness =
+                            channel?.snapBrightness(v.round()) ?? v.round()),
                       ),
                     ] else ...[
                       Text(l10n.actionPickerState,

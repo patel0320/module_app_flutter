@@ -141,6 +141,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     final l10n = AppLocalizations.of(context);
     final roomOptions = ['General', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
+    final sliderTarget =
+        dimmerTargetChannel(_modules, _sliderTargetName);
 
     return Scaffold(
       appBar: AppBar(
@@ -298,9 +300,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 value: _sliderValue.toDouble(),
                 min: 0,
                 max: 100,
-                divisions: 100,
+                divisions: sliderTarget?.brightnessSliderDivisions ?? 100,
                 label: '$_sliderValue%',
-                onChanged: (v) => setState(() => _sliderValue = v.round()),
+                onChanged: (v) => setState(() => _sliderValue =
+                    sliderTarget?.snapBrightness(v.round()) ?? v.round()),
               ),
             ],
             const SizedBox(height: 24),

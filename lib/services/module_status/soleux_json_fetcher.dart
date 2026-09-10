@@ -61,6 +61,9 @@ class SoleuxOutputState {
   /// report it, in which case the output is treated as enabled.
   final bool? enabled;
 
+  /// Dimmer brightness step size (`output_off_delay`); defaults to 1.
+  final int stepSize;
+
   /// Device `initial_state` (`off`/`on`/`restore`, or a legacy int/absent).
   /// Null when the device does not report it.
   final Object? initialState;
@@ -74,6 +77,7 @@ class SoleuxOutputState {
     this.state = false,
     this.pwm,
     this.enabled,
+    this.stepSize = 1,
     this.initialState,
     this.raw = const {},
   });
@@ -81,6 +85,7 @@ class SoleuxOutputState {
   factory SoleuxOutputState.fromJson(Map<String, dynamic> json) {
     final pwmRaw = json['pwm'];
     final enabledRaw = json['output_enabled'] ?? json['enabled'];
+    final stepRaw = json['output_off_delay'];
     return SoleuxOutputState(
       channel: _int(json['channel']),
       name: json['output_name'] as String? ?? json['name'] as String? ?? '',
@@ -91,6 +96,7 @@ class SoleuxOutputState {
           : enabledRaw is bool
               ? enabledRaw
               : (enabledRaw as num?) != 0,
+      stepSize: (stepRaw is num ? stepRaw.toInt() : 1).clamp(1, 100).toInt(),
       initialState: json['initial_state'],
       raw: json,
     );
@@ -213,6 +219,7 @@ class SoleuxJsonFetcher {
       if (index < 0 || index >= module.channels.length) continue;
       final channel = module.channels[index];
       channel.isOn = output.state;
+      channel.stepSize = output.stepSize;
       // Dimmer outputs expose PWM as a bounded value supplied by firmware
       // metadata; persist it as the channel brightness (0-100%).
       if (output.pwm != null) {

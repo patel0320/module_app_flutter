@@ -566,10 +566,12 @@ class DimmerChannelCard extends StatelessWidget {
                     value: channel.brightness.toDouble(),
                     min: 0,
                     max: 100,
-                    divisions: 100,
+                    divisions: channel.brightnessSliderDivisions,
                     label: '${channel.brightness}%',
-                    onChanged: (v) => onChanged(v.round()),
-                    onChangeEnd: (v) => onChangeEnd?.call(v.round()),
+                    onChanged: (v) =>
+                        onChanged(channel.snapBrightness(v.round())),
+                    onChangeEnd: (v) =>
+                        onChangeEnd?.call(channel.snapBrightness(v.round())),
                   ),
                 ),
                 IconButton(

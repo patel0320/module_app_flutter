@@ -658,6 +658,8 @@ class _QuickScenarioCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final isSlider = scenario.type == ScenarioType.manualSlider;
+    final sliderChannel = dimmerTargetChannel(
+        ModuleStore.shared.modules, scenario.sliderTargetName);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -744,9 +746,12 @@ class _QuickScenarioCard extends StatelessWidget {
                             value: scenario.sliderValue.toDouble(),
                             min: 0,
                             max: 100,
-                            divisions: 100,
+                            divisions:
+                                sliderChannel?.brightnessSliderDivisions ?? 100,
                             label: '${scenario.sliderValue}%',
-                            onChanged: (v) => onSliderChanged(v.round()),
+                            onChanged: (v) => onSliderChanged(
+                                sliderChannel?.snapBrightness(v.round()) ??
+                                    v.round()),
                           ),
                         ),
                       ),
