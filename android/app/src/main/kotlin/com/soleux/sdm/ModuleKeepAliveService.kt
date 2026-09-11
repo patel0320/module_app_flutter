@@ -160,8 +160,8 @@ class ModuleKeepAliveService : Service() {
     // Android 15+ (API 35) calls this when a foreground service exceeds its
     // allowed time budget. A specialUse service has no budget, so this is a
     // defensive safety net: stop cleanly instead of leaking a foreground state.
-    override fun onTimeout() {
-        super.onTimeout()
+    override fun onTimeout(id: Int) {
+        super.onTimeout(id)
         stopForegroundCompat()
         stopSelf()
     }
