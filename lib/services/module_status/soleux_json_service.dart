@@ -153,6 +153,12 @@ class SoleuxJsonService extends SoleuxControlApiService {
   StreamSubscription<String>? _dataSubscription;
   int _nextId = 1;
 
+  /// Application-level keep-alive that sends a `hello` on the live socket so
+  /// proxies/gateways/NAT do not idle-timeout the persistent connection and
+  /// half-open sockets are detected quickly.
+  Timer? _keepAliveTimer;
+  static const Duration _keepAliveInterval = Duration(seconds: 10);
+
   /// Parsed legacy/event lines from the device.
   Stream<SoleuxLegacyEvent> get eventStream => _events.stream;
 
@@ -188,13 +194,43 @@ class SoleuxJsonService extends SoleuxControlApiService {
     _dataSubscription = _connection.dataStream.listen(_handleData);
   }
 
-  /// Opens the persistent connection.
+  /// Opens the persistent connection and starts the keep-alive timer.
   @override
-  Future<void> connect() => _connection.connect();
+  Future<void> connect() async {
+    await _connection.connect();
+    _startKeepAlive();
+  }
 
-  /// Closes the live socket and stops auto-reconnect.
+  /// Closes the live socket, stops auto-reconnect and the keep-alive timer.
   @override
-  Future<void> disconnect() => _connection.disconnect();
+  Future<void> disconnect() async {
+    _stopKeepAlive();
+    await _connection.disconnect();
+  }
+
+  /// Starts the keep-alive heartbeat once a live socket exists. Restarting is
+  /// idempotent: the previous timer (if any) is replaced.
+  void _startKeepAlive() {
+    _stopKeepAlive();
+    if (!_connection.isConnected) return;
+    _keepAliveTimer =
+        Timer.periodic(_keepAliveInterval, (_) => unawaited(_sendKeepAlive()));
+  }
+
+  /// Sends a non-fatal `hello` keep-alive while the socket is live.
+  Future<void> _sendKeepAlive() async {
+    if (!_connection.isConnected) return;
+    try {
+      await hello(timeout: const Duration(seconds: 5));
+    } catch (_) {
+      // Keep-alive failures are non-fatal; the socket layer handles reconnect.
+    }
+  }
+
+  void _stopKeepAlive() {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
+  }
 
   /// Feeds a chunk of wire data as if it had just arrived on the socket.
   /// Exposed for tests so routing/splitting logic can be exercised without
@@ -313,6 +349,7 @@ class SoleuxJsonService extends SoleuxControlApiService {
 
   @override
   void dispose() {
+    _stopKeepAlive();
     for (final pending in _pending.values) {
       pending.timer.cancel();
       if (!pending.completer.isCompleted) {
