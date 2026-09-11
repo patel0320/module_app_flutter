@@ -55,6 +55,8 @@ class ModuleStatusScheduler with WidgetsBindingObserver {
   }
 
   void _onLifecycleChanged(AppLifecycleState state) {
+    debugPrint('ModuleStatusScheduler: app backgrounded ($_state) => ($state)');
+
     if (state == _state) return;
     _state = state;
     if (state == AppLifecycleState.resumed) {
