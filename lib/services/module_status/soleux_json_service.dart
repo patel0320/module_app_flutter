@@ -13,6 +13,9 @@
 //   - the Control API framing (a plain JSON object per line, no `J:` prefix,
 //     with the outer `protocol` field) is the default. [SoleuxJsonFraming.legacyJ]
 //     selects the legacy `J:` framing for pre-Control-API devices;
+//   - unsolicited JSON device events (`event` + `data`, no `ok`/`result`,
+//     doc/...Specification_v0.6.md §"Device events") are routed to
+//     [deviceEventStream] as parsed [SoleuxDeviceEvent]s;
 //   - non-JSON lines (welcome status dump, unsolicited `OUT:`/`IN:` state,
 //     `OVERRIDE:`, `GETENERGY:`, `OK`, `Error : Function Disabled`, ...) are
 //     routed to [eventStream] as parsed [SoleuxLegacyEvent]s.
@@ -23,6 +26,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/soleux/soleux_device_event.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import 'module_tcp_service.dart';
 import 'soleux_control_api_service.dart';
@@ -141,6 +145,8 @@ class SoleuxJsonService extends SoleuxControlApiService {
       StreamController<SoleuxLegacyEvent>.broadcast(sync: true);
   final StreamController<Map<String, dynamic>> _jsonEvents =
       StreamController<Map<String, dynamic>>.broadcast(sync: true);
+  final StreamController<SoleuxDeviceEvent> _deviceEvents =
+      StreamController<SoleuxDeviceEvent>.broadcast(sync: true);
   final SoleuxLineSplitter _splitter = SoleuxLineSplitter();
   final Map<int, _JsonPending> _pending = {};
 
@@ -153,6 +159,11 @@ class SoleuxJsonService extends SoleuxControlApiService {
   /// Unsolicited (no pending request) JSON lines, e.g. pushed configuration
   /// updates, decoded as raw maps.
   Stream<Map<String, dynamic>> get jsonEventStream => _jsonEvents.stream;
+
+  /// Unsolicited Control API device events
+  /// (doc/...Specification_v0.6.md §"Device events"): parsed JSON envelopes
+  /// carrying `event` + `data` (e.g. `output_state_changed`).
+  Stream<SoleuxDeviceEvent> get deviceEventStream => _deviceEvents.stream;
 
   /// Connection up/down transitions, forwarded from [ModuleTcpConnection].
   @override
@@ -192,10 +203,19 @@ class SoleuxJsonService extends SoleuxControlApiService {
   void feed(String chunk) => _handleData(chunk);
 
   /// Feeds decoded chunks through the buffered line splitter and routes each
-  /// complete line: `J:` responses match pending requests by `id`; everything
-  /// else becomes a legacy event.
+  /// complete line:
+  ///   - Control API device events (JSON with `event` + `data`, no `ok` /
+  ///     `result`, doc/...Specification_v0.6.md §"Device events") surface on
+  ///     [deviceEventStream];
+  ///   - `J:` / plain JSON responses match pending requests by `id`;
+  ///   - everything else becomes a legacy event.
   void _handleData(String chunk) {
     for (final line in _splitter.add(chunk)) {
+      final deviceEvent = SoleuxDeviceEvent.maybeParse(line);
+      if (deviceEvent != null) {
+        _deviceEvents.add(deviceEvent);
+        continue;
+      }
       final response = SoleuxJsonResponse.maybeParse(line);
       if (response == null) {
         _events.add(SoleuxLegacyEvent.parse(line));
@@ -304,6 +324,7 @@ class SoleuxJsonService extends SoleuxControlApiService {
     _dataSubscription?.cancel();
     _events.close();
     _jsonEvents.close();
+    _deviceEvents.close();
     _connection.dispose();
   }
 

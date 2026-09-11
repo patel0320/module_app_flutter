@@ -142,6 +142,7 @@ class ModuleStore extends ChangeNotifier {
                   name: priorInputs[i].name,
                   mode: priorInputs[i].mode,
                   enabled: priorInputs[i].enabled,
+                  state: priorInputs[i].state,
                 )
               : fresh.inputs[i],
       ]);

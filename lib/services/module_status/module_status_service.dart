@@ -34,6 +34,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../../core/logger/network_debug_logger.dart';
+import '../../core/soleux/soleux_device_event.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
@@ -1431,6 +1432,101 @@ class ModuleStatusService {
         _scheduleCommit();
       }
     });
+    // Control API device events (output/input/level changes, temperature, ...,
+    // doc/...Specification_v0.6.md §"Device events") update the live module so
+    // its target screen reflects device-initiated changes without a re-fetch.
+    unit.deviceEventStream.listen((event) => _applyDeviceEvent(module.id, event));
+  }
+
+  /// Applies a Control API device event to the live module in the store (and
+  /// therefore to the module's screen, which rebuilds on [ModuleStore]
+  /// changes). Events are incremental updates; skipped revisions should be
+  /// recovered with a `get_device_state` snapshot, so out-of-range or unknown
+  /// events are ignored here.
+  void _applyDeviceEvent(String moduleId, SoleuxDeviceEvent event) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    final changed = switch (event.type) {
+      SoleuxDeviceEventType.outputStateChanged =>
+        _applyOutputStateEvent(live, event),
+      SoleuxDeviceEventType.outputLevelChanged =>
+        _applyOutputLevelEvent(live, event),
+      SoleuxDeviceEventType.inputStateChanged =>
+        _applyInputStateEvent(live, event),
+      SoleuxDeviceEventType.temperatureChanged =>
+        _applyTemperatureEvent(live, event),
+      _ => false,
+    };
+    if (changed) _scheduleCommit();
+  }
+
+  /// `output_state_changed` - the output's on/off state changed.
+  bool _applyOutputStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    final state = event.state;
+    if (channel == null ||
+        state == null ||
+        channel < 0 ||
+        channel >= live.channels.length) {
+      return false;
+    }
+    final output = live.channels[channel];
+    if (output.isOn == state) return false;
+    output.isOn = state;
+    return true;
+  }
+
+  /// `output_level_changed` - a dimmer output's level transitioned.
+  bool _applyOutputLevelEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    if (channel == null || channel < 0 || channel >= live.channels.length) {
+      return false;
+    }
+    final output = live.channels[channel];
+    final level = event.requestedLevel ?? event.actualLevel;
+    if (level != null) {
+      final brightness = level.round().clamp(0, 100);
+      if (output.brightness == brightness && output.isOn == (brightness > 0)) {
+        return false;
+      }
+      output.brightness = brightness;
+      output.isOn = brightness > 0;
+      return true;
+    }
+    // Some firmware reports only the logical state on a level change.
+    final state = event.state;
+    if (state != null && output.isOn != state) {
+      output.isOn = state;
+      return true;
+    }
+    return false;
+  }
+
+  /// `input_state_changed` - a physical/virtual input changed state.
+  bool _applyInputStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    final state = event.state;
+    if (channel == null ||
+        state == null ||
+        channel < 0 ||
+        channel >= live.inputs.length) {
+      return false;
+    }
+    final input = live.inputs[channel];
+    if (input.state == state) return false;
+    input.state = state;
+    return true;
+  }
+
+  /// `temperature_changed` - mirror the sensor reading onto the module's
+  /// internal temperature so the temperature module screen stays live.
+  bool _applyTemperatureEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final value = event.valueC;
+    if (value == null) return false;
+    final rounded = double.parse(value.toStringAsFixed(1));
+    if ((live.internalTempC - rounded).abs() < 0.05) return false;
+    live.internalTempC = rounded;
+    return true;
   }
 
   /// The Control API command endpoint for [module] per the app's HTTP/HTTPS

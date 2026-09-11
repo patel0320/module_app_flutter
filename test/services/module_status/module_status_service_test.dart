@@ -9,6 +9,15 @@ import 'package:soleux_device_manager/models/models.dart';
 import 'package:soleux_device_manager/services/module_store.dart';
 import 'package:soleux_device_manager/services/module_status/module_status_service.dart';
 
+/// Tracks a live fake-device socket so tests can push unsolicited lines
+/// (Control API device events) over the same TCP connection.
+class _FakeSocket {
+  final Socket socket;
+  bool destroyed = false;
+
+  _FakeSocket(this.socket);
+}
+
 /// Fake Control API device: answers `hello` / `get_relay_configuration`, and
 /// acknowledges `set_output_state` with a plain `ok:true` JSON response but
 /// never broadcasts an `OUT:` line (the exact scenario that used to leave the
@@ -18,6 +27,7 @@ class _FakeDevice {
   final List<String> received = [];
   final Map<int, bool> outputs = {};
   final bool staleActual;
+  final List<_FakeSocket> _sockets = [];
 
   _FakeDevice._(this.server, {this.staleActual = false});
 
@@ -30,7 +40,16 @@ class _FakeDevice {
 
   int get port => server.port;
 
+  void broadcast(String line) {
+    for (final entry in List.of(_sockets)) {
+      if (!entry.destroyed) entry.socket.write('$line\r\n');
+    }
+  }
+
   void _handle(Socket socket) {
+    final entry = _FakeSocket(socket);
+    _sockets.add(entry);
+    socket.done.then((_) => entry.destroyed = true);
     final buffer = StringBuffer();
     socket.listen((bytes) {
       buffer.write(utf8.decode(bytes));
@@ -88,7 +107,15 @@ class _FakeDevice {
               'restart_disable': false,
             }
         ],
-        'inputs': const [],
+        'inputs': [
+          for (var ch = 0; ch < 2; ch++)
+            {
+              'channel': ch,
+              'input_name': 'Input ${ch + 1}',
+              'input_state': false,
+              'input_enabled': 1,
+            }
+        ],
         'mapping': const [],
       };
     } else if (action == 'set_output_state') {
@@ -390,6 +417,119 @@ void main() {
     expect(await service.turnOffOutput('m-at', 1), isTrue);
     await _flush();
     expect(store.byId('m-at')!.channels[1].isOn, isFalse);
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test(
+      'unsolicited output/input device events update the module on screen',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-events',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+    expect(store.byId('m-events')!.channels, hasLength(2));
+    expect(store.byId('m-events')!.inputs, hasLength(2));
+
+    // Device broadcasts output_state_changed for channel 1 over the same TCP
+    // socket; the relay screen must flip without a manual refresh.
+    fake.broadcast('{"protocol":3,"event":"output_state_changed",'
+        '"subscription_id":"sub-1","data":{"channel":1,"previous_state":false,'
+        '"state":true,"pending":false,"source":"windows-app","revision":10,'
+        '"timestamp":"2026-08-31T10:20:30+00:00"}}');
+    await _flush();
+    expect(store.byId('m-events')!.channels[1].isOn, isTrue,
+        reason: 'output_state_changed must flip the relay output on screen');
+
+    // Device broadcasts input_state_changed for channel 0; the input indicator
+    // on the module screen must light.
+    fake.broadcast(
+        '{"protocol":3,"event":"input_state_changed","data":{"kind":"physical",'
+        '"channel":0,"previous_state":false,"state":true,"source":"input",'
+        '"revision":11,"timestamp":"2026-08-31T10:20:31+00:00"}}');
+    await _flush();
+    expect(store.byId('m-events')!.inputs[0].state, isTrue,
+        reason: 'input_state_changed must light the input indicator on screen');
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('output_level_changed sets the dimmer brightness on the target module',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-dimmer',
+      name: 'Dimmer',
+      type: ModuleType.dimmerDc,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+    expect(store.byId('m-dimmer')!.channels, hasLength(2));
+
+    fake.broadcast('{"protocol":3,"event":"output_level_changed",'
+        '"data":{"channel":1,"requested_level":70,"actual_level":70,'
+        '"transitioning":false,"source":"windows-app","revision":12,'
+        '"timestamp":"2026-08-31T10:20:32+00:00"}}');
+    await _flush();
+    final live = store.byId('m-dimmer')!;
+    expect(live.channels[1].brightness, 70,
+        reason: 'output_level_changed must update the dimmer brightness');
+    expect(live.channels[1].isOn, isTrue);
+
+    service.dispose();
+    await fake.server.close();
+  });
+
+  test('temperature_changed keeps the module temperature reading live',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-temp',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 25,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    fake.broadcast('{"protocol":3,"event":"temperature_changed",'
+        '"data":{"sensor_id":0,"value_c":27.4,"status":"ok",'
+        '"timestamp":"2026-08-31T10:20:33+00:00"}}');
+    await _flush();
+    expect(store.byId('m-temp')!.internalTempC, closeTo(27.4, 0.05),
+        reason: 'temperature_changed must update the module temperature');
 
     service.dispose();
     await fake.server.close();
