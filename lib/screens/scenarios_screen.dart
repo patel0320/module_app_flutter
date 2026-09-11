@@ -191,19 +191,23 @@ class _ScenarioCard extends StatelessWidget {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 4),
-                        RoomTag(label: scenario.roomName),
-                        const SizedBox(height: 4),
-                        Expanded(
-                          child: Text(
-                            isSlider
-                                ? l10n.homeManualDimmingSlider
-                                : l10n
-                                    .homeActionsCount(scenario.actions.length),
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: onSurface.withValues(alpha: 0.55)),
-                          ),
+                        Row(
+                          children: [
+                            RoomTag(label: scenario.roomName),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isSlider
+                                    ? l10n.homeManualDimmingSlider
+                                    : l10n.homeActionsCount(
+                                        scenario.actions.length),
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: onSurface.withValues(alpha: 0.55)),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
