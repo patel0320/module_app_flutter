@@ -93,7 +93,11 @@ abstract final class BackgroundStatusWorker {
     try {
       debugPrint('BackgroundStatusWorker: starting poll');
       await SettingsStore.shared.init();
-      await LocalNotificationService.shared.initialize();
+      // No permission requests from the background isolate: the plugin's
+      // activity context is null there (headless process), which would throw
+      // in requestNotificationsPermission. Permission was already granted on
+      // the first foreground launch; only channel setup + show are needed.
+      await LocalNotificationService.shared.initialize(requestPermissions: false);
       await StatusLogStore.shared.init();
 
       await ModuleStore.shared.init();
