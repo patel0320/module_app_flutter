@@ -147,15 +147,19 @@ class SoleuxJsonService extends SoleuxControlApiService {
       StreamController<Map<String, dynamic>>.broadcast(sync: true);
   final StreamController<SoleuxDeviceEvent> _deviceEvents =
       StreamController<SoleuxDeviceEvent>.broadcast(sync: true);
+  final StreamController<Map<String, dynamic>> _deviceState =
+      StreamController<Map<String, dynamic>>.broadcast(sync: true);
   final SoleuxLineSplitter _splitter = SoleuxLineSplitter();
   final Map<int, _JsonPending> _pending = {};
 
   StreamSubscription<String>? _dataSubscription;
   int _nextId = 1;
 
-  /// Application-level keep-alive that sends a `hello` on the live socket so
-  /// proxies/gateways/NAT do not idle-timeout the persistent connection and
-  /// half-open sockets are detected quickly.
+  /// Application-level keep-alive that sends a `get_device_state` on the live
+  /// socket so proxies/gateways/NAT do not idle-timeout the persistent
+  /// connection and half-open sockets are detected quickly. Unlike a bare
+  /// `hello` ping, the response also carries the live device status, which is
+  /// published on [deviceStateStream] so callers can reflect the current state.
   Timer? _keepAliveTimer;
   static const Duration _keepAliveInterval = Duration(seconds: 10);
 
@@ -170,6 +174,12 @@ class SoleuxJsonService extends SoleuxControlApiService {
   /// (doc/...Specification_v0.6.md §"Device events"): parsed JSON envelopes
   /// carrying `event` + `data` (e.g. `output_state_changed`).
   Stream<SoleuxDeviceEvent> get deviceEventStream => _deviceEvents.stream;
+
+  /// Live `get_device_state` snapshots produced by the keep-alive heartbeat.
+  /// Each entry is a `get_device_state` `result`, so callers can reflect the
+  /// device's current inputs/outputs/sensors/system/network without an extra
+  /// poll.
+  Stream<Map<String, dynamic>> get deviceStateStream => _deviceState.stream;
 
   /// Connection up/down transitions, forwarded from [ModuleTcpConnection].
   @override
@@ -217,11 +227,16 @@ class SoleuxJsonService extends SoleuxControlApiService {
         Timer.periodic(_keepAliveInterval, (_) => unawaited(_sendKeepAlive()));
   }
 
-  /// Sends a non-fatal `hello` keep-alive while the socket is live.
+  /// Sends a non-fatal `get_device_state` keep-alive while the socket is live.
+  /// On success the returned snapshot is published on [deviceStateStream] so
+  /// callers reflect the live device status.
   Future<void> _sendKeepAlive() async {
     if (!_connection.isConnected) return;
     try {
-      await hello(timeout: const Duration(seconds: 5));
+      final response = await getDeviceState(timeout: const Duration(seconds: 5));
+      if (response.ok && response.result != null) {
+        _deviceState.add(response.result!);
+      }
     } catch (_) {
       // Keep-alive failures are non-fatal; the socket layer handles reconnect.
     }
@@ -362,6 +377,7 @@ class SoleuxJsonService extends SoleuxControlApiService {
     _events.close();
     _jsonEvents.close();
     _deviceEvents.close();
+    _deviceState.close();
     _connection.dispose();
   }
 
