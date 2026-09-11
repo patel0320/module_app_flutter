@@ -30,7 +30,14 @@
   "noRoom": "General",
   "comingSoon": "În curând",
   "showOnHome": "Arată pe Acasă",
-  "appVersion": "Versiunea aplicației 1.0.0",
+  "appVersion": "Versiunea aplicației {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
 
   "keepAliveTitle": "Monitorizare Soleux activă",
   "keepAliveBody": "Conexiunile către module sunt menținute active",

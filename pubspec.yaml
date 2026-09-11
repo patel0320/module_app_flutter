@@ -48,6 +48,7 @@ dependencies:
   # Config
   flutter_dotenv: ^5.1.0
   workmanager: ^0.7.0
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:

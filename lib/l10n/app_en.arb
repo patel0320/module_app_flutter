@@ -30,7 +30,14 @@
   "noRoom": "General",
   "comingSoon": "Coming soon",
   "showOnHome": "Show on Home",
-  "appVersion": "App version 1.0.0",
+  "appVersion": "App version {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
 
   "keepAliveTitle": "Soleux monitoring active",
   "keepAliveBody": "Keeping module connections alive",
