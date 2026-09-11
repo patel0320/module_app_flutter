@@ -32,6 +32,17 @@
   "showOnHome": "Arată pe Acasă",
   "appVersion": "Versiunea aplicației 1.0.0",
 
+  "keepAliveTitle": "Monitorizare Soleux activă",
+  "keepAliveBody": "Conexiunile către module sunt menținute active",
+  "keepAliveBodyCount": "Mențin {count} module conectate",
+  "@keepAliveBodyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
   "languageSaved": "Preferința de limbă a fost salvată.",
   "languageAvailable": "Disponibile la lansare",
   "settingsLanguage": "Limbă",
@@ -63,6 +74,16 @@
   "settingsCommandProtocolHttpHint": "POST /api/v1/command pe portul 80",
   "settingsCommandProtocolHttps": "HTTPS",
   "settingsCommandProtocolHttpsHint": "POST /api/v1/command pe portul 443",
+  "settingsMonitoring": "Monitorizare continuă",
+  "settingsKeepAlive": "Menține conexiunile active",
+  "settingsKeepAliveBody": "Menține socket-urile modulelor și heartbeat-urile active când aplicația este în fundal sau ecranul este oprit.",
+  "settingsKeepAliveRunning": "Activă",
+  "settingsKeepAliveStopped": "Oprită",
+  "settingsBatteryOptimization": "Optimizarea bateriei",
+  "settingsBatteryOptimizationBody": "Permite utilizarea nerestricționată a bateriei pentru ca monitorizarea să continue în fundal.",
+  "settingsBatteryExempt": "Excepție",
+  "settingsBatteryNotExempt": "Fără excepție",
+  "settingsBatteryRequestExemption": "Solicită excepția",
   "systemStatusTitle": "Istoric notificări",
   "statusLogOffline": "OFFLINE",
   "statusLogRestored": "RESTORED",

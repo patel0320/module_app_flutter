@@ -15,6 +15,7 @@ import '../services/session_store.dart';
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/module_keep_alive_settings.dart';
 import 'appearance_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -127,6 +128,8 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            const ModuleKeepAliveSettings(),
             const SizedBox(height: 24),
             SectionHeader(l10n.settingsLocation),
             Card(

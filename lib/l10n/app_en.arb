@@ -32,6 +32,17 @@
   "showOnHome": "Show on Home",
   "appVersion": "App version 1.0.0",
 
+  "keepAliveTitle": "Soleux monitoring active",
+  "keepAliveBody": "Keeping module connections alive",
+  "keepAliveBodyCount": "Keeping {count} modules connected",
+  "@keepAliveBodyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
   "languageSaved": "Language preference saved.",
   "languageAvailable": "Available at launch",
   "settingsLanguage": "Language",
@@ -63,6 +74,16 @@
   "settingsCommandProtocolHttpHint": "POST /api/v1/command on port 80",
   "settingsCommandProtocolHttps": "HTTPS",
   "settingsCommandProtocolHttpsHint": "POST /api/v1/command on port 443",
+  "settingsMonitoring": "Continuous monitoring",
+  "settingsKeepAlive": "Keep connections alive",
+  "settingsKeepAliveBody": "Keep the module sockets and heartbeats running while the app is in the background or the screen is off.",
+  "settingsKeepAliveRunning": "Running",
+  "settingsKeepAliveStopped": "Stopped",
+  "settingsBatteryOptimization": "Battery optimization",
+  "settingsBatteryOptimizationBody": "Allow unrestricted battery use so monitoring keeps running in the background.",
+  "settingsBatteryExempt": "Exempt",
+  "settingsBatteryNotExempt": "Not exempt",
+  "settingsBatteryRequestExemption": "Request exemption",
   "systemStatusTitle": "Notification History",
   "statusLogOffline": "OFFLINE",
   "statusLogRestored": "RESTORED",

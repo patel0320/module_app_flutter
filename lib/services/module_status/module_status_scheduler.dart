@@ -23,6 +23,7 @@ import 'package:flutter/widgets.dart';
 
 import 'background_status_worker.dart';
 import 'module_heartbeat_service.dart';
+import 'module_keep_alive.dart';
 import 'module_status_service.dart';
 
 /// Toggles the module status strategy between persistent-socket (foreground)
@@ -84,6 +85,16 @@ class ModuleStatusScheduler with WidgetsBindingObserver {
 
   void _enterBackground() {
     _foreground = false;
+    // On Android the native foreground service (see [ModuleKeepAlive]) keeps
+    // the process - and with it the persistent sockets and the UDP heartbeat
+    // monitor - alive while the app is backgrounded or the screen is off. In
+    // that mode the sockets must NOT be dropped and the worker must NOT take
+    // over: the keep-alive *is* the continuous monitoring. Only the legacy
+    // teardown path runs for non-Android builds and for Android when the
+    // keep-alive service has been stopped.
+    if (ModuleKeepAlive.supported && ModuleKeepAlive.shared.running.value) {
+      return;
+    }
     // Stop the in-app UDP heartbeat polling: the OS may suspend the timers
     // anyway, and the randomized 30-60 s monitoring must not run in a
     // background state (spec §4.5). The native worker resumes reachability

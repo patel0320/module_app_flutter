@@ -2,10 +2,14 @@
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -47,6 +51,91 @@ class MainActivity : FlutterActivity() {
                 result.error("WIFI_LOCK", e.message, null)
             }
         }
+        registerKeepAliveChannel(flutterEngine)
+    }
+
+    // Android foreground service that keeps the Dart-side persistent module
+    // sockets + UDP heartbeat alive while the app is backgrounded. The channel
+    // is registered on the main activity (main isolate) only: the background
+    // worker isolate is headless and never needs to touch the service.
+    private fun registerKeepAliveChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "soleux.device_manager/keep_alive"
+        ).setMethodCallHandler { call, result ->
+            try {
+                when (call.method) {
+                    "start" -> {
+                        startKeepAliveService(
+                            call.argument("moduleCount") ?: 0,
+                            call.argument("title"),
+                            call.argument("text"),
+                        )
+                        result.success(true)
+                    }
+                    "stop" -> {
+                        stopKeepAliveService()
+                        result.success(true)
+                    }
+                    "isRunning" -> {
+                        result.success(ModuleKeepAliveService.isRunning(this))
+                    }
+                    "isIgnoringBatteryOptimizations" -> {
+                        result.success(isIgnoringBatteryOptimizations())
+                    }
+                    "requestIgnoreBatteryOptimizations" -> {
+                        requestIgnoreBatteryOptimizations()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            } catch (e: Exception) {
+                result.error("KEEP_ALIVE", e.message, null)
+            }
+        }
+    }
+
+    // Starts (or updates) the persistent keep-alive foreground service. The
+    // app is in the foreground when the user launches it, so this is an
+    // allowed foreground service start on every supported Android version.
+    private fun startKeepAliveService(moduleCount: Int, title: String?, text: String?) {
+        val intent = Intent(this, ModuleKeepAliveService::class.java).apply {
+            action = ModuleKeepAliveService.ACTION_START
+            putExtra(ModuleKeepAliveService.EXTRA_MODULE_COUNT, moduleCount)
+            putExtra(ModuleKeepAliveService.EXTRA_TITLE, title)
+            putExtra(ModuleKeepAliveService.EXTRA_TEXT, text)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopKeepAliveService() {
+        val intent = Intent(this, ModuleKeepAliveService::class.java).apply {
+            action = ModuleKeepAliveService.ACTION_STOP
+        }
+        startService(intent)
+    }
+
+    // Whether the app is already exempt from battery optimization (Doze /
+    // App Standby), used by the opt-in flow in Settings.
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        val power =
+            applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return power.isIgnoringBatteryOptimizations(applicationContext.packageName)
+    }
+
+    // Opens the system dialog asking the user to exempt the app from battery
+    // optimizations. Opt-in only - never called automatically; the caller must
+    // be a visible activity (this MethodChannel lives on the Activity).
+    private fun requestIgnoreBatteryOptimizations() {
+        val intent = Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:$packageName")
+        )
+        startActivity(intent)
     }
 
     // WiFi NICs drop broadcast/multicast frames unless the app holds a
