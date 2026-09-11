@@ -10,6 +10,7 @@ import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/module_polling.dart';
 
 class TemperatureModuleScreen extends StatefulWidget {
   const TemperatureModuleScreen({super.key, required this.module});
@@ -21,8 +22,12 @@ class TemperatureModuleScreen extends StatefulWidget {
       _TemperatureModuleScreenState();
 }
 
-class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
+class _TemperatureModuleScreenState extends State<TemperatureModuleScreen>
+    with ModulePollingState<TemperatureModuleScreen> {
   bool _alertsEnabled = true;
+
+  @override
+  String get pollModuleId => widget.module.id;
 
   bool _editDialogOpen = false;
 

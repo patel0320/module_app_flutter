@@ -783,6 +783,20 @@ class ModuleStatusService {
     return ok;
   }
 
+  /// `get_device_state` - polls the current live snapshot for an already-active
+  /// Control API module and applies it to the store (system/network/temperature
+  /// and every output's on/off + dimmer brightness). Unlike [refreshOne] it
+  /// does not probe, greet or re-fetch configuration, so it can run on a
+  /// screen-local periodic timer without disturbing the session. No-op when the
+  /// module has no live Control API unit.
+  Future<void> pollDeviceState(String moduleId) async {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return;
+    await _fetchDeviceState(unit, live);
+  }
+
   /// Tears down the live command/status unit for [moduleId]. Used when a
   /// module is removed so its socket/reconnect timers stop and the fleet
   /// counts reflect exactly the modules that remain.
@@ -1272,7 +1286,8 @@ class ModuleStatusService {
   ///     screens can surface CPU/memory/temperature/uptime and network details;
   ///   - the internal module temperature is mirrored onto
   ///     [DeviceModule.internalTempC] (falling back to `external_temp_c`);
-  ///   - every dimmer set/actual PWM level and state is applied for dimmers.
+  ///   - every output's on/off state and (for dimmers) set/actual PWM level is
+  ///     applied to the live store channels.
   Future<void> _fetchDeviceState(
       SoleuxControlApiService unit, DeviceModule live) async {
     try {
@@ -1294,10 +1309,8 @@ class ModuleStatusService {
           live.internalTempC = live.systemInfo!.externalTempC!;
         }
       }
-      if (live.type == ModuleType.dimmerDc || live.type == ModuleType.dimmerAc) {
-        final raw = result['outputs'];
-        if (raw is List) _applyDimmerOutputs(live.id, raw);
-      }
+      final raw = result['outputs'];
+      if (raw is List) _applyDimmerOutputs(live.id, raw);
       _scheduleCommit();
     } catch (e, st) {
       debugPrint('Module ${live.name} (${live.id}) device state fetch '

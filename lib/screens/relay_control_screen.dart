@@ -12,6 +12,7 @@ import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/module_polling.dart';
 import 'channel_editor_screen.dart';
 import 'input_editor_screen.dart';
 
@@ -24,7 +25,11 @@ class RelayControlScreen extends StatefulWidget {
   State<RelayControlScreen> createState() => _RelayControlScreenState();
 }
 
-class _RelayControlScreenState extends State<RelayControlScreen> {
+class _RelayControlScreenState extends State<RelayControlScreen>
+    with ModulePollingState<RelayControlScreen> {
+  @override
+  String get pollModuleId => widget.module.id;
+
   Future<void> _editChannel(ChannelOutput channel, int index) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
