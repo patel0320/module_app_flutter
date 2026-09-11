@@ -43,7 +43,7 @@ abstract final class BackgroundStatusWorker {
 
   /// How often the OS is asked to run the background poll. Android enforces a
   /// 15-minute floor; iOS schedules opportunistically and does not guarantee it.
-  static const Duration backgroundPollFrequency = Duration(minutes: 15);
+  static const Duration backgroundPollFrequency = Duration(minutes: 1);
 
   static bool _initialized = false;
 
