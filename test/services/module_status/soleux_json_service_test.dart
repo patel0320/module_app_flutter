@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:soleux_device_manager/core/soleux/soleux_device_event.dart';
 import 'package:soleux_device_manager/services/module_status/module_tcp_service.dart';
 import 'package:soleux_device_manager/services/module_status/soleux_json_fetcher.dart';
 import 'package:soleux_device_manager/services/module_status/soleux_json_service.dart';
@@ -178,6 +179,40 @@ void main() {
     expect(jsonEvents, hasLength(2));
     expect(jsonEvents.first['device'], 'dimmer');
     expect(legacyEvents.map((e) => e.type), [SoleuxLegacyEventType.output]);
+    service.dispose();
+  });
+
+  test('feed() routes unsolicited Control API device events', () {
+    // An inert connection driven with `feed` (visibleForTesting).
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1', port: 1, timeout: const Duration(seconds: 1));
+    final service = SoleuxJsonService(connection: connection);
+    final deviceEvents = <SoleuxDeviceEvent>[];
+    service.deviceEventStream.listen(deviceEvents.add);
+
+    service.feed('{"protocol":3,"event":"output_state_changed",'
+        '"subscription_id":"sub-7","data":{"channel":0,"previous_state":false,'
+        '"state":true,"pending":false,"source":"windows-app","revision":312,'
+        '"timestamp":"2026-08-31T10:20:30+00:00"}}\r\n');
+    // A device event must not be re-parsed as a legacy `OUT:` line or an
+    // unmatched JSON response.
+    expect(deviceEvents, hasLength(1));
+    expect(deviceEvents.single.type, SoleuxDeviceEventType.outputStateChanged);
+    expect(deviceEvents.single.channel, 0);
+    expect(deviceEvents.single.state, isTrue);
+    expect(deviceEvents.single.revision, 312);
+
+    // Interleaved command responses and legacy lines still route normally.
+    final jsonEvents = <Map<String, dynamic>>[];
+    service.jsonEventStream.listen(jsonEvents.add);
+    service.feed(
+        '{"protocol":2,"id":99,"ok":true,"result":{"device":"dimmer"}}\r\n');
+    expect(jsonEvents, hasLength(1));
+
+    service.feed('OUT:2:OFF\r\n');
+    expect(deviceEvents, hasLength(1),
+        reason: 'legacy OUT lines must not become device events');
+
     service.dispose();
   });
 

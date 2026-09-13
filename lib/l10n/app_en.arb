@@ -30,7 +30,25 @@
   "noRoom": "General",
   "comingSoon": "Coming soon",
   "showOnHome": "Show on Home",
-  "appVersion": "App version 1.0.0",
+  "appVersion": "App version {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+
+  "keepAliveTitle": "Soleux monitoring active",
+  "keepAliveBody": "Keeping module connections alive",
+  "keepAliveBodyCount": "Keeping {count} modules connected",
+  "@keepAliveBodyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
 
   "languageSaved": "Language preference saved.",
   "languageAvailable": "Available at launch",
@@ -56,13 +74,23 @@
   "settingsHome": "Home",
   "settingsSingleLocation": "Single location in this version - multi-location support is planned",
   "settingsCommandProtocol": "Command protocol",
-  "settingsCommandProtocolHint": "Transport used to send Control API commands to modules (doc/Soleux_Control_API_Command_Specification_v0.2.md).",
+  "settingsCommandProtocolHint": "Transport used to send Control API commands to modules.",
   "settingsCommandProtocolTcp": "TCP (port 5008)",
   "settingsCommandProtocolTcpHint": "Persistent JSON session on the Control API TCP port",
   "settingsCommandProtocolHttp": "HTTP",
   "settingsCommandProtocolHttpHint": "POST /api/v1/command on port 80",
   "settingsCommandProtocolHttps": "HTTPS",
   "settingsCommandProtocolHttpsHint": "POST /api/v1/command on port 443",
+  "settingsMonitoring": "Continuous monitoring",
+  "settingsKeepAlive": "Keep connections alive",
+  "settingsKeepAliveBody": "Keep the module sockets and heartbeats running while the app is in the background or the screen is off.",
+  "settingsKeepAliveRunning": "Running",
+  "settingsKeepAliveStopped": "Stopped",
+  "settingsBatteryOptimization": "Battery optimization",
+  "settingsBatteryOptimizationBody": "Allow unrestricted battery use so monitoring keeps running in the background.",
+  "settingsBatteryExempt": "Exempt",
+  "settingsBatteryNotExempt": "Not exempt",
+  "settingsBatteryRequestExemption": "Request\r\nexemption",
   "systemStatusTitle": "Notification History",
   "statusLogOffline": "OFFLINE",
   "statusLogRestored": "RESTORED",

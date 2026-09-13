@@ -714,16 +714,49 @@ class _InputFieldCardState extends State<InputFieldCard> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
-                      const Icon(Icons.toggle_on_outlined, size: 28),
+                      Icon(
+                        Icons.toggle_on_outlined,
+                        size: 28,
+                        color: widget.input.state
+                            ? scheme.primary
+                            : onSurface.withValues(alpha: 0.6),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(widget.input.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700, fontSize: 16)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Flexible(
+                                  child: Text(widget.input.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16),
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                                if (widget.input.state) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6),
+                                    decoration: BoxDecoration(
+                                      color: scheme.primary,
+                                      borderRadius: BorderRadius.circular(9),
+                                    ),
+                                    child: Text(
+                                      'ON',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: scheme.onPrimary),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                             const SizedBox(height: 2),
                             Text(
                               widget.input.mode.label,

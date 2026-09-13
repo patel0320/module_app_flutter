@@ -10,28 +10,18 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import 'mock_data.dart';
 
 class AutomationRepository {
   static const String _storageKey = 'automations';
-  static const String _seedKey = 'automations_seeded';
 
   final SharedPreferences _prefs;
 
   AutomationRepository(this._prefs);
 
-  /// Loads the store, seeding demo automations on the very first run.
+  /// Loads the store. The automation list starts empty on a fresh install.
   static Future<AutomationRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final repo = AutomationRepository(prefs);
-    await repo._seedIfEmpty();
-    return repo;
-  }
-
-  Future<void> _seedIfEmpty() async {
-    if (_prefs.getBool(_seedKey) ?? false) return;
-    await saveAll(mockAutomations());
-    await _prefs.setBool(_seedKey, true);
+    return AutomationRepository(prefs);
   }
 
   /// Fetches the persisted automation list in stored order.

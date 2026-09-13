@@ -30,7 +30,25 @@
   "noRoom": "General",
   "comingSoon": "În curând",
   "showOnHome": "Arată pe Acasă",
-  "appVersion": "Versiunea aplicației 1.0.0",
+  "appVersion": "Versiunea aplicației {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+
+  "keepAliveTitle": "Monitorizare Soleux activă",
+  "keepAliveBody": "Conexiunile către module sunt menținute active",
+  "keepAliveBodyCount": "Mențin {count} module conectate",
+  "@keepAliveBodyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
 
   "languageSaved": "Preferința de limbă a fost salvată.",
   "languageAvailable": "Disponibile la lansare",
@@ -56,13 +74,23 @@
   "settingsHome": "Acasă",
   "settingsSingleLocation": "Locație unică în această versiune - suportul multi-locație este planificat",
   "settingsCommandProtocol": "Protocolul de comandă",
-  "settingsCommandProtocolHint": "Transportul folosit pentru a trimite comenzile API de control către module (doc/Soleux_Control_API_Command_Specification_v0.2.md).",
+  "settingsCommandProtocolHint": "Transportul folosit pentru a trimite comenzile API de control către module.",
   "settingsCommandProtocolTcp": "TCP (portul 5008)",
   "settingsCommandProtocolTcpHint": "Sesiune JSON persistentă pe portul TCP al API-ului de control",
   "settingsCommandProtocolHttp": "HTTP",
   "settingsCommandProtocolHttpHint": "POST /api/v1/command pe portul 80",
   "settingsCommandProtocolHttps": "HTTPS",
   "settingsCommandProtocolHttpsHint": "POST /api/v1/command pe portul 443",
+  "settingsMonitoring": "Monitorizare continuă",
+  "settingsKeepAlive": "Menține conexiunile active",
+  "settingsKeepAliveBody": "Menține socket-urile modulelor și heartbeat-urile active când aplicația este în fundal sau ecranul este oprit.",
+  "settingsKeepAliveRunning": "Activă",
+  "settingsKeepAliveStopped": "Oprită",
+  "settingsBatteryOptimization": "Optimizarea bateriei",
+  "settingsBatteryOptimizationBody": "Permite utilizarea nerestricționată a bateriei pentru ca monitorizarea să continue în fundal.",
+  "settingsBatteryExempt": "Excepție",
+  "settingsBatteryNotExempt": "Fără excepție",
+  "settingsBatteryRequestExemption": "Solicită\r\nexcepția",
   "systemStatusTitle": "Istoric notificări",
   "statusLogOffline": "OFFLINE",
   "statusLogRestored": "RESTORED",

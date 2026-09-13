@@ -2,7 +2,6 @@
 
 import 'package:soleux_device_manager/core/config/env.dart';
 import 'package:soleux_device_manager/core/drivers/module_driver.dart';
-import 'package:soleux_device_manager/core/transport/mock_transport.dart';
 import 'package:soleux_device_manager/core/transport/transport.dart';
 import 'package:soleux_device_manager/data/models/channel.dart';
 import 'package:soleux_device_manager/data/models/module.dart';
@@ -11,9 +10,9 @@ import 'package:soleux_device_manager/features/configuration/drivers/driver_fact
 /// App environment + config.
 final appConfigProvider = Provider((ref) => Env.config);
 
-/// In-memory registry of discovered modules + their drivers.
-/// Replace the MockTransport wire-up with the LAN/MQTT factories once the real
-/// protocol contracts are frozen (Stage 3/4) â€” see setup.md Â§5.
+/// In-memory registry of discovered modules + their drivers. Starts empty;
+/// modules are added through [ModuleRepository.addDiscoveredModule] once
+/// discovery or IP-based add reaches the transport layer.
 final moduleRepositoryProvider =
     StateNotifierProvider<ModuleRepository, List<Module>>((ref) {
   return ModuleRepository(factory: const DriverFactory());
@@ -29,62 +28,7 @@ class ModuleRepository extends StateNotifier<List<Module>> {
   final Map<String, ModuleDriver> drivers = {};
   final Map<String, List<Channel>> channelsByModule = {};
 
-  ModuleRepository({required this.factory}) : super([]) {
-    _seedDemoModules();
-  }
-
-  void _seedDemoModules() {
-    // Demo data so the scaffold runs without hardware. Remove once discovery is live.
-    const relay = Module(
-      id: 'm1',
-      type: ModuleType.relay,
-      name: 'Relay Module 8',
-      ip: '192.168.1.10',
-      status: ModuleStatus.online,
-    );
-    const dimmer = Module(
-      id: 'm2',
-      type: ModuleType.dcDimmer,
-      name: 'DC Dimmer 4',
-      ip: '192.168.1.11',
-      status: ModuleStatus.online,
-    );
-    const temp = Module(
-      id: 'm3',
-      type: ModuleType.temperature,
-      name: 'Temperature Module',
-      ip: '192.168.1.12',
-      status: ModuleStatus.online,
-    );
-
-    final relayChannels = List<Channel>.generate(
-        8,
-        (i) => Channel(
-            id: 'm1c$i', moduleId: 'm1', index: i, name: 'Output ${i + 1}'));
-    final dimmerChannels = List<Channel>.generate(
-        4,
-        (i) => Channel(
-            id: 'm2c$i',
-            moduleId: 'm2',
-            index: i,
-            name: 'Light ${i + 1}',
-            brightness: 0));
-    final tempChannels = [
-      const Channel(
-          id: 'm3c0', moduleId: 'm3', index: 0, name: 'Internal Temperature'),
-    ];
-
-    channelsByModule['m1'] = relayChannels;
-    channelsByModule['m2'] = dimmerChannels;
-    channelsByModule['m3'] = tempChannels;
-
-    final mock = MockTransport();
-    drivers['m1'] = factory.create(relay, mock, relayChannels);
-    drivers['m2'] = factory.create(dimmer, MockTransport(), dimmerChannels);
-    drivers['m3'] = factory.create(temp, mock, tempChannels);
-
-    state = [relay, dimmer, temp];
-  }
+  ModuleRepository({required this.factory}) : super(const []);
 
   List<Channel> channelsOf(String moduleId) =>
       channelsByModule[moduleId] ?? const [];

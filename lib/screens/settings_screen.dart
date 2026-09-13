@@ -8,6 +8,7 @@
 // HTTP/HTTPS POST /api/v1/command endpoint
 // (doc/Soleux_Control_API_Command_Specification_v0.2.md §"Transport mapping").
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/event_log_store.dart';
@@ -15,6 +16,7 @@ import '../services/session_store.dart';
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/module_keep_alive_settings.dart';
 import 'appearance_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -128,6 +130,8 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            const ModuleKeepAliveSettings(),
+            const SizedBox(height: 24),
             SectionHeader(l10n.settingsLocation),
             Card(
               child: ListTile(
@@ -200,9 +204,17 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Center(
-              child: Text(l10n.appVersion,
-                  style: TextStyle(
-                      fontSize: 12, color: onSurface.withValues(alpha: 0.4))),
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final String version =
+                      snapshot.data?.version ?? (snapshot.hasError ? '?' : '');
+                  return Text(l10n.appVersion(version),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: onSurface.withValues(alpha: 0.4)));
+                },
+              ),
             ),
           ],
         ),

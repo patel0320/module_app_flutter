@@ -35,8 +35,8 @@ void main() {
 
       await store.init();
       expect(store.loaded, isTrue);
-      // The repository seeds demo modules on a first empty run.
-      expect(store.modules, isNotEmpty);
+      // A fresh install starts with an empty fleet (no demo seeding).
+      expect(store.modules, isEmpty);
       expect(notified, greaterThanOrEqualTo(1));
     });
 

@@ -10,28 +10,18 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import 'mock_data.dart';
 
 class ScenarioRepository {
   static const String _storageKey = 'scenarios';
-  static const String _seedKey = 'scenarios_seeded';
 
   final SharedPreferences _prefs;
 
   ScenarioRepository(this._prefs);
 
-  /// Loads the store, seeding demo scenarios on the very first run.
+  /// Loads the store. The scenario list starts empty on a fresh install.
   static Future<ScenarioRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final repo = ScenarioRepository(prefs);
-    await repo._seedIfEmpty();
-    return repo;
-  }
-
-  Future<void> _seedIfEmpty() async {
-    if (_prefs.getBool(_seedKey) ?? false) return;
-    await saveAll(mockScenarios());
-    await _prefs.setBool(_seedKey, true);
+    return ScenarioRepository(prefs);
   }
 
   /// Fetches the persisted scenario list in stored order.

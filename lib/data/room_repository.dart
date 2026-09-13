@@ -9,28 +9,18 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import 'mock_data.dart';
 
 class RoomRepository {
   static const String _storageKey = 'rooms';
-  static const String _seedKey = 'rooms_seeded';
 
   final SharedPreferences _prefs;
 
   RoomRepository(this._prefs);
 
-  /// Loads the store, seeding demo rooms on the very first run.
+  /// Loads the store. The room list starts empty on a fresh install.
   static Future<RoomRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final repo = RoomRepository(prefs);
-    await repo._seedIfEmpty();
-    return repo;
-  }
-
-  Future<void> _seedIfEmpty() async {
-    if (_prefs.getBool(_seedKey) ?? false) return;
-    await saveAll(mockRooms());
-    await _prefs.setBool(_seedKey, true);
+    return RoomRepository(prefs);
   }
 
   /// Fetches the persisted room list in stored (presentation) order.

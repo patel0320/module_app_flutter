@@ -18,16 +18,15 @@ void main() {
       final store = EventLogStore.forTesting();
       await store.init();
       expect(store.loaded, isTrue);
-      // Seeded demo history is present on the very first run.
-      expect(store.entries, isNotEmpty);
+      // A fresh install starts with an empty history (no demo seeding).
+      expect(store.entries, isEmpty);
 
-      final before = store.entries.length;
       await store.recordModuleAction(
         moduleName: 'Main Cabin Relay',
         outputName: 'Cabin Light',
         on: true,
       );
-      expect(store.entries.length, before + 1);
+      expect(store.entries, hasLength(1));
       expect(store.entries.first.title, 'Cabin Light turned ON');
     });
 

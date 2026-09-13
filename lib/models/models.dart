@@ -276,6 +276,7 @@ class PhysicalInput {
     required this.name,
     this.mode = InputMode.momentary,
     this.enabled = true,
+    this.state = false,
   });
 
   final String id;
@@ -285,11 +286,16 @@ class PhysicalInput {
   /// When false the input is hidden from its module screen.
   bool enabled;
 
+  /// Live input state (`input_state_changed` device event / `IN:<ch>:<ON|OFF>`),
+  /// shown as an indicator on the module screen.
+  bool state;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'name': name,
         'mode': mode.name,
         'enabled': enabled,
+        'state': state,
       };
 
   factory PhysicalInput.fromJson(Map<String, Object?> json) => PhysicalInput(
@@ -297,6 +303,7 @@ class PhysicalInput {
         name: (json['name'] ?? json['label']) as String? ?? 'Switch',
         mode: _inputModeFromJson(json['mode']),
         enabled: json['enabled'] as bool? ?? true,
+        state: json['state'] as bool? ?? false,
       );
 
   /// Maps a persisted `mode` value to [InputMode], tolerating the legacy

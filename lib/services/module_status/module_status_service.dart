@@ -34,6 +34,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../../core/logger/network_debug_logger.dart';
+import '../../core/soleux/soleux_device_event.dart';
 import '../../core/soleux/soleux_json_protocol.dart';
 import '../../models/models.dart';
 import '../module_store.dart';
@@ -782,6 +783,20 @@ class ModuleStatusService {
     return ok;
   }
 
+  /// `get_device_state` - polls the current live snapshot for an already-active
+  /// Control API module and applies it to the store (system/network/temperature
+  /// and every output's on/off + dimmer brightness). Unlike [refreshOne] it
+  /// does not probe, greet or re-fetch configuration, so it can run on a
+  /// screen-local periodic timer without disturbing the session. No-op when the
+  /// module has no live Control API unit.
+  Future<void> pollDeviceState(String moduleId) async {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return;
+    await _fetchDeviceState(unit, live);
+  }
+
   /// Tears down the live command/status unit for [moduleId]. Used when a
   /// module is removed so its socket/reconnect timers stop and the fleet
   /// counts reflect exactly the modules that remain.
@@ -1271,7 +1286,8 @@ class ModuleStatusService {
   ///     screens can surface CPU/memory/temperature/uptime and network details;
   ///   - the internal module temperature is mirrored onto
   ///     [DeviceModule.internalTempC] (falling back to `external_temp_c`);
-  ///   - every dimmer set/actual PWM level and state is applied for dimmers.
+  ///   - every output's on/off state and (for dimmers) set/actual PWM level is
+  ///     applied to the live store channels.
   Future<void> _fetchDeviceState(
       SoleuxControlApiService unit, DeviceModule live) async {
     try {
@@ -1293,10 +1309,8 @@ class ModuleStatusService {
           live.internalTempC = live.systemInfo!.externalTempC!;
         }
       }
-      if (live.type == ModuleType.dimmerDc || live.type == ModuleType.dimmerAc) {
-        final raw = result['outputs'];
-        if (raw is List) _applyDimmerOutputs(live.id, raw);
-      }
+      final raw = result['outputs'];
+      if (raw is List) _applyDimmerOutputs(live.id, raw);
       _scheduleCommit();
     } catch (e, st) {
       debugPrint('Module ${live.name} (${live.id}) device state fetch '
@@ -1431,6 +1445,175 @@ class ModuleStatusService {
         _scheduleCommit();
       }
     });
+    // Control API device events (output/input/level changes, temperature, ...,
+    // doc/...Specification_v0.6.md §"Device events") update the live module so
+    // its target screen reflects device-initiated changes without a re-fetch.
+    unit.deviceEventStream.listen((event) => _applyDeviceEvent(module.id, event));
+    // `get_device_state` snapshots from the keep-alive heartbeat: fold the live
+    // inputs/outputs/system into the module so relay, dimmer, blind and all
+    // other module screens stay in sync with the device.
+    unit.deviceStateStream
+        .listen((result) => _applyDeviceStateSnapshot(module.id, result));
+  }
+
+  /// Applies a `get_device_state` snapshot produced by the keep-alive heartbeat
+  /// to the live module in the store (and therefore to its screen, which
+  /// rebuilds on [ModuleStore] changes). It mirrors inputs/outputs (relay on/off,
+  /// dimmer level, blind direction state) and the system/network temperature.
+  void _applyDeviceStateSnapshot(String moduleId, Map<String, dynamic> result) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+
+    if (result['system'] is Map || result['network'] is Map) {
+      live.systemInfo =
+          DeviceSystemInfo.fromJson(Map<String, dynamic>.from(result));
+      if (live.systemInfo!.internalTempC != null) {
+        live.internalTempC = live.systemInfo!.internalTempC!;
+      } else if (live.systemInfo!.externalTempC != null) {
+        live.internalTempC = live.systemInfo!.externalTempC!;
+      }
+    }
+
+    final rawOutputs = result['outputs'];
+    if (rawOutputs is List) _applyStateOutputs(live, rawOutputs);
+
+    final rawInputs = result['inputs'];
+    if (rawInputs is List) _applyStateInputs(live, rawInputs);
+
+    _scheduleCommit();
+  }
+
+  /// Applies a `get_device_state` `outputs` list to the live store channels:
+  /// on/off state from `state`/`actual_state` and brightness from
+  /// `set_pwm`/`actual_pwm` (dimmers). Works for relay, dimmer and blind
+  /// outputs alike.
+  void _applyStateOutputs(DeviceModule live, List rawOutputs) {
+    for (final item in rawOutputs) {
+      if (item is! Map) continue;
+      final data = Map<String, dynamic>.from(item);
+      final channel = (data['channel'] as num?)?.toInt();
+      if (channel == null || channel < 0 || channel >= live.channels.length) {
+        continue;
+      }
+      final output = live.channels[channel];
+
+      final rawState = data['state'] ?? data['actual_state'];
+      if (rawState is bool) output.isOn = rawState;
+
+      final rawLevel = data['set_pwm'] ??
+          data['actual_pwm'] ??
+          data['requested_level'] ??
+          data['actual_level'];
+      if (rawLevel is num) {
+        output.brightness = rawLevel.round().clamp(0, 100);
+      }
+    }
+  }
+
+  /// Applies a `get_device_state` `inputs` list to the live store inputs,
+  /// mirroring each input's on/off `state` so its screen indicator stays live.
+  void _applyStateInputs(DeviceModule live, List rawInputs) {
+    for (final item in rawInputs) {
+      if (item is! Map) continue;
+      final data = Map<String, dynamic>.from(item);
+      final channel = (data['channel'] as num?)?.toInt();
+      if (channel == null || channel < 0 || channel >= live.inputs.length) {
+        continue;
+      }
+      final state = data['state'];
+      if (state is bool) live.inputs[channel].state = state;
+    }
+  }
+
+  /// Applies a Control API device event to the live module in the store (and
+  /// therefore to the module's screen, which rebuilds on [ModuleStore]
+  /// changes). Events are incremental updates; skipped revisions should be
+  /// recovered with a `get_device_state` snapshot, so out-of-range or unknown
+  /// events are ignored here.
+  void _applyDeviceEvent(String moduleId, SoleuxDeviceEvent event) {
+    final live = store.byId(moduleId);
+    if (live == null) return;
+    final changed = switch (event.type) {
+      SoleuxDeviceEventType.outputStateChanged =>
+        _applyOutputStateEvent(live, event),
+      SoleuxDeviceEventType.outputLevelChanged =>
+        _applyOutputLevelEvent(live, event),
+      SoleuxDeviceEventType.inputStateChanged =>
+        _applyInputStateEvent(live, event),
+      SoleuxDeviceEventType.temperatureChanged =>
+        _applyTemperatureEvent(live, event),
+      _ => false,
+    };
+    if (changed) _scheduleCommit();
+  }
+
+  /// `output_state_changed` - the output's on/off state changed.
+  bool _applyOutputStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    final state = event.state;
+    if (channel == null ||
+        state == null ||
+        channel < 0 ||
+        channel >= live.channels.length) {
+      return false;
+    }
+    final output = live.channels[channel];
+    if (output.isOn == state) return false;
+    output.isOn = state;
+    return true;
+  }
+
+  /// `output_level_changed` - a dimmer output's level transitioned.
+  bool _applyOutputLevelEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    if (channel == null || channel < 0 || channel >= live.channels.length) {
+      return false;
+    }
+    final output = live.channels[channel];
+    final level = event.requestedLevel ?? event.actualLevel;
+    if (level != null) {
+      final brightness = level.round().clamp(0, 100);
+      if (output.brightness == brightness && output.isOn == (brightness > 0)) {
+        return false;
+      }
+      output.brightness = brightness;
+      output.isOn = brightness > 0;
+      return true;
+    }
+    // Some firmware reports only the logical state on a level change.
+    final state = event.state;
+    if (state != null && output.isOn != state) {
+      output.isOn = state;
+      return true;
+    }
+    return false;
+  }
+
+  /// `input_state_changed` - a physical/virtual input changed state.
+  bool _applyInputStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    final state = event.state;
+    if (channel == null ||
+        state == null ||
+        channel < 0 ||
+        channel >= live.inputs.length) {
+      return false;
+    }
+    final input = live.inputs[channel];
+    if (input.state == state) return false;
+    input.state = state;
+    return true;
+  }
+
+  /// `temperature_changed` - mirror the sensor reading onto the module's
+  /// internal temperature so the temperature module screen stays live.
+  bool _applyTemperatureEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final value = event.valueC;
+    if (value == null) return false;
+    final rounded = double.parse(value.toStringAsFixed(1));
+    if ((live.internalTempC - rounded).abs() < 0.05) return false;
+    live.internalTempC = rounded;
+    return true;
   }
 
   /// The Control API command endpoint for [module] per the app's HTTP/HTTPS

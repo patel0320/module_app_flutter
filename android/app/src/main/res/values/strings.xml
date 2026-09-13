@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Foreground "keep alive" service notification (see ModuleKeepAliveService.kt). -->
+    <string name="keep_alive_title">Soleux monitoring active</string>
+    <string name="keep_alive_body">Keeping module connections alive</string>
+    <string name="keep_alive_body_count">Keeping %1$d modules connected</string>
+    <string name="keep_alive_channel_name">Monitoring</string>
+    <string name="keep_alive_channel_description">Keeps the module status connections alive while the app is in the background</string>
+</resources>

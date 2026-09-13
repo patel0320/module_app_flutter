@@ -11,6 +11,7 @@ import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/module_polling.dart';
 import 'input_editor_screen.dart';
 
 enum _Motion { idle, up, down }
@@ -24,8 +25,12 @@ class BlindControlScreen extends StatefulWidget {
   State<BlindControlScreen> createState() => _BlindControlScreenState();
 }
 
-class _BlindControlScreenState extends State<BlindControlScreen> {
+class _BlindControlScreenState extends State<BlindControlScreen>
+    with ModulePollingState<BlindControlScreen> {
   final Map<String, _Motion> _motion = {};
+
+  @override
+  String get pollModuleId => widget.module.id;
 
   _Motion _motionOf(ChannelOutput channel) =>
       _motion[channel.id] ?? _Motion.idle;

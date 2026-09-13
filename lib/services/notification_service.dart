@@ -86,7 +86,14 @@ class LocalNotificationService with WidgetsBindingObserver {
 
   /// Initializes the plugin and requests notification permission. Idempotent.
   /// Safe to call from the background worker isolate as well.
-  Future<void> initialize() async {
+  ///
+  /// [requestPermissions] is disabled in background isolates (see
+  /// `BackgroundStatusWorker.runPoll`): requesting permission calls into the
+  /// plugin's activity context, which is null in a headless WorkManager /
+  /// BGAppRefreshTask process and throws. Permission is a foreground-only
+  /// concern - it is already granted from the first foreground launch - while
+  /// channel setup and `show` only need the application context.
+  Future<void> initialize({bool requestPermissions = true}) async {
     if (_initialized || !_nativeSupported) return;
 
     const settings = InitializationSettings(
@@ -102,7 +109,9 @@ class LocalNotificationService with WidgetsBindingObserver {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
-      await android.requestNotificationsPermission();
+      if (requestPermissions) {
+        await android.requestNotificationsPermission();
+      }
       for (final channel in _androidChannels) {
         await android.createNotificationChannel(channel);
       }
@@ -110,7 +119,9 @@ class LocalNotificationService with WidgetsBindingObserver {
 
     final ios = _plugin.resolvePlatformSpecificImplementation<
         IOSFlutterLocalNotificationsPlugin>();
-    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+    if (requestPermissions) {
+      await ios?.requestPermissions(alert: true, badge: true, sound: true);
+    }
 
     _initialized = true;
   }

@@ -43,7 +43,7 @@ abstract final class BackgroundStatusWorker {
 
   /// How often the OS is asked to run the background poll. Android enforces a
   /// 15-minute floor; iOS schedules opportunistically and does not guarantee it.
-  static const Duration backgroundPollFrequency = Duration(minutes: 15);
+  static const Duration backgroundPollFrequency = Duration(minutes: 1);
 
   static bool _initialized = false;
 
@@ -93,7 +93,11 @@ abstract final class BackgroundStatusWorker {
     try {
       debugPrint('BackgroundStatusWorker: starting poll');
       await SettingsStore.shared.init();
-      await LocalNotificationService.shared.initialize();
+      // No permission requests from the background isolate: the plugin's
+      // activity context is null there (headless process), which would throw
+      // in requestNotificationsPermission. Permission was already granted on
+      // the first foreground launch; only channel setup + show are needed.
+      await LocalNotificationService.shared.initialize(requestPermissions: false);
       await StatusLogStore.shared.init();
 
       await ModuleStore.shared.init();

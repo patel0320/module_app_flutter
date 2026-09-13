@@ -93,6 +93,7 @@ class ModuleTcpConnection {
         (bytes) {
           _reconnectAttempts = 0;
           final text = utf8.decode(bytes);
+          debugPrint('ModuleTCP $key received: $text');
           NetworkDebugLogger.inbound('tcp', key, text);
           _dataController.add(text);
         },
@@ -118,23 +119,36 @@ class ModuleTcpConnection {
 
   /// Reacts to the socket being dropped. The dead socket is cleaned up and,
   /// unless auto-reconnect was disabled, a reconnect is scheduled.
+  ///
+  /// A single close can surface as both an `onError` and an `onDone` on the
+  /// same socket, so this is guarded to act only once: the second arrival is
+  /// ignored while a reconnect is already pending. This prevents reconnect
+  /// timers from stacking and the attempt counter from burning through the
+  /// max budget on a single peer close.
   void _handleDisconnect() {
-    if (_isConnected || _socket != null) {
-      _isConnected = false;
+    final wasLive = _isConnected || _socket != null;
+    _isConnected = false;
+    if (wasLive) {
       _stateController.add(false);
-      _cleanup();
     }
+    _cleanup();
     _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
     if (!_shouldReconnect) return;
-    if (_reconnectAttempts >= _maxReconnectAttempts) {
-      debugPrint('ModuleTCP $key max reconnect attempts reached');
+    // A reconnect is already pending (e.g. error+done fired for one close).
+    if (_reconnectTimer?.isActive ?? false) {
       return;
     }
-    _reconnectAttempts++;
     _reconnectTimer?.cancel();
+    // Keep retrying for the module's whole lifetime: a long-lived app must
+    // not give up on the socket permanently after a bounded burst of fails.
+    // The bounded budget still guards against a hot error loop, and it is
+    // reset to 0 every time a connection is re-established.
+    if (_reconnectAttempts < _maxReconnectAttempts) {
+      _reconnectAttempts++;
+    }
     _reconnectTimer = Timer(_reconnectDelay, connect);
   }
 

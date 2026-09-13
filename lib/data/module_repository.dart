@@ -4,15 +4,11 @@
 // list under a single shared_preferences key so the Configuration screen can
 // add / edit / delete / fetch modules and have them survive app restarts
 // without a backend (brief section 4.2 "Cached device list persisted locally").
-//
-// The first time the app runs an empty store is seeded with the demo modules
-// from mock_data.dart so the prototype still shows examples out of the box.
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import 'mock_data.dart';
 
 /// Thrown when an operation targets a module id that is not in storage.
 class ModuleNotFoundException implements Exception {
@@ -25,24 +21,15 @@ class ModuleNotFoundException implements Exception {
 
 class ModuleRepository {
   static const String _storageKey = 'modules';
-  static const String _seedKey = 'modules_seeded';
 
   final SharedPreferences _prefs;
 
   ModuleRepository(this._prefs);
 
-  /// Loads the store, seeding demo modules on the very first run.
+  /// Loads the store. The module list starts empty on a fresh install.
   static Future<ModuleRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final repo = ModuleRepository(prefs);
-    await repo._seedIfEmpty();
-    return repo;
-  }
-
-  Future<void> _seedIfEmpty() async {
-    if (_prefs.getBool(_seedKey) ?? false) return;
-    await saveAll(mockModules());
-    await _prefs.setBool(_seedKey, true);
+    return ModuleRepository(prefs);
   }
 
   /// Fetches the persisted module list.

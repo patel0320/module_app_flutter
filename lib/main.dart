@@ -31,6 +31,7 @@ import 'services/automation_scheduler.dart';
 import 'services/automation_store.dart';
 import 'services/room_store.dart';
 import 'services/module_status/background_status_worker.dart';
+import 'services/module_status/module_keep_alive.dart';
 import 'services/module_status/module_status_scheduler.dart';
 import 'services/module_status/module_status_service.dart';
 import 'services/notification_monitor.dart';
@@ -94,6 +95,10 @@ void main() {
   // after the app is suspended, then start the lifecycle-aware scheduler:
   // persistent sockets while foreground, timed polling while backgrounded.
   BackgroundStatusWorker.initialize().ignore();
+  // On Android, start the specialUse foreground service that keeps the process
+  // (persistent module sockets + UDP heartbeat) alive continuously, including
+  // when the app is backgrounded or the screen is off. No-op elsewhere.
+  ModuleKeepAlive.shared.start().ignore();
   ModuleStatusScheduler.shared.start();
   // Initialise local notifications and start watching the module store so
   // offline/online, temperature and output-duration alerts fire while the app

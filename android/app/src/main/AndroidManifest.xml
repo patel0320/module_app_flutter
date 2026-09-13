@@ -25,6 +25,16 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Keeps the device awake while surfacing notifications in Doze. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Running the persistent module keep-alive as a foreground service
+         (Android 9+; not needed for the background worker). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 15+ requires the service type permission for a specialUse
+         foreground service (the continuous module monitoring service). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Opt-in flow (Settings -> Monitoring) asking the user to exempt the app
+         from battery optimizations so the persistent socket/heartbeat keeps
+         running indefinitely. Not requested automatically. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <application
         android:label="Soleux Device Manager"
@@ -58,6 +68,21 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Continuous module monitoring foreground service. Runs as
+             specialUse (NOT dataSync, which Android 15+ caps at 6 h/day) so
+             the persistent module sockets and the UDP heartbeat survive the
+             app going to the background or the screen turning off. -->
+        <service
+            android:name=".ModuleKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <!-- Play Store requires this justification string (Policy
+                 everywhere; required when declaring specialUse). During
+                 development the service runs freely on device. -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Continuous LAN monitoring of the configured Soleux home-automation modules: keeps the persistent Control API / legacy AT status sockets and the UDP heartbeat monitor connected while the app is backgrounded or the screen is off, so module online/offline state and real-time status keep flowing." />
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
