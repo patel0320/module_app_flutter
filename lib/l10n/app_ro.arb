@@ -183,6 +183,7 @@
   "homeTempRange": "{room} · interval {min}-{max}°C",
   "homeSectionTheme": "Temă",
   "homeChoosePalette": "Alegeți o paletă de culori.",
+  "homeTempEmpty": "Nu s-au adăugat încă module. Adăugați module noi în Configurare.",
 
   "scenariosTitle": "Scenarii",
   "scenariosNew": "Scenariu nou",

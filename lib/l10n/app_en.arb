@@ -194,6 +194,7 @@
   "@homeTempRange": {"placeholders": {"room": {"type": "String"}, "min": {"type": "String"}, "max": {"type": "String"}}},
   "homeSectionTheme": "Theme",
   "homeChoosePalette": "Choose a color palette for the deck.",
+  "homeTempEmpty": "No modules added yet. Add new modules in Configuration.",
 
   "scenariosTitle": "Scenarios",
   "scenariosNew": "New scenario",

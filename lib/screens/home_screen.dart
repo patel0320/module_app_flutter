@@ -404,14 +404,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     _SectionLabel(l10n.homeSectionTempMonitoring),
                     const SizedBox(height: 10),
-                    for (final module in _onlineModules)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: AppSpacing.betweenCards),
-                        child: _TemperatureRow(
-                            module: module,
-                            onTap: () => openModuleDetail(context, module)),
-                      ),
+                    if (_onlineModules.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            l10n.homeTempEmpty,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: cs.onSurface.withValues(alpha: 0.6)),
+                          ),
+                        ),
+                      )
+                    else
+                      for (final module in _onlineModules)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              bottom: AppSpacing.betweenCards),
+                          child: _TemperatureRow(
+                              module: module,
+                              onTap: () =>
+                                  openModuleDetail(context, module)),
+                        ),
                   ],
                 ),
               ),
