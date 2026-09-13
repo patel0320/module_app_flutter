@@ -168,7 +168,11 @@ class ModuleHeartbeatService {
           key: module.id,
         ),
     ];
-    if (targets.isNotEmpty) _monitor.refreshTargets(targets);
+    if (targets.isEmpty) {
+      _monitor.clearTargets();
+    } else {
+      _monitor.refreshTargets(targets);
+    }
   }
 
   /// Every valid pong refreshes the module's `lastSeenAt` (spec §4.2) and

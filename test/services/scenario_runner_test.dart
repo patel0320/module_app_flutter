@@ -14,6 +14,37 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  // Injects a relay into the shared store so action resolution finds a target
+  // module even though there is no demo fleet seeding on a fresh install.
+  Future<void> seedRelayFleet() async {
+    await ModuleStore.shared.init();
+    await ModuleStore.shared.replaceAll([
+      DeviceModule(
+        id: 'm1',
+        name: 'Main Cabin Relay',
+        type: ModuleType.relay,
+        ipAddress: '192.168.1.10',
+        status: ConnectionStatus.offline,
+        roomName: 'Cabin',
+        internalTempC: 30,
+        channels: [
+          ChannelOutput(
+            id: 'm1c1',
+            name: 'Cabin Light',
+            icon: Icons.lightbulb,
+          ),
+        ],
+        inputs: [
+          PhysicalInput(
+            id: 'm1i1', name: 'Switch 1', mode: InputMode.maintained),
+          PhysicalInput(id: 'm1i2', name: 'Switch 2', mode: InputMode.pulse),
+          PhysicalInput(
+            id: 'm1i3', name: 'Switch 3', mode: InputMode.momentary),
+        ],
+      ),
+    ]);
+  }
+
   group('ScenarioRunner', () {
     test('flags an unknown module as a failed action', () async {
       final runner = ScenarioRunner.shared;
@@ -39,13 +70,12 @@ void main() {
       expect(result.failed, 1);
     });
 
-    test('resolves a seeded module but reports not-connected', () async {
-      await ModuleStore.shared.init();
+    test('resolves a configured module but reports not-connected', () async {
+      await seedRelayFleet();
       final runner = ScenarioRunner.shared;
 
-      // The very first run seeds the demo fleet (Main Cabin Relay has
-      // 'Cabin Light' at index 0); with no live socket, dispatch is reported
-      // as failed with a "not connected" reason.
+      // The injected relay carries 'Cabin Light' at index 0; with no live
+      // socket, dispatch is reported as failed with a "not connected" reason.
       final result = await runner.run(Scenario(
         id: 's2',
         name: 'Test Relay',
@@ -69,7 +99,7 @@ void main() {
     });
 
     test('resolves an input action by input name', () async {
-      await ModuleStore.shared.init();
+      await seedRelayFleet();
       final runner = ScenarioRunner.shared;
 
       final result = await runner.run(Scenario(
@@ -91,14 +121,14 @@ void main() {
       ));
 
       expect(result.actions, hasLength(1));
-      // Input resolved on the seeded module; no live socket => failed,
+      // Input resolved on the configured module; no live socket => failed,
       // "not connected" (not "input not found").
       expect(result.actions.first.success, isFalse);
       expect(result.actions.first.detail, contains('not connected'));
     });
 
     test('reports an unknown input as a failed action', () async {
-      await ModuleStore.shared.init();
+      await seedRelayFleet();
       final runner = ScenarioRunner.shared;
 
       final result = await runner.run(Scenario(

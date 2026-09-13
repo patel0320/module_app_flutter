@@ -9,28 +9,18 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import 'mock_data.dart';
 
 class EventLogRepository {
   static const String _storageKey = 'event_log';
-  static const String _seedKey = 'event_log_seeded';
 
   final SharedPreferences _prefs;
 
   EventLogRepository(this._prefs);
 
-  /// Loads the store, seeding demo history entries on the very first run.
+  /// Loads the store. The event history starts empty on a fresh install.
   static Future<EventLogRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final repo = EventLogRepository(prefs);
-    await repo._seedIfEmpty();
-    return repo;
-  }
-
-  Future<void> _seedIfEmpty() async {
-    if (_prefs.getBool(_seedKey) ?? false) return;
-    await saveAll(mockEventLog());
-    await _prefs.setBool(_seedKey, true);
+    return EventLogRepository(prefs);
   }
 
   /// Fetches the persisted event history in stored (chronological) order.
