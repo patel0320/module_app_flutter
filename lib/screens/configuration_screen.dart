@@ -110,8 +110,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (modules.isEmpty) {
-              return EmptyState(
-                  icon: Icons.dns_outlined, message: l10n.configEmpty);
+              return const Center(child: Text('No modules added yet'));
             }
             return ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.outerPadding),

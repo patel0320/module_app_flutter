@@ -25,48 +25,42 @@ class ConfigurationScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: modules.isEmpty
-            ? const Center(
-                child: Text('No modules added yet'),
-              )
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Text('Device List',
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  for (final module in modules)
-                    Dismissible(
-                      key: Key(module.id),
-                      onDismissed: (d) {},
-                      child: Card(
-                        color: AppColors.surface,
-                        child: ListTile(
-                          leading: ModuleStatusDot(
-                            online: module.status == ModuleStatus.online,
-                          ),
-                          title: Text(module.name),
-                          subtitle: Text('${module.type.name} · ${module.ip}'),
-                          trailing: const Icon(Icons.chevron_right,
-                              color: Colors.grey),
-                        ),
-                      ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Device List', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            for (final module in modules)
+              Dismissible(
+                key: Key(module.id),
+                onDismissed: (d) {},
+                child: Card(
+                  color: AppColors.surface,
+                  child: ListTile(
+                    leading: ModuleStatusDot(
+                      online: module.status == ModuleStatus.online,
                     ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.search),
-                    label: const Text('Discover modules'),
-                    onPressed: () {
-                      // Wire to the self-discovery broadcast listener (Stage 4).
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Discovery not yet wired to transport')),
-                      );
-                    },
+                    title: Text(module.name),
+                    subtitle: Text('${module.type.name} · ${module.ip}'),
+                    trailing:
+                        const Icon(Icons.chevron_right, color: Colors.grey),
                   ),
-                ],
+                ),
               ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              icon: const Icon(Icons.search),
+              label: const Text('Discover modules'),
+              onPressed: () {
+                // Wire to the self-discovery broadcast listener (Stage 4).
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Discovery not yet wired to transport')),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
