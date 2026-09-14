@@ -46,9 +46,9 @@ Future<ScenarioAction?> showAddActionSheet(
         (allModules.isNotEmpty ? allModules.first : null);
     if (isInputTarget) {
       input = _matchInput(module?.inputs, initial.inputName);
-      if (module != null && module!.inputs.isEmpty && inputModules.isNotEmpty) {
+      if (module != null && module.inputs.isEmpty && inputModules.isNotEmpty) {
         module = inputModules.first;
-        input = module!.inputs.first;
+        input = module.inputs.first;
       }
       // Dimmer inputs only support Pulse.
       if (module?.type == ModuleType.dimmerDc ||
@@ -58,20 +58,20 @@ Future<ScenarioAction?> showAddActionSheet(
     } else {
       channel = _matchChannel(module?.channels, initial.channelName);
       if (module != null &&
-          module!.channels.isEmpty &&
+          module.channels.isEmpty &&
           outputModules.isNotEmpty) {
         module = outputModules.first;
-        channel = module!.channels.first;
+        channel = module.channels.first;
       }
     }
   } else {
     if (outputModules.isNotEmpty) {
       module = outputModules.first;
-      channel = module!.channels.first;
+      channel = module.channels.first;
     } else if (inputModules.isNotEmpty) {
       isInputTarget = true;
       module = inputModules.first;
-      input = module!.inputs.first;
+      input = module.inputs.first;
     }
   }
 
