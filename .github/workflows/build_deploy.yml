@@ -277,6 +277,7 @@ jobs:
     env:
       # True when we must produce a signed build for TestFlight.
       SHOULD_DEPLOY: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
+      IOS_GOOGLE_SERVICE_PLIST: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -305,9 +306,9 @@ jobs:
 
       # Optional: inject Firebase iOS config from secret (base64).
       - name: Recreate GoogleService-Info.plist
-        if: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST != '' }}
+        if: ${{ env.IOS_GOOGLE_SERVICE_PLIST != '' }}
         run: |
-          echo "${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          echo "${{ env.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
 
       # Decode the signing certificate (.p12) + distribution provisioning
       # profile (.mobileprovision) from secrets onto the runner disk.
