@@ -115,6 +115,13 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       builder: (_) => _ColorPickerSheet(
         initial: _backgroundColor ?? kScenarioBackgroundPresets.first,
+        name: _nameController.text.trim().isEmpty
+            ? AppLocalizations.of(context).scenarioUntitled
+            : _nameController.text.trim(),
+        icon: _icon,
+        roomName: _roomName,
+        isSlider: _type == ScenarioType.manualSlider,
+        actionsCount: _actions.length,
       ),
     );
     if (!mounted) return;
@@ -183,8 +190,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     final l10n = AppLocalizations.of(context);
     final roomOptions = ['General', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
-    final sliderTarget =
-        dimmerTargetChannel(_modules, _sliderTargetName);
+    final sliderTarget = dimmerTargetChannel(_modules, _sliderTargetName);
 
     return Scaffold(
       appBar: AppBar(
@@ -281,8 +287,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 _ColorSwatch(
                   label: l10n.scenarioBackgroundCustom,
                   color: _backgroundColor == null ||
-                          kScenarioBackgroundPresets
-                              .contains(_backgroundColor)
+                          kScenarioBackgroundPresets.contains(_backgroundColor)
                       ? const Color(0xFFB0BEC5)
                       : _backgroundColor,
                   selected: _backgroundColor != null &&
@@ -296,8 +301,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
               Text(
                 l10n.scenarioBackgroundSavedHint,
                 style: TextStyle(
-                    fontSize: 12,
-                    color: onSurface.withValues(alpha: 0.5)),
+                    fontSize: 12, color: onSurface.withValues(alpha: 0.5)),
               ),
             ],
             SwitchListTile(
@@ -328,9 +332,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     child: Card(
                       child: ListTile(
                         leading: IconAvatar(icon: _actions[i].icon),
-                        title: Text(_actions[i].isInputAction
-                            ? _actions[i].inputName
-                            : _actions[i].channelName,
+                        title: Text(
+                            _actions[i].isInputAction
+                                ? _actions[i].inputName
+                                : _actions[i].channelName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(l10n.scenarioActionModuleSummary(
@@ -375,8 +380,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                   for (final t in dimmerTargets)
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(t,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child:
+                          Text(t, maxLines: 1, overflow: TextOverflow.ellipsis),
                     )
                 ],
                 onChanged: (value) => setState(
@@ -393,8 +398,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 label: '$_sliderValue%',
                 onChanged: sliderTarget == null
                     ? null
-                    : (v) => setState(() => _sliderValue =
-                        sliderTarget.snapBrightness(v.round())),
+                    : (v) => setState(() =>
+                        _sliderValue = sliderTarget.snapBrightness(v.round())),
               ),
             ],
             const SizedBox(height: 24),
@@ -430,12 +435,12 @@ class _ColorSwatch extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     const double size = 48;
-    final Color fill =
-        color ?? (Theme.of(context).brightness == Brightness.dark
+    final Color fill = color ??
+        (Theme.of(context).brightness == Brightness.dark
             ? cs.surfaceContainerHigh
             : cs.surfaceContainerHighest);
-    final bool light = ThemeData.estimateBrightnessForColor(fill) ==
-        Brightness.light;
+    final bool light =
+        ThemeData.estimateBrightnessForColor(fill) == Brightness.light;
     return InkWell(
       borderRadius: BorderRadius.circular(size / 2),
       onTap: onTap,
@@ -491,9 +496,21 @@ class _ColorSwatch extends StatelessWidget {
 /// saturation and brightness sliders. Popping with the check button returns
 /// the currently previewed color.
 class _ColorPickerSheet extends StatefulWidget {
-  const _ColorPickerSheet({required this.initial});
+  const _ColorPickerSheet({
+    required this.initial,
+    required this.name,
+    required this.icon,
+    required this.roomName,
+    required this.isSlider,
+    required this.actionsCount,
+  });
 
   final Color initial;
+  final String name;
+  final IconData icon;
+  final String roomName;
+  final bool isSlider;
+  final int actionsCount;
 
   @override
   State<_ColorPickerSheet> createState() => _ColorPickerSheetState();
@@ -505,14 +522,18 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final cs = Theme.of(context).colorScheme;
     final Color current = _hsv.toColor();
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        // Keep the controls clear of the keyboard and, in edge-to-edge mode,
+        // of the system navigation bar: MediaQuery.padding.bottom is the
+        // inset the transparent nav bar overlays the sheet with.
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            16,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -527,21 +548,19 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
                       fontSize: 18, fontWeight: FontWeight.w700),
                 ),
               ),
-              IconButton.filled(
-                onPressed: () => Navigator.pop(context, current),
-                icon: const Icon(Icons.check),
-                tooltip: l10n.scenarioSave,
-              ),
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            height: 90,
-            decoration: BoxDecoration(
-              color: current,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cs.onSurface.withValues(alpha: 0.2)),
-            ),
+          // Live preview: a faithful miniature of the scenario's card on
+          // Home/Scenarios, painted with the exact selected color so the
+          // result is unmistakable.
+          _ScenarioCardPreview(
+            color: current,
+            name: widget.name,
+            icon: widget.icon,
+            roomName: widget.roomName,
+            isSlider: widget.isSlider,
+            actionsCount: widget.actionsCount,
           ),
           const SizedBox(height: 20),
           _PickerSlider(
@@ -626,6 +645,93 @@ class _PickerSlider extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A small live reproduction of the scenario's quick-access card, painted
+/// with the exact color being picked so the user sees the final Home result.
+class _ScenarioCardPreview extends StatelessWidget {
+  const _ScenarioCardPreview({
+    required this.color,
+    required this.name,
+    required this.icon,
+    required this.roomName,
+    required this.isSlider,
+    required this.actionsCount,
+  });
+
+  final Color color;
+  final String name;
+  final IconData icon;
+  final String roomName;
+  final bool isSlider;
+  final int actionsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final bool light =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.light;
+    final Color fg = light ? Colors.black87 : Colors.white;
+
+    return Card(
+      color: color,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: fg.withValues(alpha: 0.12),
+                border: Border.all(color: fg.withValues(alpha: 0.4)),
+              ),
+              child: Icon(icon, color: fg, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 15, color: fg),
+                  ),
+                  const SizedBox(height: 4),
+                  RoomTag(label: roomName, fg: fg),
+                  const SizedBox(height: 4),
+                  Text(
+                    isSlider
+                        ? l10n.homeManualDimming
+                        : l10n.homeActionsCount(actionsCount),
+                    style: TextStyle(
+                        fontSize: 12, color: fg.withValues(alpha: 0.6)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: fg),
+              child: Icon(
+                Icons.play_arrow_rounded,
+                color: light ? Colors.white : Colors.black87,
+                size: 26,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
