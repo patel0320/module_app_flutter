@@ -296,6 +296,15 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
+      # Hosted macOS runners ship a broken system CocoaPods (system Ruby 2.6);
+      # Flutter then prints "CocoaPods is installed but broken. Skipping pod
+      # install" and the plugin build fails. Install CocoaPods for the active
+      # Ruby 3.2 (setup-ruby puts its gem bin at the front of PATH).
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods --no-document
+          pod --version
+
       - name: Restore pub dependencies
         run: flutter pub get
 
