@@ -77,13 +77,16 @@ lane :beta do
      "-k", keychain_password, keychain_path)
 
   # Diagnostic: confirm the Distribution identity + private key are visible.
-  # xcodebuild's "No signing certificate 'iOS Distribution' found" error is
-  # thrown when it can't match the identity name + team + private key, so we
-  # pin the build to the exact certificate common name we actually imported.
+  # xcodebuild's code-signing errors are thrown when the identity, team or
+  # provisioning profile don't line up, so pin the build to the exact
+  # DISTRIBUTION certificate common name that we actually imported. A
+  # "iPhone Developer" identity (development cert) cannot sign an App Store
+  # distribution profile, so we must skip it.
   identity_output = sh("security", "find-identity", "-v", "-p", "codesigning", keychain_path)
-  codesign_identity = identity_output[/"([^"]+)"/, 1]
+  identities = identity_output.scan(/"([^"]+)"/).flatten.map(&:strip)
+  codesign_identity = identities.find { |name| name.include?("Distribution") }
   if codesign_identity.to_s.empty?
-    UI.user_error!("No iOS Distribution codesigning identity (certificate + private key) was found in #{keychain_path}. Check the .p12: it must contain the distribution certificate WITH its private key.")
+    UI.user_error!("No iOS Distribution codesigning identity was found in #{keychain_path}. Available identities: #{identities.empty? ? 'none' : identities.join(', ')}. The .p12 must contain an 'Apple Distribution' / 'iPhone Distribution' certificate WITH its private key - a Development certificate cannot sign an App Store distribution profile.")
   end
   UI.message("Using codesign identity: #{codesign_identity}")
 
