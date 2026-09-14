@@ -28,6 +28,7 @@ require "shellwords"
 # Directory of this Fastfile = <repo>/ios/fastlane, so <repo> is one level up.
 FASTLANE_DIR = __dir__
 FLUTTER_ROOT = File.expand_path("..", FASTLANE_DIR)
+REPO_ROOT = File.expand_path("../..", FASTLANE_DIR)
 
 # App Store Connect API key object, or nil when the secret is not configured so
 # upload_to_testflight falls back to username / app-specific-password auth.
@@ -46,21 +47,37 @@ end
 desc "Build a signed IPA and upload it to TestFlight"
 lane :beta do
   # Dedicated signing keychain created by the workflow (non-empty password).
+  # Resolve to an absolute path: the workflow creates it at the repo root
+  # while this lane runs from ios/, and relying on a relative name would make
+  # the imported certificate invisible to codesign (Xcode build search).
   keychain_name = ENV["IOS_KEYCHAIN_NAME"]
   keychain_password = ENV["IOS_KEYCHAIN_PASSWORD"]
+  keychain_path = File.expand_path(keychain_name, REPO_ROOT)
+
+  sh("security", "create-keychain", "-p", keychain_password, keychain_path) unless File.exist?(keychain_path)
+
+  # Make it the default keychain and first in the user search list, then
+  # allow codesign to use the imported key without a GUI prompt (headless CI).
+  sh("security", "default-keychain", "-s", keychain_path)
+  sh("security", "list-keychains", "-d", "user", "-s",
+     keychain_path, File.expand_path("~/Library/Keychains/login.keychain-db"))
+  sh("security", "unlock-keychain", "-p", keychain_password, keychain_path)
+  sh("security", "set-keychain-settings", "-t", "3600", "-u", keychain_path)
 
   # Import the Distribution certificate + private key into the signing keychain.
   import_certificate(
     certificate_path: ENV["IOS_CERT_P12_PATH"],
     certificate_password: ENV["IOS_CERT_P12_PASSWORD"],
-    keychain_name: keychain_name,
+    keychain_name: keychain_path,
     keychain_password: keychain_password
   )
 
-  # Allow codesign to use the imported key without a GUI prompt (headless CI).
-  sh("security", "unlock-keychain", "-p", keychain_password, keychain_name)
+  sh("security", "unlock-keychain", "-p", keychain_password, keychain_path)
   sh("security", "set-key-partition-list", "-S", "apple-tool:,apple:", "-s",
-     "-k", keychain_password, keychain_name)
+     "-k", keychain_password, keychain_path)
+
+  # Diagnostic: confirm the Distribution identity + private key are visible.
+  sh("security", "find-identity", "-v", "-p", "codesigning", keychain_path)
 
   # Install the App Store distribution provisioning profile.
   install_provisioning_profile(path: ENV["IOS_MOBILEPROVISION_PATH"])
