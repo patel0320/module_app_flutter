@@ -38,7 +38,7 @@ def asc_api_key
   app_store_connect_api_key(
     key_id: ENV["IOS_MATCH_CERT_API_KEY_ID"],
     issuer_id: ENV["IOS_MATCH_CERT_ISSUER_ID"],
-    key: ENV["IOS_MATCH_CERT_API_KEY"],
+    key_content: ENV["IOS_MATCH_CERT_API_KEY"],
     is_key_content_base64: true,
     duration: 1200
   )
