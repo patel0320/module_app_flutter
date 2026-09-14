@@ -1,0 +1,50 @@
+# Lightweight formatting gate that runs on every push/PR touching Dart code.
+# Mirrors the "Check formatting" step used in build_deploy.yml (`analyze` job),
+# so unformatted commits are caught immediately instead of at release time.
+
+name: Format Check
+
+on:
+  push:
+    paths:
+      - 'lib/**/*.dart'
+      - 'test/**/*.dart'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+  pull_request:
+    paths:
+      - 'lib/**/*.dart'
+      - 'test/**/*.dart'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Dart Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: format-flutter-${{ hashFiles('pubspec.lock') }}
+
+      # `dart format lib test` also covers lib/l10n/gen (it lives under lib/).
+      # --output=none only reports; --set-exit-if-changed fails the job on any
+      # file that would be reformatted (no changes are written to the repo).
+      - name: Check formatting
+        run: |
+          dart format --output=none --set-exit-if-changed lib test
