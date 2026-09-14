@@ -404,14 +404,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     _SectionLabel(l10n.homeSectionTempMonitoring),
                     const SizedBox(height: 10),
-                    for (final module in _onlineModules)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: AppSpacing.betweenCards),
-                        child: _TemperatureRow(
-                            module: module,
-                            onTap: () => openModuleDetail(context, module)),
-                      ),
+                    if (_onlineModules.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            l10n.homeTempEmpty,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: cs.onSurface.withValues(alpha: 0.6)),
+                          ),
+                        ),
+                      )
+                    else
+                      for (final module in _onlineModules)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              bottom: AppSpacing.betweenCards),
+                          child: _TemperatureRow(
+                              module: module,
+                              onTap: () =>
+                                  openModuleDetail(context, module)),
+                        ),
                   ],
                 ),
               ),
@@ -661,7 +676,19 @@ class _QuickScenarioCard extends StatelessWidget {
     final sliderChannel = dimmerTargetChannel(
         ModuleStore.shared.modules, scenario.sliderTargetName);
 
+    // A scenario can carry a custom background color: then the whole card is
+    // painted with it and the foreground flips to black/white for contrast.
+    final Color? bg = scenario.backgroundColor;
+    final bool hasBg = bg != null;
+    final Color fg = hasBg
+        ? (ThemeData.estimateBrightnessForColor(bg) == Brightness.light
+            ? Colors.black87
+            : Colors.white)
+        : cs.onSurface;
+    final Color accent = hasBg ? fg : cs.primary;
+
     return Card(
+      color: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -678,12 +705,12 @@ class _QuickScenarioCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Icon(Icons.drag_indicator,
-                          color: cs.onSurface.withValues(alpha: 0.6), size: 22),
+                          color: fg.withValues(alpha: 0.6), size: 22),
                     ),
                   ),
                   _ScenarioAvatar(
                       icon: scenario.icon,
-                      tint: isSlider ? cs.primary : cs.onSurface),
+                      tint: isSlider ? accent : fg),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -694,10 +721,10 @@ class _QuickScenarioCard extends StatelessWidget {
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
-                              color: cs.onSurface),
+                              color: fg),
                         ),
                         const SizedBox(height: 4),
-                        _RoomTag(label: scenario.roomName),
+                        _RoomTag(label: scenario.roomName, fg: fg),
                         const SizedBox(height: 4),
                         Text(
                           isSlider
@@ -705,7 +732,7 @@ class _QuickScenarioCard extends StatelessWidget {
                               : l10n.homeActionsCount(scenario.actions.length),
                           style: TextStyle(
                               fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.6)),
+                              color: fg.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -716,6 +743,8 @@ class _QuickScenarioCard extends StatelessWidget {
                       icon: const Icon(Icons.open_in_full, size: 20),
                       onTap: onOpenSlider,
                       outlined: true,
+                      fg: fg,
+                      accent: accent,
                     )
                   else
                     _RunButton(onTap: onRun),
@@ -728,18 +757,18 @@ class _QuickScenarioCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.brightness_low,
-                          size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
+                          size: 18, color: fg.withValues(alpha: 0.6)),
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: cs.primary,
+                            activeTrackColor: accent,
                             inactiveTrackColor:
-                                cs.onSurface.withValues(alpha: 0.14),
-                            thumbColor: cs.primary,
-                            overlayColor: cs.primary.withValues(alpha: 0.15),
-                            valueIndicatorColor: cs.primary,
+                                fg.withValues(alpha: 0.14),
+                            thumbColor: accent,
+                            overlayColor: accent.withValues(alpha: 0.15),
+                            valueIndicatorColor: accent,
                             valueIndicatorTextStyle: TextStyle(
-                                color: cs.onPrimary,
+                                color: hasBg ? bg : cs.onPrimary,
                                 fontWeight: FontWeight.w700),
                           ),
                           child: Slider(
@@ -756,7 +785,7 @@ class _QuickScenarioCard extends StatelessWidget {
                         ),
                       ),
                       Icon(Icons.brightness_high,
-                          size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
+                          size: 18, color: fg.withValues(alpha: 0.6)),
                       SizedBox(
                         width: 40,
                         child: Text(
@@ -765,7 +794,7 @@ class _QuickScenarioCard extends StatelessWidget {
                           style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
-                              color: cs.primary),
+                              color: accent),
                         ),
                       ),
                     ],
@@ -808,26 +837,30 @@ class _ScenarioAvatar extends StatelessWidget {
 
 /// Inline room tag, restyled to match the glass chips.
 class _RoomTag extends StatelessWidget {
-  const _RoomTag({required this.label});
+  const _RoomTag({required this.label, this.fg});
 
   final String label;
+
+  /// Overrides the theme foreground (e.g. for colored scenario cards).
+  final Color? fg;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final Color c = fg ?? cs.onSurface;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: cs.onSurface.withValues(alpha: 0.06),
-        border: Border.all(color: cs.onSurface.withValues(alpha: 0.18)),
+        color: c.withValues(alpha: 0.12),
+        border: Border.all(color: c.withValues(alpha: 0.35)),
       ),
       child: Text(
         label,
         style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: cs.onSurface.withValues(alpha: 0.6)),
+            color: c.withValues(alpha: 0.85)),
       ),
     );
   }
@@ -865,28 +898,39 @@ class _RunButton extends StatelessWidget {
 /// Secondary outlined icon action (e.g. open slider in full screen).
 class _IconActionButton extends StatelessWidget {
   const _IconActionButton(
-      {required this.icon, required this.onTap, required this.outlined});
+      {required this.icon,
+      required this.onTap,
+      required this.outlined,
+      this.fg,
+      this.accent});
 
   final Widget icon;
   final VoidCallback onTap;
   final bool outlined;
 
+  /// Overrides the theme foreground/accent (e.g. for colored scenario cards).
+  final Color? fg;
+  final Color? accent;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final Color buttonFg = fg ?? cs.onSurface;
+    final Color buttonAccent = accent ?? cs.primary;
     return Material(
       color: Colors.transparent,
       shape: const CircleBorder(),
       child: Ink(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: outlined ? cs.onSurface.withValues(alpha: 0.08) : null,
+          color: outlined ? buttonFg.withValues(alpha: 0.08) : null,
           border: outlined
-              ? Border.all(color: cs.onSurface.withValues(alpha: 0.25))
+              ? Border.all(color: buttonFg.withValues(alpha: 0.35))
               : null,
           gradient: outlined
               ? null
-              : LinearGradient(colors: [cs.primary, cs.primary]),
+              : LinearGradient(
+                  colors: [buttonAccent, buttonAccent]),
         ),
         width: 48,
         height: 48,
@@ -895,7 +939,7 @@ class _IconActionButton extends StatelessWidget {
           onTap: onTap,
           child: Center(
               child: outlined
-                  ? Icon(Icons.open_in_full, color: cs.onSurface, size: 20)
+                  ? Icon(Icons.open_in_full, color: buttonFg, size: 20)
                   : icon),
         ),
       ),

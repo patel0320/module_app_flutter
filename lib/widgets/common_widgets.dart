@@ -173,24 +173,28 @@ class EmptyState extends StatelessWidget {
 
 /// A round chip-like tag used to show a room name on scenario/module cards.
 class RoomTag extends StatelessWidget {
-  const RoomTag({super.key, required this.label});
+  const RoomTag({super.key, required this.label, this.fg});
 
   final String label;
 
+  /// Overrides the theme foreground (e.g. for colored scenario cards).
+  final Color? fg;
+
   @override
   Widget build(BuildContext context) {
-    final Color fg = Theme.of(context).colorScheme.onSurface;
+    final Color base = fg ?? Theme.of(context).colorScheme.onSurface;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withValues(alpha: 0.25)),
+        color: base.withValues(alpha: 0.12),
+        border: Border.all(color: base.withValues(alpha: 0.25)),
       ),
       child: Text(label,
           style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: fg.withValues(alpha: 0.75))),
+              color: base.withValues(alpha: 0.75))),
     );
   }
 }

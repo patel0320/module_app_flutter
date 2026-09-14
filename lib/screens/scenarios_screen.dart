@@ -159,10 +159,23 @@ class _ScenarioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final bool isSlider = scenario.type == ScenarioType.manualSlider;
+
+    // A scenario can carry a custom background color: then the whole card is
+    // painted with it and the foreground flips to black/white for contrast.
+    final Color? bg = scenario.backgroundColor;
+    final bool hasBg = bg != null;
+    final Color fg = hasBg
+        ? (ThemeData.estimateBrightnessForColor(bg) == Brightness.light
+            ? Colors.black87
+            : Colors.white)
+        : cs.onSurface;
+    final Color fgMuted = fg.withValues(alpha: 0.55);
+
     return Card(
+      color: bg,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onEdit,
@@ -178,7 +191,7 @@ class _ScenarioCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: Icon(Icons.drag_indicator,
-                          color: onSurface.withValues(alpha: 0.6), size: 22),
+                          color: fgMuted, size: 22),
                     ),
                   ),
                   IconAvatar(icon: scenario.icon),
@@ -188,12 +201,14 @@ class _ScenarioCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(scenario.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 16)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                color: fg)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            RoomTag(label: scenario.roomName),
+                            RoomTag(label: scenario.roomName, fg: fg),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -204,7 +219,7 @@ class _ScenarioCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     fontSize: 12,
-                                    color: onSurface.withValues(alpha: 0.55)),
+                                    color: fgMuted),
                               ),
                             ),
                           ],
@@ -227,12 +242,13 @@ class _ScenarioCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const Divider(height: 20),
+              Divider(height: 20, color: fg.withValues(alpha: 0.15)),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(l10n.showOnHome,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, color: fg)),
                   Switch(
                       value: scenario.showInHome,
                       onChanged: onShowInHomeChanged),
