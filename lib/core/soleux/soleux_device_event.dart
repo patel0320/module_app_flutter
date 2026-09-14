@@ -277,8 +277,9 @@ class SoleuxDeviceEvent {
         ? Map<String, dynamic>.from(data)
         : const <String, dynamic>{};
     return SoleuxDeviceEvent(
-      protocol:
-          envelope['protocol'] is num ? (envelope['protocol'] as num).toInt() : null,
+      protocol: envelope['protocol'] is num
+          ? (envelope['protocol'] as num).toInt()
+          : null,
       type: rawEvent is String
           ? SoleuxDeviceEventType.fromWire(rawEvent)
           : SoleuxDeviceEventType.unknown,

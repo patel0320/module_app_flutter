@@ -55,8 +55,9 @@ class _FakeHttpSoleuxDevice {
 
     final id = envelope['id'];
     final action = envelope['action'] as String? ?? '';
-    final params =
-        envelope['params'] is Map ? envelope['params'] as Map<String, dynamic> : const <String, dynamic>{};
+    final params = envelope['params'] is Map
+        ? envelope['params'] as Map<String, dynamic>
+        : const <String, dynamic>{};
 
     if (request.uri.path != '/api/v1/command') {
       request.response.statusCode = 404;
@@ -145,7 +146,8 @@ class _FakeHttpSoleuxDevice {
 }
 
 void main() {
-  test('hello / get_relay_configuration / set_output_state over HTTP', () async {
+  test('hello / get_relay_configuration / set_output_state over HTTP',
+      () async {
     final fake = await _FakeHttpSoleuxDevice.start();
     final service = SoleuxHttpService(
       baseUri: Uri.parse('http://127.0.0.1:${fake.port}/api/v1/command'),
@@ -155,8 +157,8 @@ void main() {
     await service.connect();
     expect(service.isConnected, isTrue);
     expect(service.framing, SoleuxJsonFraming.controlApi);
-    expect(service.transportKey,
-        'http://127.0.0.1:${fake.port}/api/v1/command');
+    expect(
+        service.transportKey, 'http://127.0.0.1:${fake.port}/api/v1/command');
 
     // The request body is the common Control API envelope; the endpoint and
     // media type match the spec (§"Implemented Relay Module endpoint").

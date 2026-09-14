@@ -183,8 +183,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     final l10n = AppLocalizations.of(context);
     final roomOptions = ['General', ..._rooms.map((r) => r.name)];
     final dimmerTargets = _dimmerTargets;
-    final sliderTarget =
-        dimmerTargetChannel(_modules, _sliderTargetName);
+    final sliderTarget = dimmerTargetChannel(_modules, _sliderTargetName);
 
     return Scaffold(
       appBar: AppBar(
@@ -281,8 +280,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 _ColorSwatch(
                   label: l10n.scenarioBackgroundCustom,
                   color: _backgroundColor == null ||
-                          kScenarioBackgroundPresets
-                              .contains(_backgroundColor)
+                          kScenarioBackgroundPresets.contains(_backgroundColor)
                       ? const Color(0xFFB0BEC5)
                       : _backgroundColor,
                   selected: _backgroundColor != null &&
@@ -296,8 +294,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
               Text(
                 l10n.scenarioBackgroundSavedHint,
                 style: TextStyle(
-                    fontSize: 12,
-                    color: onSurface.withValues(alpha: 0.5)),
+                    fontSize: 12, color: onSurface.withValues(alpha: 0.5)),
               ),
             ],
             SwitchListTile(
@@ -328,9 +325,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     child: Card(
                       child: ListTile(
                         leading: IconAvatar(icon: _actions[i].icon),
-                        title: Text(_actions[i].isInputAction
-                            ? _actions[i].inputName
-                            : _actions[i].channelName,
+                        title: Text(
+                            _actions[i].isInputAction
+                                ? _actions[i].inputName
+                                : _actions[i].channelName,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(l10n.scenarioActionModuleSummary(
@@ -375,8 +373,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                   for (final t in dimmerTargets)
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(t,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child:
+                          Text(t, maxLines: 1, overflow: TextOverflow.ellipsis),
                     )
                 ],
                 onChanged: (value) => setState(
@@ -393,8 +391,8 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 label: '$_sliderValue%',
                 onChanged: sliderTarget == null
                     ? null
-                    : (v) => setState(() => _sliderValue =
-                        sliderTarget.snapBrightness(v.round())),
+                    : (v) => setState(() =>
+                        _sliderValue = sliderTarget.snapBrightness(v.round())),
               ),
             ],
             const SizedBox(height: 24),
@@ -430,12 +428,12 @@ class _ColorSwatch extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     const double size = 48;
-    final Color fill =
-        color ?? (Theme.of(context).brightness == Brightness.dark
+    final Color fill = color ??
+        (Theme.of(context).brightness == Brightness.dark
             ? cs.surfaceContainerHigh
             : cs.surfaceContainerHighest);
-    final bool light = ThemeData.estimateBrightnessForColor(fill) ==
-        Brightness.light;
+    final bool light =
+        ThemeData.estimateBrightnessForColor(fill) == Brightness.light;
     return InkWell(
       borderRadius: BorderRadius.circular(size / 2),
       onTap: onTap,

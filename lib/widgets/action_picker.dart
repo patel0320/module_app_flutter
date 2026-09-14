@@ -198,13 +198,11 @@ Future<ScenarioAction?> showAddActionSheet(
                           decoration: InputDecoration(
                               labelText: l10n.actionPickerInputLabel),
                           items: [
-                            for (final i in module?.inputs ??
-                                const <PhysicalInput>[])
-                              DropdownMenuItem(
-                                  value: i, child: Text(i.name)),
+                            for (final i
+                                in module?.inputs ?? const <PhysicalInput>[])
+                              DropdownMenuItem(value: i, child: Text(i.name)),
                           ],
-                          onChanged: (i) =>
-                              setSheetState(() => input = i),
+                          onChanged: (i) => setSheetState(() => input = i),
                         )
                     else if (module?.channels.isEmpty ?? true)
                       Text(l10n.actionPickerNoOutputs)
@@ -214,8 +212,8 @@ Future<ScenarioAction?> showAddActionSheet(
                         decoration: InputDecoration(
                             labelText: l10n.actionPickerOutputLabel),
                         items: [
-                          for (final c in module?.channels ??
-                              const <ChannelOutput>[])
+                          for (final c
+                              in module?.channels ?? const <ChannelOutput>[])
                             DropdownMenuItem(value: c, child: Text(c.name)),
                         ],
                         onChanged: (c) => setSheetState(() => channel = c),
@@ -276,9 +274,7 @@ Future<ScenarioAction?> showAddActionSheet(
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: module == null ||
-                              (isInputTarget
-                                  ? input == null
-                                  : channel == null)
+                              (isInputTarget ? input == null : channel == null)
                           ? null
                           : () => Navigator.pop(
                                 context,

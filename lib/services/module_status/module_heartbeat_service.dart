@@ -50,8 +50,7 @@ class ModuleHeartbeatService {
   /// to inject targets or query last-seen).
   SoleuxHeartbeatMonitor get monitor => _monitor;
 
-  ModuleHeartbeatService(
-      {required this.store, SoleuxHeartbeatMonitor? monitor})
+  ModuleHeartbeatService({required this.store, SoleuxHeartbeatMonitor? monitor})
       : _monitor = monitor ?? SoleuxHeartbeatMonitor() {
     _monitor.onState = _onState;
     _monitor.onPong = _onPong;

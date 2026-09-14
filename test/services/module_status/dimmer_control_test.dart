@@ -60,11 +60,10 @@ class _FakeDimmerDevice {
         (request['params'] as Map?)?.cast<String, dynamic>() ?? const {};
     received.add(request);
 
-    final Map<String, dynamic> result =
-        _resultFor(action, params) ??
-            {
-              'channel': params['channel'],
-            };
+    final Map<String, dynamic> result = _resultFor(action, params) ??
+        {
+          'channel': params['channel'],
+        };
     socket.write('${jsonEncode({
           'protocol': 2,
           'id': id,
@@ -73,8 +72,7 @@ class _FakeDimmerDevice {
         })}\r\n');
   }
 
-  Map<String, dynamic>? _resultFor(
-      String action, Map<String, dynamic> params) {
+  Map<String, dynamic>? _resultFor(String action, Map<String, dynamic> params) {
     switch (action) {
       case 'hello':
         return {
@@ -138,8 +136,7 @@ class _FakeDimmerDevice {
             'channel': ch,
             'state': states[ch],
             'set_pwm': levels[ch] ?? 0,
-            'actual_pwm':
-                (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
+            'actual_pwm': (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
             'transitioning': false,
             'revision': 1,
           },
@@ -153,8 +150,7 @@ class _FakeDimmerDevice {
                 'channel': ch,
                 'state': states[ch] ?? false,
                 'set_pwm': levels[ch] ?? 0,
-                'actual_pwm':
-                    (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
+                'actual_pwm': (states[ch] ?? false) ? (levels[ch] ?? 0) : 0,
                 'pending': false,
               },
           ],
@@ -253,7 +249,8 @@ void main() {
     expect(live.channels[1].brightness, 70);
   });
 
-  test('set_dimmer_level / dimmer_on / dimmer_off / toggle_dimmer dispatch '
+  test(
+      'set_dimmer_level / dimmer_on / dimmer_off / toggle_dimmer dispatch '
       'the spec actions and reflect state', () async {
     await service.refreshOne(module);
     await _flush();
@@ -288,7 +285,8 @@ void main() {
         reason: 'toggle reports set_pwm 35, keeping the earlier set level');
   });
 
-  test('get_dimmer_state / get_dimmer_levels return parsed snapshots and '
+  test(
+      'get_dimmer_state / get_dimmer_levels return parsed snapshots and '
       'syncDimmerLevels applies them to the store', () async {
     await service.refreshOne(module);
     await _flush();
@@ -370,7 +368,8 @@ void main() {
     expect(fake.received.last['params'], {'frequency_hz': 2000});
   });
 
-  test('dimmer commands fall back to false when the module has no Control API '
+  test(
+      'dimmer commands fall back to false when the module has no Control API '
       'unit', () async {
     // No refresh ran, so no JSON unit exists yet.
     expect(await service.dimmerOn('dim1', 0), isFalse);

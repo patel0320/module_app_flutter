@@ -221,9 +221,9 @@ class ModuleStatusService {
   ModuleCommandService? commandServiceFor(String moduleId) => _units[moduleId];
 
   /// The live Soleux Control API unit driving [moduleId] (a [SoleuxJsonService]
-/// for the persistent TCP transport or a [SoleuxHttpService] for the
-/// HTTP/HTTPS transport), or null when the module has no live Control API unit
-/// (legacy AT device / not yet probed).
+  /// for the persistent TCP transport or a [SoleuxHttpService] for the
+  /// HTTP/HTTPS transport), or null when the module has no live Control API unit
+  /// (legacy AT device / not yet probed).
   SoleuxControlApiService? jsonCommandServiceFor(String moduleId) =>
       _jsonUnits[moduleId];
 
@@ -370,8 +370,8 @@ class ModuleStatusService {
       final levels = <DimmerStateSnapshot>[];
       for (final item in raw) {
         if (item is Map) {
-          final snapshot = DimmerStateSnapshot.fromMap(
-              Map<String, dynamic>.from(item));
+          final snapshot =
+              DimmerStateSnapshot.fromMap(Map<String, dynamic>.from(item));
           if (snapshot != null) levels.add(snapshot);
         }
       }
@@ -454,13 +454,12 @@ class ModuleStatusService {
 
   /// Turns one dimmer on via `set_output_state` (`state: true`), replacing the
   /// retired `dimmer_on` command.
-  Future<bool> dimmerOn(
-      String moduleId, int channel, {int? transitionMs}) async {
+  Future<bool> dimmerOn(String moduleId, int channel,
+      {int? transitionMs}) async {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return false;
     try {
-      final response =
-          await unit.dimmerOn(channel, transitionMs: transitionMs);
+      final response = await unit.dimmerOn(channel, transitionMs: transitionMs);
       if (!response.ok) {
         debugPrint('ModuleStatusService: set_output_state (on) ($channel) on '
             '$moduleId rejected: ${response.error?.summary}');
@@ -477,8 +476,8 @@ class ModuleStatusService {
 
   /// Turns one dimmer off via `set_output_state` (`state: false`), replacing
   /// the retired `dimmer_off` command.
-  Future<bool> dimmerOff(
-      String moduleId, int channel, {int? transitionMs}) async {
+  Future<bool> dimmerOff(String moduleId, int channel,
+      {int? transitionMs}) async {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return false;
     try {
@@ -500,8 +499,8 @@ class ModuleStatusService {
 
   /// `toggle_dimmer` (§6.7) - toggles one dimmer while retaining its target
   /// level.
-  Future<bool> toggleDimmer(
-      String moduleId, int channel, {int? transitionMs}) async {
+  Future<bool> toggleDimmer(String moduleId, int channel,
+      {int? transitionMs}) async {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return false;
     try {
@@ -551,8 +550,8 @@ class ModuleStatusService {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return false;
     try {
-      final response = await unit
-          .setDimmerFrequency(frequencyHz, applyNow: applyNow);
+      final response =
+          await unit.setDimmerFrequency(frequencyHz, applyNow: applyNow);
       if (!response.ok) {
         debugPrint('ModuleStatusService: set_dimmer_frequency ($frequencyHz) '
             'on $moduleId rejected: ${response.error?.summary}');
@@ -574,8 +573,7 @@ class ModuleStatusService {
       String moduleId, Map<String, dynamic>? result) {
     if (result == null) return;
     final wrapped = result['dimmer'];
-    final data =
-        wrapped is Map ? Map<String, dynamic>.from(wrapped) : result;
+    final data = wrapped is Map ? Map<String, dynamic>.from(wrapped) : result;
     final channel = (data['channel'] as num?)?.toInt();
     if (channel == null || channel < 0) return;
     final live = store.byId(moduleId);
@@ -583,9 +581,10 @@ class ModuleStatusService {
     final output = live.channels[channel];
     final rawState = data['state'] ?? data['actual_state'];
     if (rawState is bool) output.isOn = rawState;
-    final rawLevel =
-        data['set_pwm'] ?? data['actual_pwm'] ?? data['requested_level'] ??
-            data['actual_level'];
+    final rawLevel = data['set_pwm'] ??
+        data['actual_pwm'] ??
+        data['requested_level'] ??
+        data['actual_level'];
     if (rawLevel is num) output.brightness = rawLevel.round().clamp(0, 100);
     _scheduleCommit();
   }
@@ -626,8 +625,8 @@ class ModuleStatusService {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return false;
     try {
-      final response = await unit.setVirtualInputState(index, state,
-          source: 'app');
+      final response =
+          await unit.setVirtualInputState(index, state, source: 'app');
       if (!response.ok) {
         debugPrint('ModuleStatusService: set_virtual_input_state '
             '($index, $state) on $moduleId rejected: '
@@ -1213,8 +1212,7 @@ class ModuleStatusService {
   ///             Control API HTTP device);
   ///   - `null`  when the endpoint was unreachable or no hello arrived in time
   ///             - a legacy device, so the caller falls back to AT+.
-  Future<bool?> _probeHttp(
-      DeviceModule live, CommandTransportMode mode) async {
+  Future<bool?> _probeHttp(DeviceModule live, CommandTransportMode mode) async {
     final unit = _ensureHttpUnit(live, mode);
     final ok = await _tryJsonHello(unit, live);
     if (ok == true) {
@@ -1301,8 +1299,8 @@ class ModuleStatusService {
       final result = response.result;
       if (result == null) return;
       if (result['system'] is Map || result['network'] is Map) {
-        live.systemInfo = DeviceSystemInfo.fromJson(
-            Map<String, dynamic>.from(result));
+        live.systemInfo =
+            DeviceSystemInfo.fromJson(Map<String, dynamic>.from(result));
         if (live.systemInfo!.internalTempC != null) {
           live.internalTempC = live.systemInfo!.internalTempC!;
         } else if (live.systemInfo!.externalTempC != null) {
@@ -1333,9 +1331,10 @@ class ModuleStatusService {
       final output = live.channels[channel];
       final rawState = data['state'];
       if (rawState is bool) output.isOn = rawState;
-      final rawLevel =
-          data['set_pwm'] ?? data['actual_pwm'] ?? data['requested_level'] ??
-              data['actual_level'];
+      final rawLevel = data['set_pwm'] ??
+          data['actual_pwm'] ??
+          data['requested_level'] ??
+          data['actual_level'];
       if (rawLevel is num) output.brightness = rawLevel.round().clamp(0, 100);
     }
     _scheduleCommit();
@@ -1417,8 +1416,8 @@ class ModuleStatusService {
   /// reachability probe. When an existing unit targets a different endpoint
   /// (or the module changed IP / the transport setting changed), the old unit
   /// is disposed and replaced.
-  SoleuxHttpService _ensureHttpUnit(DeviceModule module,
-      CommandTransportMode mode) {
+  SoleuxHttpService _ensureHttpUnit(
+      DeviceModule module, CommandTransportMode mode) {
     final baseUri = controlApiHttpEndpoint(module, mode);
     final existing = _jsonUnits[module.id];
     if (existing is SoleuxHttpService && existing.baseUri == baseUri) {
@@ -1448,7 +1447,8 @@ class ModuleStatusService {
     // Control API device events (output/input/level changes, temperature, ...,
     // doc/...Specification_v0.6.md §"Device events") update the live module so
     // its target screen reflects device-initiated changes without a re-fetch.
-    unit.deviceEventStream.listen((event) => _applyDeviceEvent(module.id, event));
+    unit.deviceEventStream
+        .listen((event) => _applyDeviceEvent(module.id, event));
     // `get_device_state` snapshots from the keep-alive heartbeat: fold the live
     // inputs/outputs/system into the module so relay, dimmer, blind and all
     // other module screens stay in sync with the device.
