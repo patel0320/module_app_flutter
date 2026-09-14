@@ -22,6 +22,9 @@
 
 default_platform(:ios)
 
+require "xcodeproj"
+require "shellwords"
+
 # Directory of this Fastfile = <repo>/ios/fastlane, so <repo> is one level up.
 FASTLANE_DIR = __dir__
 FLUTTER_ROOT = File.expand_path("..", FASTLANE_DIR)
@@ -61,6 +64,31 @@ lane :beta do
 
   # Install the App Store distribution provisioning profile.
   install_provisioning_profile(path: ENV["IOS_MOBILEPROVISION_PATH"])
+
+  # The Runner target has no Development Team / signing wired up, so Flutter's
+  # archive step would fall back to automatic signing and fail with
+  # "No profiles ... App Development provisioning profiles". Pin the build to
+  # the Distribution certificate + App Store profile we just installed.
+  # Team ID and profile name are read from the .mobileprovision itself, so no
+  # extra secrets are required.
+  profile_plist = `security cms -D -i #{ENV["IOS_MOBILEPROVISION_PATH"].shellescape}`
+  team_id = ENV["IOS_APPLE_TEAM_ID"]
+  if team_id.to_s.empty?
+    team_id = profile_plist[/<key>TeamIdentifier<\/key>\s*<array>\s*<string>([^<]+)<\/string>/m, 1]
+  end
+  profile_name = profile_plist[/<key>Name<\/key>\s*<string>([^<]+)<\/string>/, 1]
+
+  project = Xcodeproj::Project.open(File.join(FLUTTER_ROOT, "ios", "Runner.xcodeproj"))
+  runner = project.targets.find { |t| t.name == "Runner" }
+  runner.build_configurations.each do |config|
+    next unless %w[Release Profile].include?(config.name)
+
+    config.build_settings["CODE_SIGN_STYLE"] = "Manual"
+    config.build_settings["DEVELOPMENT_TEAM"] = team_id
+    config.build_settings["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = "iPhone Distribution"
+    config.build_settings["PROVISIONING_PROFILE_SPECIFIER"] = profile_name
+  end
+  project.save
 
   # flutter build ipa must run from the project root (not from ios/).
   # --export-method=app-store signs for App Store / TestFlight (on Xcode 15.4+
