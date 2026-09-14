@@ -323,9 +323,22 @@ jobs:
           echo "$IOS_MOBILEPROVISION_BASE64" | base64 --decode > "${{ runner.temp }}/signing/distribution.mobileprovision"
           echo "Signing material staged at ${{ runner.temp }}/signing"
 
+      # Dedicated signing keychain with a non-empty password. Using the
+      # passwordless login.keychain fails on CI runners with
+      # "security set-key-partition-list ... exit status 1".
+      - name: Create signing keychain
+        if: ${{ env.SHOULD_DEPLOY == 'true' }}
+        run: |
+          set -euo pipefail
+          security create-keychain -p "ci-ios-signing" ios-build.keychain-db || true
+          security default-keychain -s ios-build.keychain-db
+          security unlock-keychain -p "ci-ios-signing" ios-build.keychain-db
+          security set-keychain-settings -t 3600 -u ios-build.keychain-db
+          echo "signing keychain ready"
+
       # fastlane lane `beta` (ios/fastlane/Fastfile) imports the certificate
-      # into the login keychain, installs the provisioning profile, builds the
-      # signed IPA and uploads it to TestFlight.
+      # into the signing keychain, installs the provisioning profile, builds
+      # the signed IPA and uploads it to TestFlight.
       - name: Build signed IPA and upload to TestFlight
         if: ${{ env.SHOULD_DEPLOY == 'true' }}
         working-directory: ios
@@ -333,6 +346,8 @@ jobs:
           IOS_CERT_P12_PATH: ${{ runner.temp }}/signing/distribution.p12
           IOS_CERT_P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
           IOS_MOBILEPROVISION_PATH: ${{ runner.temp }}/signing/distribution.mobileprovision
+          IOS_KEYCHAIN_NAME: ios-build.keychain-db
+          IOS_KEYCHAIN_PASSWORD: ci-ios-signing
           IOS_APPLE_BUNDLE_ID: ${{ secrets.IOS_APPLE_BUNDLE_ID }}
           APP_ENV: ${{ env.APP_ENV }}
           # Preferred: App Store Connect API key. IOS_MATCH_CERT_API_KEY is the

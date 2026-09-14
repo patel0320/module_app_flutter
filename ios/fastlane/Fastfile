@@ -42,18 +42,22 @@ end
 
 desc "Build a signed IPA and upload it to TestFlight"
 lane :beta do
-  # Import the Distribution certificate + private key into the login keychain.
+  # Dedicated signing keychain created by the workflow (non-empty password).
+  keychain_name = ENV["IOS_KEYCHAIN_NAME"]
+  keychain_password = ENV["IOS_KEYCHAIN_PASSWORD"]
+
+  # Import the Distribution certificate + private key into the signing keychain.
   import_certificate(
     certificate_path: ENV["IOS_CERT_P12_PATH"],
     certificate_password: ENV["IOS_CERT_P12_PASSWORD"],
-    keychain_name: "login.keychain",
-    keychain_password: ""
+    keychain_name: keychain_name,
+    keychain_password: keychain_password
   )
 
   # Allow codesign to use the imported key without a GUI prompt (headless CI).
-  sh("security", "unlock-keychain", "-p", "", "login.keychain")
+  sh("security", "unlock-keychain", "-p", keychain_password, keychain_name)
   sh("security", "set-key-partition-list", "-S", "apple-tool:,apple:", "-s",
-     "-k", "", "login.keychain")
+     "-k", keychain_password, keychain_name)
 
   # Install the App Store distribution provisioning profile.
   install_provisioning_profile(path: ENV["IOS_MOBILEPROVISION_PATH"])
