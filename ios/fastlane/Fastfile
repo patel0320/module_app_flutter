@@ -63,10 +63,11 @@ lane :beta do
   install_provisioning_profile(path: ENV["IOS_MOBILEPROVISION_PATH"])
 
   # flutter build ipa must run from the project root (not from ios/).
-  # --export-method=app-store-connect signs for App Store / TestFlight.
+  # --export-method=app-store signs for App Store / TestFlight (on Xcode 15.4+
+  # Flutter transparently maps this to the new app-store-connect method).
   sh("cd #{FLUTTER_ROOT} && flutter build ipa --release " \
      "--dart-define=APP_ENV=#{ENV["APP_ENV"]} " \
-     "--export-method=app-store-connect")
+     "--export-method=app-store")
 
   upload_to_testflight(
     api_key: asc_api_key,
