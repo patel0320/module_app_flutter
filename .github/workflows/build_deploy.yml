@@ -296,13 +296,18 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      # Hosted macOS runners ship a broken system CocoaPods (system Ruby 2.6);
-      # Flutter then prints "CocoaPods is installed but broken. Skipping pod
-      # install" and the plugin build fails. Homebrew installs a self-contained
-      # CocoaPods (own Ruby) whose `pod` lands on PATH ahead of the broken one.
-      - name: Install CocoaPods
+      # Hosted macOS runners ship a broken system CocoaPods (system Ruby 2.6)
+      # at /usr/local/bin/pod, which precedes Homebrew /opt/homebrew/bin in the
+      # default GITHUB_PATH. Flutter then probes the broken pod and prints
+      # "CocoaPods is installed but broken. Skipping pod install". Homebrew
+      # installs a self-contained CocoaPods (own Ruby); we prepend its bin dir
+      # so that working `pod` shadows the broken system one.
+      - name: Install CocoaPods (Homebrew, shadow system pod)
         run: |
           brew install cocoapods
+          brew link --overwrite cocoapods 2>/dev/null || true
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          which -a pod
           pod --version
 
       - name: Restore pub dependencies
