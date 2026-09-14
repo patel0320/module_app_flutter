@@ -128,7 +128,7 @@ lane :beta do
   upload_to_testflight(
     api_key: asc_api_key,
     app_identifier: ENV["IOS_APPLE_BUNDLE_ID"],
-    ipa: File.join(FLUTTER_ROOT, "build", "ios", "ipa", "Runner.ipa"),
+    ipa: File.join(REPO_ROOT, "build", "ios", "ipa", "Runner.ipa"),
     skip_waiting_for_build_processing: false
   )
 end
