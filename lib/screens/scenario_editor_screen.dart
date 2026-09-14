@@ -32,6 +32,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
   late IconData _icon = widget.scenario?.icon ?? Icons.auto_awesome_outlined;
   late String _roomName = widget.scenario?.roomName ?? 'General';
   late bool _showInHome = widget.scenario?.showInHome ?? false;
+  late Color? _backgroundColor = widget.scenario?.backgroundColor;
   late ScenarioType _type = widget.scenario?.type ?? ScenarioType.tapToRun;
   late final List<ScenarioAction> _actions =
       List.of(widget.scenario?.actions ?? const []);
@@ -101,6 +102,18 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     if (action != null) setState(() => _actions[index] = action);
   }
 
+  Future<void> _pickCustomColor() async {
+    final Color? picked = await showModalBottomSheet<Color>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      builder: (_) => _ColorPickerSheet(
+        initial: _backgroundColor ?? kScenarioBackgroundPresets.first,
+      ),
+    );
+    if (picked != null) setState(() => _backgroundColor = picked);
+  }
+
   void _save() {
     FocusScope.of(context).unfocus();
     final String name = _nameController.text.trim().isEmpty
@@ -112,6 +125,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
       s.icon = _icon;
       s.roomName = _roomName;
       s.showInHome = _showInHome;
+      s.backgroundColor = _backgroundColor;
       s.type = _type;
       s.actions
         ..clear()
@@ -127,6 +141,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
         type: _type,
         roomName: _roomName,
         showInHome: _showInHome,
+        backgroundColor: _backgroundColor,
         actions: _actions,
         sliderTargetName: _sliderTargetName,
         sliderValue: _sliderValue,
@@ -210,6 +225,37 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
               ],
               onChanged: (value) =>
                   setState(() => _roomName = value ?? _roomName),
+            ),
+            const SizedBox(height: 20),
+            SectionHeader(l10n.scenarioBackgroundSection),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _ColorSwatch(
+                  label: l10n.scenarioBackgroundDefault,
+                  color: null,
+                  selected: _backgroundColor == null,
+                  onTap: () => setState(() => _backgroundColor = null),
+                ),
+                for (final preset in kScenarioBackgroundPresets)
+                  _ColorSwatch(
+                    color: preset,
+                    selected: _backgroundColor == preset,
+                    onTap: () => setState(() => _backgroundColor = preset),
+                  ),
+                _ColorSwatch(
+                  label: l10n.scenarioBackgroundCustom,
+                  color: _backgroundColor == null ||
+                          kScenarioBackgroundPresets
+                              .contains(_backgroundColor)
+                      ? const Color(0xFFB0BEC5)
+                      : _backgroundColor,
+                  selected: _backgroundColor != null &&
+                      !kScenarioBackgroundPresets.contains(_backgroundColor),
+                  onTap: _pickCustomColor,
+                ),
+              ],
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -313,6 +359,198 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A round, tappable color choice for a scenario's background. [color] being
+/// null renders the "Default" swatch (plain themed surface). Selected swatches
+/// get a primary ring plus a contrast-aware check mark.
+class _ColorSwatch extends StatelessWidget {
+  const _ColorSwatch({
+    required this.selected,
+    required this.onTap,
+    this.color,
+    this.label,
+  });
+
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? color;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    const double size = 48;
+    final Color fill =
+        color ?? (Theme.of(context).brightness == Brightness.dark
+            ? cs.surfaceContainerHigh
+            : cs.surfaceContainerHighest);
+    final bool light = ThemeData.estimateBrightnessForColor(fill) ==
+        Brightness.light;
+    return InkWell(
+      borderRadius: BorderRadius.circular(size / 2),
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: fill,
+              border: Border.all(
+                color: selected
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.25),
+                width: selected ? 3 : 1,
+              ),
+            ),
+            child: selected
+                ? Icon(
+                    Icons.check,
+                    size: 22,
+                    color: light ? Colors.black87 : Colors.white,
+                  )
+                : null,
+          ),
+          if (label != null) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 64,
+              child: Text(
+                label!,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: cs.onSurface.withValues(alpha: selected ? 1 : 0.6),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet with a minimal HSV color picker: a live preview plus hue,
+/// saturation and brightness sliders. Popping with the check button returns
+/// the currently previewed color.
+class _ColorPickerSheet extends StatefulWidget {
+  const _ColorPickerSheet({required this.initial});
+
+  final Color initial;
+
+  @override
+  State<_ColorPickerSheet> createState() => _ColorPickerSheetState();
+}
+
+class _ColorPickerSheetState extends State<_ColorPickerSheet> {
+  late HSVColor _hsv = HSVColor.fromColor(widget.initial);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final Color current = _hsv.toColor();
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.scenarioBackgroundPickerTitle,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+              ),
+              IconButton.filled(
+                onPressed: () => Navigator.pop(context, current),
+                icon: const Icon(Icons.check),
+                tooltip: l10n.scenarioSave,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 90,
+            decoration: BoxDecoration(
+              color: current,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cs.onSurface.withValues(alpha: 0.2)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _PickerSlider(
+            label: l10n.scenarioBackgroundHue,
+            value: _hsv.hue,
+            max: 360,
+            onChanged: (v) => setState(() => _hsv = _hsv.withHue(v)),
+          ),
+          _PickerSlider(
+            label: l10n.scenarioBackgroundSaturation,
+            value: _hsv.saturation,
+            max: 1,
+            onChanged: (v) => setState(() => _hsv = _hsv.withSaturation(v)),
+          ),
+          _PickerSlider(
+            label: l10n.scenarioBackgroundValue,
+            value: _hsv.value,
+            max: 1,
+            onChanged: (v) => setState(() => _hsv = _hsv.withValue(v)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickerSlider extends StatelessWidget {
+  const _PickerSlider({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(label,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        ),
+        Expanded(
+          child: Slider(
+            value: value.clamp(0, max).toDouble(),
+            max: max,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
 }

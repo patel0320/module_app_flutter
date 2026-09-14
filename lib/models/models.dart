@@ -6,6 +6,18 @@
 import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
+/// Seven modern preset colors offered for a scenario's background. Selecting
+/// one makes the scenario's Home quick-access card render with that color.
+const List<Color> kScenarioBackgroundPresets = [
+  Color(0xFF3949AB), // Indigo
+  Color(0xFF0288D1), // Sky blue
+  Color(0xFF00897B), // Teal
+  Color(0xFF43A047), // Green
+  Color(0xFFEF6C00), // Amber
+  Color(0xFFE91E63), // Pink
+  Color(0xFF7B1FA2), // Purple
+];
+
 /// The five dedicated hardware module types described in the brief
 /// (section 2.3 "Extended Control Types").
 enum ModuleType { relay, blind, dimmerDc, dimmerAc, temperature }
@@ -724,6 +736,7 @@ class Scenario {
     required this.type,
     this.roomName = 'General',
     this.showInHome = false,
+    this.backgroundColor,
     List<ScenarioAction>? actions,
     this.sliderTargetName = '',
     this.sliderValue = 0,
@@ -735,6 +748,11 @@ class Scenario {
   ScenarioType type;
   String roomName;
   bool showInHome;
+
+  /// Background color applied to the scenario's Home quick-access card.
+  /// Null keeps the default themed surface.
+  Color? backgroundColor;
+
   final List<ScenarioAction> actions;
 
   // Only used when [type] == ScenarioType.manualSlider.
@@ -748,6 +766,7 @@ class Scenario {
         'type': type.name,
         'roomName': roomName,
         'showInHome': showInHome,
+        'backgroundColor': backgroundColor?.toARGB32(),
         'actions': actions.map((a) => a.toJson()).toList(),
         'sliderTargetName': sliderTargetName,
         'sliderValue': sliderValue,
@@ -763,6 +782,9 @@ class Scenario {
           final value => value as String,
         },
         showInHome: json['showInHome'] as bool? ?? false,
+        backgroundColor: json['backgroundColor'] == null
+            ? null
+            : Color(json['backgroundColor'] as int),
         actions: [
           for (final a in json['actions'] as List? ?? const [])
             ScenarioAction.fromJson((a as Map).cast<String, Object?>()),
