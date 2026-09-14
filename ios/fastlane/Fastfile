@@ -78,7 +78,7 @@ lane :beta do
   end
   profile_name = profile_plist[/<key>Name<\/key>\s*<string>([^<]+)<\/string>/, 1]
 
-  project = Xcodeproj::Project.open(File.join(FLUTTER_ROOT, "ios", "Runner.xcodeproj"))
+  project = Xcodeproj::Project.open(File.expand_path("../Runner.xcodeproj", FASTLANE_DIR))
   runner = project.targets.find { |t| t.name == "Runner" }
   runner.build_configurations.each do |config|
     next unless %w[Release Profile].include?(config.name)
