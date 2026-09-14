@@ -375,7 +375,9 @@ jobs:
           FASTLANE_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
           APP_STORE_CONNECT_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
-        run: bundle exec fastlane beta
+        run: |
+          bundle install
+          bundle exec fastlane beta
 
       # Unsigned build for artifact-only runs (no deploy requested).
       - name: Build unsigned IPA (artifact-only)
