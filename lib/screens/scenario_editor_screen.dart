@@ -9,6 +9,7 @@ import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../data/mock_data.dart';
 import '../models/models.dart';
+import '../services/custom_color_store.dart';
 import '../services/module_store.dart';
 import '../services/room_store.dart';
 import '../theme/app_theme.dart';
@@ -41,6 +42,7 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
 
   List<DeviceModule> _modules = const [];
   List<Room> _rooms = const [];
+  List<Color> _savedColors = const [];
 
   List<String> get _dimmerTargets => [
         for (final m in _modules.where((m) =>
@@ -58,6 +60,10 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
     RoomStore.shared.init().then((_) {
       if (!mounted) return;
       setState(() => _rooms = RoomStore.shared.rooms);
+    });
+    CustomColorStore.shared.init().then((_) {
+      if (!mounted) return;
+      setState(() => _savedColors = CustomColorStore.shared.colors);
     });
   }
 
@@ -111,7 +117,28 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
         initial: _backgroundColor ?? kScenarioBackgroundPresets.first,
       ),
     );
+    if (!mounted) return;
+    // Reflect any colors saved inside the picker sheet even when it was
+    // dismissed without confirming.
+    setState(() => _savedColors = CustomColorStore.shared.colors);
     if (picked != null) setState(() => _backgroundColor = picked);
+  }
+
+  Future<void> _deleteSavedColor(Color color) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.scenarioColorRemoveTitle,
+      message: l10n.scenarioColorRemoveMsg,
+      confirmLabel: l10n.delete,
+    );
+    if (!confirmed) return;
+    await CustomColorStore.shared.remove(color);
+    if (!mounted) return;
+    setState(() {
+      _savedColors = CustomColorStore.shared.colors;
+      if (_backgroundColor == color) _backgroundColor = null;
+    });
   }
 
   void _save() {
@@ -244,6 +271,13 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                     selected: _backgroundColor == preset,
                     onTap: () => setState(() => _backgroundColor = preset),
                   ),
+                for (final saved in _savedColors)
+                  _ColorSwatch(
+                    color: saved,
+                    selected: _backgroundColor == saved,
+                    onTap: () => setState(() => _backgroundColor = saved),
+                    onLongPress: () => _deleteSavedColor(saved),
+                  ),
                 _ColorSwatch(
                   label: l10n.scenarioBackgroundCustom,
                   color: _backgroundColor == null ||
@@ -257,6 +291,15 @@ class _ScenarioEditorScreenState extends State<ScenarioEditorScreen> {
                 ),
               ],
             ),
+            if (_savedColors.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                l10n.scenarioBackgroundSavedHint,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: onSurface.withValues(alpha: 0.5)),
+              ),
+            ],
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.showOnHome),
@@ -370,12 +413,16 @@ class _ColorSwatch extends StatelessWidget {
   const _ColorSwatch({
     required this.selected,
     required this.onTap,
+    this.onLongPress,
     this.color,
     this.label,
   });
 
   final bool selected;
   final VoidCallback onTap;
+
+  /// Optional long-press affordance (used to delete a saved custom color).
+  final VoidCallback? onLongPress;
   final Color? color;
   final String? label;
 
@@ -392,6 +439,7 @@ class _ColorSwatch extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(size / 2),
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -514,9 +562,36 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
             max: 1,
             onChanged: (v) => setState(() => _hsv = _hsv.withValue(v)),
           ),
+          const SizedBox(height: 20),
+          FilledButton.tonalIcon(
+            onPressed: _saveColor,
+            icon: Icon(CustomColorStore.shared.contains(current)
+                ? Icons.bookmark_added
+                : Icons.bookmark_add_outlined),
+            label: Text(
+              CustomColorStore.shared.contains(current)
+                  ? l10n.scenarioColorAlreadySaved
+                  : l10n.scenarioColorPickerSave,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _saveColor() async {
+    final l10n = AppLocalizations.of(context);
+    final Color color = _hsv.toColor();
+    final bool added = await CustomColorStore.shared.add(color);
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(added
+          ? l10n.scenarioColorSaved
+          : CustomColorStore.shared.contains(color)
+              ? l10n.scenarioColorAlreadySaved
+              : l10n.scenarioColorLimit(CustomColorStore.shared.maxColors)),
+    ));
   }
 }
 
