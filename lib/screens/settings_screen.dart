@@ -133,11 +133,18 @@ class SettingsScreen extends StatelessWidget {
             const ModuleKeepAliveSettings(),
             const SizedBox(height: 24),
             SectionHeader(l10n.settingsLocation),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.other_houses_outlined),
-                title: Text(l10n.settingsHome),
-                subtitle: Text(l10n.settingsSingleLocation),
+            ListenableBuilder(
+              listenable: SettingsStore.shared,
+              builder: (context, _) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.other_houses_outlined),
+                  title: Text(l10n.settingsHome),
+                  subtitle: Text(
+                    SettingsStore.shared.locationName.isNotEmpty
+                        ? SettingsStore.shared.locationName
+                        : l10n.settingsSingleLocation,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
