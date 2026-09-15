@@ -125,10 +125,19 @@ lane :beta do
      "--dart-define=APP_ENV=#{ENV["APP_ENV"]} " \
      "--export-method=app-store")
 
+  # Locate the exported IPA anywhere under build/ios (filename/layout can vary
+  # by Flutter/Xcode version), and list what was produced if none is found.
+  ipa_glob = Dir[File.join(REPO_ROOT, "build", "ios", "**", "*.ipa")]
+  UI.message("IPA candidates: #{ipa_glob.inspect}")
+  if ipa_glob.empty?
+    files = Dir[File.join(REPO_ROOT, "build", "**", "*")].select { |p| File.file?(p) }
+    UI.user_error!("No .ipa was produced under #{File.join(REPO_ROOT, 'build')}. Files found: #{files.empty? ? 'none' : files.join(' | ')}")
+  end
+
   upload_to_testflight(
     api_key: asc_api_key,
     app_identifier: ENV["IOS_APPLE_BUNDLE_ID"],
-    ipa: File.join(REPO_ROOT, "build", "ios", "ipa", "Runner.ipa"),
+    ipa: ipa_glob.first,
     skip_waiting_for_build_processing: false
   )
 end
