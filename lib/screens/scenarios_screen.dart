@@ -190,8 +190,8 @@ class _ScenarioCard extends StatelessWidget {
                     index: index,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 4),
-                      child: Icon(Icons.drag_indicator,
-                          color: fgMuted, size: 22),
+                      child:
+                          Icon(Icons.drag_indicator, color: fgMuted, size: 22),
                     ),
                   ),
                   IconAvatar(icon: scenario.icon),
@@ -217,9 +217,7 @@ class _ScenarioCard extends StatelessWidget {
                                     : l10n.homeActionsCount(
                                         scenario.actions.length),
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: fgMuted),
+                                style: TextStyle(fontSize: 12, color: fgMuted),
                               ),
                             ),
                           ],
@@ -247,8 +245,7 @@ class _ScenarioCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(l10n.showOnHome,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, color: fg)),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: fg)),
                   Switch(
                       value: scenario.showInHome,
                       onChanged: onShowInHomeChanged),

@@ -306,8 +306,7 @@ void main() {
     await fake.server.close();
   });
 
-  test('set_output_configuration omits initial_state for Last State',
-      () async {
+  test('set_output_configuration omits initial_state for Last State', () async {
     final fake = await _FakeDevice.start();
     final store = ModuleStore.forTesting();
     final module = DeviceModule(
@@ -422,8 +421,7 @@ void main() {
     await fake.server.close();
   });
 
-  test(
-      'unsolicited output/input device events update the module on screen',
+  test('unsolicited output/input device events update the module on screen',
       () async {
     final fake = await _FakeDevice.start();
     final store = ModuleStore.forTesting();

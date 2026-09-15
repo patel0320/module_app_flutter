@@ -76,15 +76,16 @@ void main() {
         // Dimmer firmware does not follow the relay >= 7.12 release gate; a
         // "1.20"-style version would have pinned it to legacy AT and forced
         // AT+BRIGH instead of the 5008 set_dimmer_level command.
-        final d = selector.decide(module(firmware: '1.20 Build :9', type: type));
+        final d =
+            selector.decide(module(firmware: '1.20 Build :9', type: type));
         expect(d.pinned, isFalse,
             reason: 'dimmers must stay probeable so the 5008 Control API is '
                 'tried first');
       });
 
       test('$type: advertisement selects the Control API without pinning', () {
-        final d = selector.decide(
-            module(firmware: '1.20', type: type, advertised: true));
+        final d = selector
+            .decide(module(firmware: '1.20', type: type, advertised: true));
         expect(d.kind, ModuleCommandProtocolKind.controlApi);
         expect(d.pinned, isFalse);
       });

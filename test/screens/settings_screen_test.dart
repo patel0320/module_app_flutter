@@ -7,7 +7,8 @@ import 'package:soleux_device_manager/screens/settings_screen.dart';
 import 'package:soleux_device_manager/services/settings_store.dart';
 
 void main() {
-  testWidgets('Settings screen renders the command protocol picker', (tester) async {
+  testWidgets('Settings screen renders the command protocol picker',
+      (tester) async {
     // Tall viewport so the whole Settings ListView (incl. the below-the-fold
     // Command protocol section) is built.
     tester.view.physicalSize = const Size(800, 2400);

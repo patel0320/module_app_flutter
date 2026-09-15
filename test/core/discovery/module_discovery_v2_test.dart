@@ -10,8 +10,8 @@ void main() {
   group('discovery constants (v2)', () {
     test('request GUID and protocol version match the doc', () {
       expect(ModuleDiscovery.discoveryPort, 8000);
-      expect(ModuleDiscovery.requestGuid,
-          '8C93472D-2EF0-4B82-BE96-4FBBED57783F');
+      expect(
+          ModuleDiscovery.requestGuid, '8C93472D-2EF0-4B82-BE96-4FBBED57783F');
       expect(ModuleDiscovery.requestVersion, '2.0');
     });
   });
@@ -23,8 +23,8 @@ void main() {
       expect(decoded['VER'], '2.0');
       expect(decoded['PORT'], 8001);
       expect(decoded['CLIENT'], isNotEmpty);
-      expect(decoded['WANT'], containsAll(['MAC', 'API_PORT',
-          'HEARTBEAT_PORT', 'API_VER']));
+      expect(decoded['WANT'],
+          containsAll(['MAC', 'API_PORT', 'HEARTBEAT_PORT', 'API_VER']));
     });
 
     test('PORT is an integer, not a string', () {
@@ -83,8 +83,8 @@ void main() {
           '10.0.0.1')!;
       expect(module.advertisedHeartbeatPort, isNull);
       expect(module.heartbeatPort, 5007);
-      expect(module.heartbeatPort,
-          SoleuxConstants.heartbeatPort(module.tcpPort));
+      expect(
+          module.heartbeatPort, SoleuxConstants.heartbeatPort(module.tcpPort));
     });
 
     test('uses an advertised HEARTBEAT_PORT that differs from the default', () {
@@ -185,7 +185,8 @@ void main() {
           'GUID:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91\r\nPORT:5005\r\n',
           '10.0.0.2')!;
       expect(a.dedupeKey, isNot(b.dedupeKey));
-      expect(a.dedupeKey, 'ip:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91@10.0.0.1:5005');
+      expect(
+          a.dedupeKey, 'ip:C47A5A88-03E8-4EC0-9F2D-67A6C43F0D91@10.0.0.1:5005');
     });
   });
 }

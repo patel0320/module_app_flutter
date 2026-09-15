@@ -142,11 +142,14 @@ abstract class SoleuxControlApiService {
     String? source,
     Duration timeout = const Duration(seconds: 5),
   }) =>
-      request(SoleuxControlApiActions.setVirtualInputState, {
-        'channel': channel,
-        'state': state,
-        if (source != null) 'source': source,
-      }, timeout: timeout);
+      request(
+          SoleuxControlApiActions.setVirtualInputState,
+          {
+            'channel': channel,
+            'state': state,
+            if (source != null) 'source': source,
+          },
+          timeout: timeout);
 
   /// `set_mapping` - input->output mapping (code 0..5).
   Future<SoleuxJsonResponse> setMapping(int input, int output, int code) =>

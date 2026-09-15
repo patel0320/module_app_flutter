@@ -111,7 +111,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('HTTP mode refreshes and controls a pinned Control API module', () async {
+  test('HTTP mode refreshes and controls a pinned Control API module',
+      () async {
     final fake = await _FakeHttpDevice.start();
     final store = ModuleStore.forTesting();
     final module = DeviceModule(
@@ -164,10 +165,12 @@ void main() {
     await fake.server.close();
   });
 
-  test('pollAll() pings a Control API device over HTTP when configured', () async {
+  test('pollAll() pings a Control API device over HTTP when configured',
+      () async {
     final fake = await _FakeHttpDevice.start();
     final store = ModuleStore.forTesting();
-    await store.init(); // load (and seed) persistence before replacing the fleet
+    await store
+        .init(); // load (and seed) persistence before replacing the fleet
     final module = DeviceModule(
       id: 'm-poll',
       name: 'Relays',

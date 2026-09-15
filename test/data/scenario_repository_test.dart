@@ -36,7 +36,8 @@ void main() {
 
   test('background color persists and round-trips through storage', () async {
     final color = kScenarioBackgroundPresets.first;
-    await repo().then((r) => r.saveAll([scenario('s1', backgroundColor: color)]));
+    await repo()
+        .then((r) => r.saveAll([scenario('s1', backgroundColor: color)]));
     final fetched = (await repo()).fetch().single;
     expect(fetched.id, 's1');
     expect(fetched.backgroundColor, color);
@@ -44,7 +45,8 @@ void main() {
 
   test('custom background color round-trips exactly', () async {
     const color = Color(0xFF28455F);
-    await repo().then((r) => r.saveAll([scenario('s1', backgroundColor: color)]));
+    await repo()
+        .then((r) => r.saveAll([scenario('s1', backgroundColor: color)]));
     final fetched = (await repo()).fetch().single;
     expect(fetched.backgroundColor, color);
   });

@@ -131,14 +131,16 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 1800));
 
     expect(store.byId('relay-2')!.status, ConnectionStatus.offline);
-    expect(states,
-        containsAll([HeartbeatAvailability.online,
-            HeartbeatAvailability.offline]));
+    expect(
+        states,
+        containsAll(
+            [HeartbeatAvailability.online, HeartbeatAvailability.offline]));
 
     service.stop();
   });
 
-  test('a module stays online while pongs succeed, even if other layers '
+  test(
+      'a module stays online while pongs succeed, even if other layers '
       'flip it offline', () async {
     final (server, serverPort) =
         await startPongServer(tcpPort: 5005, name: 'Relay');

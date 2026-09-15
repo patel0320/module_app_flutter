@@ -31,8 +31,7 @@ import '../../core/soleux/soleux_json_protocol.dart';
 import 'module_tcp_service.dart';
 import 'soleux_control_api_service.dart';
 
-export '../../core/soleux/soleux_json_protocol.dart'
-    show SoleuxJsonFraming;
+export '../../core/soleux/soleux_json_protocol.dart' show SoleuxJsonFraming;
 
 /// One in-flight JSON request waiting for its response.
 class _JsonPending {
@@ -233,7 +232,8 @@ class SoleuxJsonService extends SoleuxControlApiService {
   Future<void> _sendKeepAlive() async {
     if (!_connection.isConnected) return;
     try {
-      final response = await getDeviceState(timeout: const Duration(seconds: 5));
+      final response =
+          await getDeviceState(timeout: const Duration(seconds: 5));
       if (response.ok && response.result != null) {
         _deviceState.add(response.result!);
       }

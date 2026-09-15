@@ -15,7 +15,8 @@ Future<(RawDatagramSocket, int)> startPongServer({
     final datagram = socket.receive();
     if (datagram == null) return;
     try {
-      final nonce = (jsonDecode(utf8.decode(datagram.data))['nonce'] as String?)!;
+      final nonce =
+          (jsonDecode(utf8.decode(datagram.data))['nonce'] as String?)!;
       socket.send(
           utf8.encode(jsonEncode({
             'soleux_heartbeat': 1,
@@ -32,9 +33,11 @@ Future<(RawDatagramSocket, int)> startPongServer({
 }
 
 void main() {
-  test('commit-triggered refreshTargets during ping-await causes duplicate '
+  test(
+      'commit-triggered refreshTargets during ping-await causes duplicate '
       'rapid pings / missed-cycle accumulation', () async {
-    final (server, serverPort) = await startPongServer(tcpPort: 5005, name: 'R');
+    final (server, serverPort) =
+        await startPongServer(tcpPort: 5005, name: 'R');
     final clientTcpPort = serverPort - 2;
     var pingCount = 0;
 
