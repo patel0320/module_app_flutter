@@ -1,11 +1,10 @@
 // lib/widgets/dimmer_controls_section.dart
 //
-// Live dimming controls shared by the AC and DC dimmer screens: a master "all
-// outputs" brightness slider, one controllable card per channel and the PWM
-// drive-frequency selector. Every control is mapped to the Control API
+// Live dimming controls shared by the AC and DC dimmer screens: one
+// controllable card per channel and the PWM drive-frequency selector. Every
+// control is mapped to the Control API
 // (doc/Soleux_Control_API_Command_Specification_v0.3.md):
 //
-//   - master slider end      -> set_multiple_dimmer_levels
 //   - per-channel slider end -> set_dimmer_level
 //   - off shortcut           -> set_output_state(state: false)
 //   - on shortcut            -> set_output_state(state: true)
@@ -45,10 +44,6 @@ class DimmerControlsSection extends StatefulWidget {
 }
 
 class _DimmerControlsSectionState extends State<DimmerControlsSection> {
-  /// Master slider governing value; null lets it track the highest enabled
-  /// channel brightness until the user drags it.
-  int? _master;
-
   /// Last `get_dimmer_frequency` result (null when unsupported/unreachable).
   DimmerFrequencyInfo? _frequency;
 
@@ -144,33 +139,12 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
     }
   }
 
-  Future<void> _setMasterLevel(DeviceModule module, int value) async {
-    final targets = [
-      for (var i = 0; i < module.channels.length; i++)
-        if (module.channels[i].enabled) {'channel': i, 'level': value},
-    ];
-    if (targets.isEmpty) return;
-    await ModuleStatusService.shared
-        .setMultipleDimmerLevels(module.id, targets);
-    if (mounted) setState(() => _master = null);
-  }
-
   Future<void> _setFrequency(int frequencyHz) async {
     await ModuleStatusService.shared
         .setDimmerFrequency(widget.module.id, frequencyHz);
     final frequency =
         await ModuleStatusService.shared.getDimmerFrequency(widget.module.id);
     if (mounted) setState(() => _frequency = frequency);
-  }
-
-  int _defaultMaster(DeviceModule module) {
-    var max = 0;
-    for (final channel in module.channels) {
-      if (channel.enabled && channel.brightness > max) {
-        max = channel.brightness;
-      }
-    }
-    return max;
   }
 
   @override
@@ -209,62 +183,6 @@ class _DimmerControlsSectionState extends State<DimmerControlsSection> {
           ],
         );
       },
-    );
-  }
-}
-
-/// Coarse "all outputs to X%" slider backed by `set_multiple_dimmer_levels`.
-class _MasterBrightnessCard extends StatelessWidget {
-  const _MasterBrightnessCard({
-    required this.value,
-    required this.onChanged,
-    required this.onChangeEnd,
-  });
-
-  final int value;
-  final ValueChanged<int> onChanged;
-  final ValueChanged<int> onChangeEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 8, 4),
-        child: Row(
-          children: [
-            const Icon(Icons.layers_outlined),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l10n.dimmerAllOutputs,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.cwTurnOff,
-              icon: const Icon(Icons.brightness_low),
-              onPressed: () => onChangeEnd(0),
-            ),
-            Expanded(
-              child: Slider(
-                value: value.toDouble(),
-                min: 0,
-                max: 100,
-                divisions: 100,
-                label: '$value%',
-                onChanged: (v) => onChanged(v.round()),
-                onChangeEnd: (v) => onChangeEnd(v.round()),
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.cwTurnOn,
-              icon: const Icon(Icons.brightness_high),
-              onPressed: () => onChangeEnd(100),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

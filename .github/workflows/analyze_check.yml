@@ -1,0 +1,49 @@
+# Static-analysis gate that runs on every push/PR touching Dart code.
+# Mirrors the "Static analysis" step used in build_deploy.yml (`analyze` job),
+# so analyzer failures are caught immediately instead of at release time.
+
+name: Analyze Check
+
+on:
+  push:
+    paths:
+      - 'lib/**/*.dart'
+      - 'test/**/*.dart'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+  pull_request:
+    paths:
+      - 'lib/**/*.dart'
+      - 'test/**/*.dart'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'analysis_options.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analyze-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Flutter Analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: analyze-flutter-${{ hashFiles('pubspec.lock') }}
+
+      - name: Restore pub dependencies
+        run: flutter pub get
+
+      - name: Static analysis (fatal on issues)
+        run: flutter analyze --fatal-infos --fatal-warnings

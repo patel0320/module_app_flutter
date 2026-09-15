@@ -113,16 +113,15 @@ class ScenarioRunner {
     }
 
     if (action.isInputAction) {
-      return _runInputAction(
-          description, action, module, inputIndex, service);
+      return _runInputAction(description, action, module, inputIndex, service);
     }
 
     final channel = module.channels[channelIndex];
 
     try {
       final bool ok = switch ((action.isDimmerAction, action.turnOn)) {
-        (true, _) =>
-          await service.setDimmerLevel(module.id, channelIndex, action.brightnessPct),
+        (true, _) => await service.setDimmerLevel(
+            module.id, channelIndex, action.brightnessPct),
         (false, true) => await service.turnOnOutput(module.id, channelIndex),
         (false, false) => await service.turnOffOutput(module.id, channelIndex),
       };
@@ -160,15 +159,13 @@ class ScenarioRunner {
           await service.setVirtualInputState(module.id, index, true),
         InputActionState.off =>
           await service.setVirtualInputState(module.id, index, false),
-        InputActionState.pulse => await _pulseInput(
-            service, module.id, index),
+        InputActionState.pulse => await _pulseInput(service, module.id, index),
       };
       return ScenarioActionResult(
         description: description,
         success: ok,
-        detail: ok
-            ? 'ACK on ${input.name}'
-            : 'Command rejected by ${module.name}',
+        detail:
+            ok ? 'ACK on ${input.name}' : 'Command rejected by ${module.name}',
       );
     } catch (e, st) {
       debugPrint('ScenarioRunner: action "$description" failed: $e\n$st');

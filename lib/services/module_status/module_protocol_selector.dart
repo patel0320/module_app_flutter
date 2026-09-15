@@ -78,8 +78,7 @@ class ModuleProtocolSelector {
   /// A lighting dimmer module (DC PWM or AC phase-cut) - the
   /// [SoleuxDeviceFamily.dimmer] family.
   bool _isDimmerFamily(DeviceModule module) =>
-      module.type == ModuleType.dimmerDc ||
-      module.type == ModuleType.dimmerAc;
+      module.type == ModuleType.dimmerDc || module.type == ModuleType.dimmerAc;
 
   /// Distinguishes between a pinned controlApi / legacyAt for a *known*
   /// firmware version. Returns null when the firmware is unknown or

@@ -300,8 +300,7 @@ class ModuleDiscovery {
     final targets = await _broadcastTargets(timeout);
     final request = buildRequestPayload(localTcpPort);
     final payload = utf8.encode(request);
-    NetworkDebugLogger.outbound(
-        'udp', 'broadcast:$discoveryPort', request);
+    NetworkDebugLogger.outbound('udp', 'broadcast:$discoveryPort', request);
 
     for (final target in targets) {
       for (var i = 0; i < _broadcastRepetitions; i++) {

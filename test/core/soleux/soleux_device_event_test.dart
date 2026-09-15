@@ -43,16 +43,15 @@ void main() {
         'energy_changed': SoleuxDeviceEventType.energyChanged,
         'schedule_executed': SoleuxDeviceEventType.scheduleExecuted,
         'automation_executed': SoleuxDeviceEventType.automationExecuted,
-        'sequence_state_changed':
-            SoleuxDeviceEventType.sequenceStateChanged,
+        'sequence_state_changed': SoleuxDeviceEventType.sequenceStateChanged,
         'operation_progress': SoleuxDeviceEventType.operationProgress,
         'device_fault': SoleuxDeviceEventType.deviceFault,
         'configuration_changed': SoleuxDeviceEventType.configurationChanged,
         'device_rebooting': SoleuxDeviceEventType.deviceRebooting,
       };
       for (final entry in samples.entries) {
-        final event = SoleuxDeviceEvent.maybeParse(
-            '{"event":"${entry.key}","data":{}}');
+        final event =
+            SoleuxDeviceEvent.maybeParse('{"event":"${entry.key}","data":{}}');
         expect(event, isNotNull, reason: entry.key);
         expect(event!.type, entry.value);
       }
@@ -83,7 +82,8 @@ void main() {
     });
 
     test('missing data degrades to an empty map', () {
-      final event = SoleuxDeviceEvent.maybeParse('{"event":"temperature_changed"}');
+      final event =
+          SoleuxDeviceEvent.maybeParse('{"event":"temperature_changed"}');
       expect(event, isNotNull);
       expect(event!.data, isEmpty);
       expect(event.timestamp, isNull);

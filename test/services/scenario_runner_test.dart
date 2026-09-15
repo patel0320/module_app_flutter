@@ -1,4 +1,4 @@
-﻿// Tests for the scenario runner's action resolution and tracing path.
+// Tests for the scenario runner's action resolution and tracing path.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,10 +36,10 @@ void main() {
         ],
         inputs: [
           PhysicalInput(
-            id: 'm1i1', name: 'Switch 1', mode: InputMode.maintained),
+              id: 'm1i1', name: 'Switch 1', mode: InputMode.maintained),
           PhysicalInput(id: 'm1i2', name: 'Switch 2', mode: InputMode.pulse),
           PhysicalInput(
-            id: 'm1i3', name: 'Switch 3', mode: InputMode.momentary),
+              id: 'm1i3', name: 'Switch 3', mode: InputMode.momentary),
         ],
       ),
     ]);
@@ -151,7 +151,8 @@ void main() {
 
       expect(result.actions, hasLength(1));
       expect(result.actions.first.success, isFalse);
-      expect(result.actions.first.detail, contains('Input "No Such Input" not found'));
+      expect(result.actions.first.detail,
+          contains('Input "No Such Input" not found'));
     });
   });
 }

@@ -97,7 +97,8 @@ abstract final class BackgroundStatusWorker {
       // activity context is null there (headless process), which would throw
       // in requestNotificationsPermission. Permission was already granted on
       // the first foreground launch; only channel setup + show are needed.
-      await LocalNotificationService.shared.initialize(requestPermissions: false);
+      await LocalNotificationService.shared
+          .initialize(requestPermissions: false);
       await StatusLogStore.shared.init();
 
       await ModuleStore.shared.init();

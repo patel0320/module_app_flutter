@@ -626,11 +626,10 @@ class DeviceModule {
           for (final i in json['inputs'] as List? ?? const [])
             PhysicalInput.fromJson((i as Map).cast<String, Object?>()),
         ],
-      )
-    ..systemInfo = json['systemInfo'] is Map
-        ? DeviceSystemInfo.fromJson(
-            (json['systemInfo'] as Map).cast<String, dynamic>())
-        : null;
+      )..systemInfo = json['systemInfo'] is Map
+          ? DeviceSystemInfo.fromJson(
+              (json['systemInfo'] as Map).cast<String, dynamic>())
+          : null;
 }
 
 /// Desired state of an input action in a scenario: drive the virtual input

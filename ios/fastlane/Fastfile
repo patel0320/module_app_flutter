@@ -1,0 +1,143 @@
+# Fastfile for iOS build + TestFlight deploy.
+#
+# Signing assets are supplied as base64 secrets decoded to disk by the
+# workflow: a Distribution certificate (.p12) and a provisioning profile
+# (.mobileprovision). This lane imports/installs them, builds the signed IPA
+# and uploads it to TestFlight — no match repo / certificate server needed.
+#
+# Required env (set from CI secrets in .github/workflows/build_deploy.yml):
+#   IOS_CERT_P12_PATH          Path to the decoded signing certificate .p12
+#   IOS_CERT_P12_PASSWORD      Password of the .p12
+#   IOS_MOBILEPROVISION_PATH   Path to the decoded .mobileprovision
+#   IOS_APPLE_BUNDLE_ID        iOS bundle identifier (com.soleux.sdm)
+#   APP_ENV                    Build environment (dev/staging/prod dart-define)
+#
+# TestFlight upload auth — one of the following:
+#   App Store Connect API key (preferred):
+#     IOS_MATCH_CERT_API_KEY        Base64 of the .p8 private key content
+#     IOS_MATCH_CERT_API_KEY_ID     App Store Connect API key ID
+#     IOS_MATCH_CERT_ISSUER_ID      App Store Connect API key issuer ID
+#   or username + app-specific password:
+#     FASTLANE_USER / FASTLANE_PASSWORD / IOS_APPLE_APP_SPECIFIC_PASSWORD
+
+default_platform(:ios)
+
+require "xcodeproj"
+require "shellwords"
+
+# Directory of this Fastfile = <repo>/ios/fastlane, so <repo> is one level up.
+FASTLANE_DIR = __dir__
+FLUTTER_ROOT = File.expand_path("..", FASTLANE_DIR)
+REPO_ROOT = File.expand_path("../..", FASTLANE_DIR)
+
+# App Store Connect API key object, or nil when the secret is not configured so
+# upload_to_testflight falls back to username / app-specific-password auth.
+def asc_api_key
+  return nil if ENV["IOS_MATCH_CERT_API_KEY_ID"].to_s.empty?
+
+  app_store_connect_api_key(
+    key_id: ENV["IOS_MATCH_CERT_API_KEY_ID"],
+    issuer_id: ENV["IOS_MATCH_CERT_ISSUER_ID"],
+    key_content: ENV["IOS_MATCH_CERT_API_KEY"],
+    is_key_content_base64: true,
+    duration: 1200
+  )
+end
+
+desc "Build a signed IPA and upload it to TestFlight"
+lane :beta do
+  # Dedicated signing keychain created by the workflow (non-empty password).
+  # Resolve to an absolute path: the workflow creates it at the repo root
+  # while this lane runs from ios/, and relying on a relative name would make
+  # the imported certificate invisible to codesign (Xcode build search).
+  keychain_name = ENV["IOS_KEYCHAIN_NAME"]
+  keychain_password = ENV["IOS_KEYCHAIN_PASSWORD"]
+  keychain_path = File.expand_path(keychain_name, REPO_ROOT)
+
+  sh("security", "create-keychain", "-p", keychain_password, keychain_path) unless File.exist?(keychain_path)
+
+  # Make it the default keychain and first in the user search list, then
+  # allow codesign to use the imported key without a GUI prompt (headless CI).
+  sh("security", "default-keychain", "-s", keychain_path)
+  sh("security", "list-keychains", "-d", "user", "-s",
+     keychain_path, File.expand_path("~/Library/Keychains/login.keychain-db"))
+  sh("security", "unlock-keychain", "-p", keychain_password, keychain_path)
+  sh("security", "set-keychain-settings", "-t", "3600", "-u", keychain_path)
+
+  # Import the Distribution certificate + private key into the signing keychain.
+  import_certificate(
+    certificate_path: ENV["IOS_CERT_P12_PATH"],
+    certificate_password: ENV["IOS_CERT_P12_PASSWORD"],
+    keychain_name: keychain_path,
+    keychain_password: keychain_password
+  )
+
+  sh("security", "unlock-keychain", "-p", keychain_password, keychain_path)
+  sh("security", "set-key-partition-list", "-S", "apple-tool:,apple:", "-s",
+     "-k", keychain_password, keychain_path)
+
+  # Diagnostic: confirm the Distribution identity + private key are visible.
+  # xcodebuild's code-signing errors are thrown when the identity, team or
+  # provisioning profile don't line up, so pin the build to the exact
+  # DISTRIBUTION certificate common name that we actually imported. A
+  # "iPhone Developer" identity (development cert) cannot sign an App Store
+  # distribution profile, so we must skip it.
+  identity_output = sh("security", "find-identity", "-v", "-p", "codesigning", keychain_path)
+  identities = identity_output.scan(/"([^"]+)"/).flatten.map(&:strip)
+  codesign_identity = identities.find { |name| name.include?("Distribution") }
+  if codesign_identity.to_s.empty?
+    UI.user_error!("No iOS Distribution codesigning identity was found in #{keychain_path}. Available identities: #{identities.empty? ? 'none' : identities.join(', ')}. The .p12 must contain an 'Apple Distribution' / 'iPhone Distribution' certificate WITH its private key - a Development certificate cannot sign an App Store distribution profile.")
+  end
+  UI.message("Using codesign identity: #{codesign_identity}")
+
+  # Install the App Store distribution provisioning profile.
+  install_provisioning_profile(path: ENV["IOS_MOBILEPROVISION_PATH"])
+
+  # The Runner target has no Development Team / signing wired up, so Flutter's
+  # archive step would fall back to automatic signing and fail with
+  # "No profiles ... App Development provisioning profiles". Pin the build to
+  # the Distribution certificate + App Store profile we just installed.
+  # Team ID and profile name are read from the .mobileprovision itself, so no
+  # extra secrets are required.
+  profile_plist = `security cms -D -i #{ENV["IOS_MOBILEPROVISION_PATH"].shellescape}`
+  team_id = ENV["IOS_APPLE_TEAM_ID"]
+  if team_id.to_s.empty?
+    team_id = profile_plist[/<key>TeamIdentifier<\/key>\s*<array>\s*<string>([^<]+)<\/string>/m, 1]
+  end
+  profile_name = profile_plist[/<key>Name<\/key>\s*<string>([^<]+)<\/string>/, 1]
+
+  project = Xcodeproj::Project.open(File.expand_path("../Runner.xcodeproj", FASTLANE_DIR))
+  runner = project.targets.find { |t| t.name == "Runner" }
+  runner.build_configurations.each do |config|
+    next unless %w[Release Profile].include?(config.name)
+
+    config.build_settings["CODE_SIGN_STYLE"] = "Manual"
+    config.build_settings["DEVELOPMENT_TEAM"] = team_id
+    config.build_settings["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = codesign_identity
+    config.build_settings["PROVISIONING_PROFILE_SPECIFIER"] = profile_name
+  end
+  project.save
+
+  # flutter build ipa must run from the project root (not from ios/).
+  # --export-method=app-store signs for App Store / TestFlight (on Xcode 15.4+
+  # Flutter transparently maps this to the new app-store-connect method).
+  sh("cd #{FLUTTER_ROOT} && flutter build ipa --release " \
+     "--dart-define=APP_ENV=#{ENV["APP_ENV"]} " \
+     "--export-method=app-store")
+
+  # Locate the exported IPA anywhere under build/ios (filename/layout can vary
+  # by Flutter/Xcode version), and list what was produced if none is found.
+  ipa_glob = Dir[File.join(REPO_ROOT, "build", "ios", "**", "*.ipa")]
+  UI.message("IPA candidates: #{ipa_glob.inspect}")
+  if ipa_glob.empty?
+    files = Dir[File.join(REPO_ROOT, "build", "**", "*")].select { |p| File.file?(p) }
+    UI.user_error!("No .ipa was produced under #{File.join(REPO_ROOT, 'build')}. Files found: #{files.empty? ? 'none' : files.join(' | ')}")
+  end
+
+  upload_to_testflight(
+    api_key: asc_api_key,
+    app_identifier: ENV["IOS_APPLE_BUNDLE_ID"],
+    ipa: ipa_glob.first,
+    skip_waiting_for_build_processing: false
+  )
+end

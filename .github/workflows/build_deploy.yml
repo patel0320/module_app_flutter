@@ -1,7 +1,7 @@
 # ============================================================================
 # Flutter Cross-Platform Build & Deploy Pipeline
 # Targets: Android (APK/AAB → Google Play), iOS (IPA → TestFlight/App Store),
-#          Windows (EXE/MSIX → GitHub Releases)
+#          Windows (EXE/MSIX → GitHub Releases), macOS (.app → GitHub Releases)
 #
 # Triggers:
 #   - Manual via GitHub Actions "Run workflow" (workflow_dispatch)
@@ -16,17 +16,17 @@
 # ANDROID_SERVICE_ACCOUNT_JSON Base64 of the Google Play service-account JSON
 # PLAY_PACKAGE_NAME          Android applicationId (com.soleux.sdm)
 # FIREBASE_GOOGLE_SERVICES    (optional) Base64 of android google-services.json
-# IOS_MATCH_GIT_URL           Git URL of the match certificates repo
-# IOS_MATCH_PASSWORD          match encryption password
-# IOS_MATCH_CERT_API_KEY      (optional, if using fastlane.app credentials)
-# IOS_MATCH_CERT_API_KEY_ID   (optional)
-# IOS_MATCH_CERT_ISSUER_ID    (optional)
-# IOS_FASTLANE_USER           (optional) App Store Connect username
-# IOS_APPLE_APP_SPECIFIC_PASSWORD (optional)
+# IOS_CERT_P12_BASE64        Base64 of the Distribution signing certificate .p12
+# IOS_CERT_P12_PASSWORD      Password of the signing certificate .p12
+# IOS_MOBILEPROVISION_BASE64 Base64 of the App Store distribution .mobileprovision
+# IOS_MATCH_CERT_API_KEY      (optional) Base64 of the App Store Connect .p8 key
+# IOS_MATCH_CERT_API_KEY_ID   (optional) App Store Connect API key ID
+# IOS_MATCH_CERT_ISSUER_ID    (optional) App Store Connect API key issuer ID
+# IOS_FASTLANE_USER           (optional, fallback auth) App Store Connect username
+# IOS_APPLE_APP_SPECIFIC_PASSWORD (optional, fallback auth) app-specific password
 # IOS_APPLE_TEAM_ID           (optional) Your Developer Team ID
 # IOS_APPLE_BUNDLE_ID         iOS bundle identifier (com.soleux.sdm)
 # IOS_GOOGLE_SERVICE_PLIST    (optional) Base64 of iOS GoogleService-Info.plist
-# APPSPOT_APPLE_ID            (optional) when not using match (password auth)
 # GH_RELEASE_TOKEN            (optional) PAT for Release upload (default: GITHUB_TOKEN)
 # ============================================================================
 
@@ -53,7 +53,12 @@ on:
           - android
           - ios
           - windows
+          - macos
           - all
+      release_tag:
+        description: 'GitHub release tag to attach build artifacts (e.g. v1.0.0). Required to upload to a release on manual runs; on tag pushes the trigger tag is used automatically.'
+        required: false
+        type: string
       deploy_android:
         description: 'Deploy AAB to Google Play (Internal testing)'
         required: false
@@ -78,10 +83,13 @@ concurrency:
 
 env:
   APP_ENV: ${{ github.event.inputs.environment || 'prod' }}
+  # Tag trigger: github.ref_name is the tag. Manual dispatch: the release_tag input.
+  RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || '' }}
   # Checks run unconditionally (before build selection).
   RUN_ANDROID: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') || startsWith(github.ref, 'refs/tags/v') }}
   RUN_IOS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios') || github.runner.os == 'macOS' }}
   RUN_WINDOWS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows') || github.runner.os == 'Windows' }}
+  RUN_MACOS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos') || github.runner.os == 'macOS' }}
 
 jobs:
   # --------------------------------------------------------------------------
@@ -209,14 +217,6 @@ jobs:
 
       - name: Enable macOS Desktop support
         run: flutter config --enable-macos-desktop
-
-      - name: Install CocoaPods (Homebrew, shadow system pod)
-        run: |
-          brew install cocoapods
-          brew link --overwrite cocoapods 2>/dev/null || true
-          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
-          which -a pod
-          pod --version
 
       - name: Restore pub dependencies
         run: flutter pub get
@@ -346,9 +346,10 @@ jobs:
 
       # Optional: attach binaries to the release that triggered the tag.
       - name: Upload Android assets to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
@@ -366,14 +367,21 @@ jobs:
           whatsNewDirectory: distribution/whatsnew/  # optional release notes dir
 
   # --------------------------------------------------------------------------
-  # 4. iOS build: signed IPA via fastlane + match, deploy to TestFlight
-  #    (requires a macOS runner; uses the runner's default selected Xcode)
+  # 4. iOS: build signed IPA using a base64-encoded Distribution certificate
+  #    (.p12) + provisioning profile (.mobileprovision), deploy to TestFlight.
+  #    Requires a macOS runner.
+  #    * deploy_ios=true or a v* tag -> fastlane `beta` lane signs + uploads.
+  #    * otherwise -> unsigned IPA produced as an artifact only.
   # --------------------------------------------------------------------------
   ios:
     name: iOS Build & Deploy
     needs: analyze
     runs-on: macos-latest
+    # Only run when iOS is requested (dispatch) or on a tag release.
+    if: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || github.event.inputs.deploy_ios == 'true')) || startsWith(github.ref, 'refs/tags/v') }}
     env:
+      # True when we must produce a signed build for TestFlight.
+      SHOULD_DEPLOY: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
       IOS_GOOGLE_SERVICE_PLIST: ${{ secrets.IOS_GOOGLE_SERVICE_PLIST }}
     steps:
       - name: Checkout
@@ -386,6 +394,27 @@ jobs:
           cache: true
           cache-key: flutter-${{ hashFiles('pubspec.lock') }}
 
+      - name: Setup Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+
+      # Hosted macOS runners ship a broken system CocoaPods (system Ruby 2.6)
+      # at /usr/local/bin/pod, which precedes Homebrew /opt/homebrew/bin in the
+      # default GITHUB_PATH. Flutter then probes the broken pod and prints
+      # "CocoaPods is installed but broken. Skipping pod install". Homebrew
+      # installs a self-contained CocoaPods (own Ruby); we prepend its bin dir
+      # so that working `pod` shadows the broken system one.
+      - name: Install CocoaPods (Homebrew, shadow system pod)
+        run: |
+          brew install cocoapods
+          brew link --overwrite cocoapods 2>/dev/null || true
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          which -a pod
+          pod --version
+
       - name: Restore pub dependencies
         run: flutter pub get
 
@@ -394,43 +423,71 @@ jobs:
           dart run build_runner build --delete-conflicting-outputs
           flutter gen-l10n
 
+      # Optional: inject Firebase iOS config from secret (base64).
       - name: Recreate GoogleService-Info.plist
         if: ${{ env.IOS_GOOGLE_SERVICE_PLIST != '' }}
         run: |
           echo "${{ env.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > ios/Runner/GoogleService-Info.plist
 
-      # fastlane match pulls signing certs + provisioning profiles from the
-      # certs repo. Provide MATCH_PASSWORD to decrypt. Only needed for signed
-      # deploys (TestFlight / App Store) — unsigned builds need no certificates.
-      - name: Sync signing certs & profiles via match
-        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
-        run: |
-          cd ios
-          bundle exec fastlane match development --readonly true \
-            --git_url "${{ secrets.IOS_MATCH_GIT_URL }}" \
-            --api_key_path /tmp/match_api_key.json
-
-      - name: Build unsigned IPA (no code signing) for artifact-only runs
-        run: flutter build ipa --release --no-codesign --dart-define=APP_ENV=${{ env.APP_ENV }}
-
-      # Append the signed IPA build when we intend to deploy to TestFlight.
-      - name: Build + upload signed IPA to TestFlight via fastlane
-        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
+      # Decode the signing certificate (.p12) + distribution provisioning
+      # profile (.mobileprovision) from secrets onto the runner disk.
+      - name: Stage signing certificate + provisioning profile
+        if: ${{ env.SHOULD_DEPLOY == 'true' }}
         env:
-          MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
-          MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
+          IOS_CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          IOS_MOBILEPROVISION_BASE64: ${{ secrets.IOS_MOBILEPROVISION_BASE64 }}
+        run: |
+          mkdir -p "${{ runner.temp }}/signing"
+          echo "$IOS_CERT_P12_BASE64" | base64 --decode > "${{ runner.temp }}/signing/distribution.p12"
+          echo "$IOS_MOBILEPROVISION_BASE64" | base64 --decode > "${{ runner.temp }}/signing/distribution.mobileprovision"
+          echo "Signing material staged at ${{ runner.temp }}/signing"
+
+      # Dedicated signing keychain with a non-empty password. Using the
+      # passwordless login.keychain fails on CI runners with
+      # "security set-key-partition-list ... exit status 1".
+      - name: Create signing keychain
+        if: ${{ env.SHOULD_DEPLOY == 'true' }}
+        run: |
+          set -euo pipefail
+          security create-keychain -p "ci-ios-signing" ios-build.keychain-db || true
+          security default-keychain -s ios-build.keychain-db
+          security unlock-keychain -p "ci-ios-signing" ios-build.keychain-db
+          security set-keychain-settings -t 3600 -u ios-build.keychain-db
+          echo "signing keychain ready"
+
+      # fastlane lane `beta` (ios/fastlane/Fastfile) imports the certificate
+      # into the signing keychain, installs the provisioning profile, builds
+      # the signed IPA and uploads it to TestFlight.
+      - name: Build signed IPA and upload to TestFlight
+        if: ${{ env.SHOULD_DEPLOY == 'true' }}
+        working-directory: ios
+        env:
+          IOS_CERT_P12_PATH: ${{ runner.temp }}/signing/distribution.p12
+          IOS_CERT_P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
+          IOS_MOBILEPROVISION_PATH: ${{ runner.temp }}/signing/distribution.mobileprovision
+          IOS_KEYCHAIN_NAME: ios-build.keychain-db
+          IOS_KEYCHAIN_PASSWORD: ci-ios-signing
+          IOS_APPLE_BUNDLE_ID: ${{ secrets.IOS_APPLE_BUNDLE_ID }}
+          APP_ENV: ${{ env.APP_ENV }}
+          # Preferred: App Store Connect API key. IOS_MATCH_CERT_API_KEY is the
+          # base64-encoded .p8 private key content.
+          IOS_MATCH_CERT_API_KEY: ${{ secrets.IOS_MATCH_CERT_API_KEY }}
+          IOS_MATCH_CERT_API_KEY_ID: ${{ secrets.IOS_MATCH_CERT_API_KEY_ID }}
+          IOS_MATCH_CERT_ISSUER_ID: ${{ secrets.IOS_MATCH_CERT_ISSUER_ID }}
+          # Fallback auth (when no API key is configured): App Store Connect
+          # username + app-specific password.
           FASTLANE_USER: ${{ secrets.IOS_FASTLANE_USER }}
           FASTLANE_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.IOS_APPLE_APP_SPECIFIC_PASSWORD }}
           APP_STORE_CONNECT_TEAM_ID: ${{ secrets.IOS_APPLE_TEAM_ID }}
-          # Keys for match when using fastlane.app API credentials (optional).
-          MATCH_API_KEY: ${{ secrets.IOS_MATCH_CERT_API_KEY }}
-          MATCH_API_KEY_ID: ${{ secrets.IOS_MATCH_CERT_API_KEY_ID }}
-          MATCH_API_ISSUER_ID: ${{ secrets.IOS_MATCH_CERT_ISSUER_ID }}
-          BUNDLE_ID: ${{ secrets.IOS_APPLE_BUNDLE_ID }}
         run: |
-          cd ios
+          bundle install
           bundle exec fastlane beta
+
+      # Unsigned build for artifact-only runs (no deploy requested).
+      - name: Build unsigned IPA (artifact-only)
+        if: ${{ env.SHOULD_DEPLOY != 'true' }}
+        run: flutter build ipa --release --no-codesign --dart-define=APP_ENV=${{ env.APP_ENV }}
 
       - name: Publish iOS IPA artifact
         uses: actions/upload-artifact@v4
@@ -439,10 +496,12 @@ jobs:
           path: |
             build/ios/**/*.ipa
             build/ios/ipa/*.ipa
+          if-no-files-found: warn
 
       - name: Upload iOS IPA to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             build/ios/ipa/*.ipa

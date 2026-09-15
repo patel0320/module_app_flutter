@@ -56,15 +56,15 @@ class SoleuxHttpService extends SoleuxControlApiService {
     required this.baseUri,
     http.Client? httpClient,
     Duration timeout = const Duration(seconds: 5),
-  })  : _client = httpClient ?? _createIoClient(tolerateBadCertificate: baseUri.scheme == 'https'),
+  })  : _client = httpClient ??
+            _createIoClient(tolerateBadCertificate: baseUri.scheme == 'https'),
         _timeout = timeout;
 
   /// Builds an IO client; over HTTPS the peer certificate is accepted so
   /// LAN Relay Modules that ship a self-signed certificate are reachable
   /// (spec: "use https://127.0.0.1/api/v1/command when SSL is enabled").
   static http.Client _createIoClient({required bool tolerateBadCertificate}) {
-    final inner = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 10);
+    final inner = HttpClient()..connectionTimeout = const Duration(seconds: 10);
     if (tolerateBadCertificate) {
       inner.badCertificateCallback = (_, __, ___) => true;
     }
@@ -129,13 +129,13 @@ class SoleuxHttpService extends SoleuxControlApiService {
     try {
       response = await _client
           .post(
-            baseUri,
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: body,
-          )
+        baseUri,
+        headers: const {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: body,
+      )
           .timeout(timeout, onTimeout: () {
         throw TimeoutException(
             'HTTP Control API request $action (id ${request.id}) timed out');
@@ -151,8 +151,7 @@ class SoleuxHttpService extends SoleuxControlApiService {
       rethrow;
     }
 
-    NetworkDebugLogger.inbound(
-        'http', baseUri.toString(), response.body);
+    NetworkDebugLogger.inbound('http', baseUri.toString(), response.body);
 
     // 200 -> the common ok:true envelope with the command result (§"Success
     // response"). Other statuses -> the documented HTTP status mapping
@@ -161,9 +160,7 @@ class SoleuxHttpService extends SoleuxControlApiService {
     try {
       final parsed = SoleuxJsonResponse.parseFromBody(response.body);
       if (response.statusCode == 200) return parsed;
-      return parsed.ok
-          ? parsed
-          : _statusError(response.statusCode, request.id);
+      return parsed.ok ? parsed : _statusError(response.statusCode, request.id);
     } on FormatException {
       return _statusError(response.statusCode, request.id);
     }
@@ -197,6 +194,5 @@ class SoleuxHttpService extends SoleuxControlApiService {
   }
 
   @override
-  String toString() =>
-      'SoleuxHttpService($baseUri, connected: $isConnected)';
+  String toString() => 'SoleuxHttpService($baseUri, connected: $isConnected)';
 }

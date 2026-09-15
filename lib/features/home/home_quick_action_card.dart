@@ -101,16 +101,21 @@ class _ActionChip extends StatelessWidget {
   (IconData, String) get _meta {
     switch (action.type) {
       case ScenarioActionType.setRelay:
-        return (action.targetState == true ? Icons.power : Icons.power_off,
-            action.targetState == true ? 'ON' : 'OFF');
+        return (
+          action.targetState == true ? Icons.power : Icons.power_off,
+          action.targetState == true ? 'ON' : 'OFF'
+        );
       case ScenarioActionType.setBrightness:
         return (Icons.brightness_6, '${action.brightnessPct ?? 0}%');
       case ScenarioActionType.blindMove:
-        return (Icons.blinds, switch (action.blindDir) {
-          BlindDirection.up => 'UP',
-          BlindDirection.down => 'DOWN',
-          _ => 'STOP',
-        });
+        return (
+          Icons.blinds,
+          switch (action.blindDir) {
+            BlindDirection.up => 'UP',
+            BlindDirection.down => 'DOWN',
+            _ => 'STOP',
+          }
+        );
     }
   }
 }

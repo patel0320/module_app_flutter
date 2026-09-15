@@ -90,7 +90,8 @@ class ModuleKeepAlive {
   Future<bool> isIgnoringBatteryOptimizations() async {
     if (!supported) return false;
     try {
-      return await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
+      return await _channel
+              .invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
           false;
     } catch (e, st) {
       debugPrint('ModuleKeepAlive: isIgnoringBatteryOptimizations failed: '

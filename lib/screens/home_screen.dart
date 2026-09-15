@@ -407,8 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_onlineModules.isEmpty)
                       Center(
                         child: Padding(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
                             l10n.homeTempEmpty,
                             textAlign: TextAlign.center,
@@ -424,8 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               bottom: AppSpacing.betweenCards),
                           child: _TemperatureRow(
                               module: module,
-                              onTap: () =>
-                                  openModuleDetail(context, module)),
+                              onTap: () => openModuleDetail(context, module)),
                         ),
                   ],
                 ),
@@ -709,8 +707,7 @@ class _QuickScenarioCard extends StatelessWidget {
                     ),
                   ),
                   _ScenarioAvatar(
-                      icon: scenario.icon,
-                      tint: isSlider ? accent : fg),
+                      icon: scenario.icon, tint: isSlider ? accent : fg),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -731,8 +728,7 @@ class _QuickScenarioCard extends StatelessWidget {
                               ? l10n.homeManualDimming
                               : l10n.homeActionsCount(scenario.actions.length),
                           style: TextStyle(
-                              fontSize: 12,
-                              color: fg.withValues(alpha: 0.6)),
+                              fontSize: 12, color: fg.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -762,8 +758,7 @@ class _QuickScenarioCard extends StatelessWidget {
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: accent,
-                            inactiveTrackColor:
-                                fg.withValues(alpha: 0.14),
+                            inactiveTrackColor: fg.withValues(alpha: 0.14),
                             thumbColor: accent,
                             overlayColor: accent.withValues(alpha: 0.15),
                             valueIndicatorColor: accent,
@@ -929,8 +924,7 @@ class _IconActionButton extends StatelessWidget {
               : null,
           gradient: outlined
               ? null
-              : LinearGradient(
-                  colors: [buttonAccent, buttonAccent]),
+              : LinearGradient(colors: [buttonAccent, buttonAccent]),
         ),
         width: 48,
         height: 48,

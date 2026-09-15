@@ -65,7 +65,8 @@ void main() {
     }
   });
 
-  test('SoleuxPong.parse reads additive Control API and boot fields (§4.2)', () {
+  test('SoleuxPong.parse reads additive Control API and boot fields (§4.2)',
+      () {
     final pong = SoleuxPong.parse(
         '{"soleux_heartbeat":1,"op":"pong","nonce":"n","tcp_port":5005,'
         '"name":"Plant Room Relays","api_port":5008,"api_version":3,'
@@ -145,8 +146,7 @@ void main() {
     final mainPort = main.port;
     // A second socket on a *different* port that forges a pong. The real
     // device would reply from the heartbeat socket; this one does not.
-    final rogue =
-        await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final rogue = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     main.listen((event) {
       if (event != RawSocketEvent.read) return;
       final datagram = main.receive();
@@ -168,7 +168,8 @@ void main() {
       }
     });
 
-    final client = SoleuxHeartbeat(acceptWindow: const Duration(milliseconds: 500));
+    final client =
+        SoleuxHeartbeat(acceptWindow: const Duration(milliseconds: 500));
     // Strict: the forged pong source port != heartbeat port -> ignored.
     final strict = await client.ping('127.0.0.1', mainPort - 2,
         heartbeatPort: mainPort, nonce: 'forged-nonce', strictSourcePort: true);
@@ -335,9 +336,10 @@ void main() {
 
     // Continued loss degrades to suspect then offline.
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    expect(states,
-        containsAll([HeartbeatAvailability.suspect,
-            HeartbeatAvailability.offline]));
+    expect(
+        states,
+        containsAll(
+            [HeartbeatAvailability.suspect, HeartbeatAvailability.offline]));
 
     monitor.stop();
     server.close();

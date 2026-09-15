@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -115,7 +115,9 @@ void main() {
       () async {
     final r = await repo();
     await r.add(relay('m1', 'Relay A'));
-    await r.update('m1', DeviceModule(
+    await r.update(
+        'm1',
+        DeviceModule(
           id: 'm1',
           name: 'Relay A',
           type: ModuleType.relay,

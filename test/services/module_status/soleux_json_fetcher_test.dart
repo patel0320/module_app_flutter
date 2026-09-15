@@ -146,7 +146,8 @@ void main() {
             id: 'd1c1', name: 'Mood Light', icon: Icons.lightbulb, stepSize: 5),
       ],
     );
-    final channel = dimmerTargetChannel([module], 'Mood Light - Cabin Dimmer 12V');
+    final channel =
+        dimmerTargetChannel([module], 'Mood Light - Cabin Dimmer 12V');
     expect(channel, isNotNull);
     expect(channel!.stepSize, 5);
     expect(dimmerTargetChannel([module], 'Mood Light - Other'), isNull);

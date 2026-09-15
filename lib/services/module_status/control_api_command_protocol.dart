@@ -102,8 +102,8 @@ class ControlApiCommandProtocol implements ModuleCommandProtocol {
   @override
   Future<bool> setDimmerLevel(int channel, int brightnessPct) async {
     try {
-      final response = await _service.setDimmerLevel(
-          channel, brightnessPct.clamp(0, 100));
+      final response =
+          await _service.setDimmerLevel(channel, brightnessPct.clamp(0, 100));
       return await _maybeFallback(
           response, 'AT+BRIGH:$channel:$brightnessPct\r');
     } catch (e, st) {
