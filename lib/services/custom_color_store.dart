@@ -71,6 +71,16 @@ class CustomColorStore extends ChangeNotifier {
     await _persist();
   }
 
+  /// Replaces the entire saved palette with [colors] (capped at [_maxColors]).
+  /// Used by the backup/restore flow to apply a restored palette wholesale.
+  Future<void> replaceAll(List<Color> colors) async {
+    await init();
+    _colors
+      ..clear()
+      ..addAll(colors.take(_maxColors));
+    await _persist();
+  }
+
   Future<void> _persist() async {
     await _prefs?.setStringList(
       _storageKey,

@@ -71,4 +71,14 @@ class AutomationStore extends ChangeNotifier {
     _automations.removeWhere((a) => a.id == id);
     await commit();
   }
+
+  /// Replaces the entire automation list with [automations] and persists it.
+  /// Used by the backup/restore flow to apply a restored rule set wholesale.
+  Future<void> replaceAll(List<Automation> automations) async {
+    await init();
+    _automations
+      ..clear()
+      ..addAll(automations);
+    await commit();
+  }
 }

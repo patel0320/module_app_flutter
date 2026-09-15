@@ -77,6 +77,13 @@ class SettingsStore extends ChangeNotifier {
   /// Which Control API command transport the app uses (TCP 5008 by default).
   CommandTransportMode _commandTransport = CommandTransportMode.tcp;
 
+  /// Active location this build manages. The app is single-location for now
+  /// (see the Settings "Location" section), but the id/name are persisted so
+  /// the backup/restore flow can round-trip them and a future multi-location
+  /// build can migrate.
+  String _locationId = 'single-location';
+  String _locationName = '';
+
   /// Default temperature alert threshold (°C) applied to newly added
   /// modules. Configured on the Settings -> Notifications screen.
   double _defaultTempThreshold = 65;
@@ -98,6 +105,13 @@ class SettingsStore extends ChangeNotifier {
   /// POST /api/v1/command selectable in Settings).
   CommandTransportMode get commandTransport => _commandTransport;
 
+  /// Persistent id of the active location.
+  String get locationId => _locationId;
+
+  /// Display name of the active location. Empty means the build default is
+  /// shown (see the Settings "Location" row).
+  String get locationName => _locationName;
+
   /// The default temperature alert threshold (°C) for new modules.
   double get defaultTemperatureThreshold => _defaultTempThreshold;
 
@@ -118,6 +132,8 @@ class SettingsStore extends ChangeNotifier {
       'settings_output_on_threshold_hours';
   static const String _kKeyCommandTransport = 'settings_command_transport';
   static const String _kKeyFirmwareUpdate = 'settings_notify_firmware_update';
+  static const String _kKeyLocationId = 'settings_location_id';
+  static const String _kKeyLocationName = 'settings_location_name';
 
   /// Loads all saved preferences once and applies them to the global
   /// notifiers. Safe to call repeatedly.
@@ -151,6 +167,8 @@ class SettingsStore extends ChangeNotifier {
       _commandTransport = CommandTransportMode.values
               .asNameMap()[_prefs!.getString(_kKeyCommandTransport)] ??
           CommandTransportMode.tcp;
+      _locationId = _prefs!.getString(_kKeyLocationId) ?? 'single-location';
+      _locationName = _prefs!.getString(_kKeyLocationName) ?? '';
     } catch (e, st) {
       debugPrint('SettingsStore: loading preferences failed: $e\n$st');
       // Keep defaults if preferences are unavailable.
@@ -231,6 +249,16 @@ class SettingsStore extends ChangeNotifier {
     return _persistAndNotify();
   }
 
+  // ---- Location -----------------------------------------------------------
+
+  /// Records the active location and persists it. Used by the backup/restore
+  /// flow and the Settings "Location" row.
+  Future<void> setLocation({required String id, required String name}) {
+    _locationId = id;
+    _locationName = name;
+    return _persistAndNotify();
+  }
+
   Future<void> _persistAndNotify() async {
     await _prefs?.setBool(_kKeyModuleStatus, _moduleStatus);
     await _prefs?.setBool(_kKeyOutputLeftOn, _outputLeftOn);
@@ -240,6 +268,8 @@ class SettingsStore extends ChangeNotifier {
     await _prefs?.setDouble(_kKeyDefaultTempThreshold, _defaultTempThreshold);
     await _prefs?.setInt(_kKeyOutputOnThresholdHours, _outputOnThresholdHours);
     await _prefs?.setString(_kKeyCommandTransport, _commandTransport.name);
+    await _prefs?.setString(_kKeyLocationId, _locationId);
+    await _prefs?.setString(_kKeyLocationName, _locationName);
     notifyListeners();
   }
 }

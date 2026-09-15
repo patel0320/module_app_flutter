@@ -66,6 +66,7 @@ class ModuleStore extends ChangeNotifier {
 
   /// Replaces the in-memory fleet (used by the status service after a pass).
   Future<void> replaceAll(List<DeviceModule> list) async {
+    await init();
     _modules = List.of(list);
     await commit();
   }
