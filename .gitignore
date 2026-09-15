@@ -54,3 +54,4 @@ app.*.map.json
 *.p12
 # Localization generated files
 lib/l10n/gen/
+creds/
