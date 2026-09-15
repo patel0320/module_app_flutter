@@ -1,7 +1,7 @@
 # ============================================================================
 # Flutter Cross-Platform Build & Deploy Pipeline
 # Targets: Android (APK/AAB → Google Play), iOS (IPA → TestFlight/App Store),
-#          Windows (EXE/MSIX → GitHub Releases)
+#          Windows (EXE/MSIX → GitHub Releases), macOS (.app → GitHub Releases)
 #
 # Triggers:
 #   - Manual via GitHub Actions "Run workflow" (workflow_dispatch)
@@ -53,6 +53,7 @@ on:
           - android
           - ios
           - windows
+          - macos
           - all
       release_tag:
         description: 'GitHub release tag to attach build artifacts (e.g. v1.0.0). Required to upload to a release on manual runs; on tag pushes the trigger tag is used automatically.'
@@ -88,6 +89,7 @@ env:
   RUN_ANDROID: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') || startsWith(github.ref, 'refs/tags/v') }}
   RUN_IOS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios') || github.runner.os == 'macOS' }}
   RUN_WINDOWS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows') || github.runner.os == 'Windows' }}
+  RUN_MACOS: ${{ (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos') || github.runner.os == 'macOS' }}
 
 jobs:
   # --------------------------------------------------------------------------
@@ -192,6 +194,87 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: dist/windows-release.zip
+
+  # --------------------------------------------------------------------------
+  # 2b. macOS desktop build (.app bundle → GitHub Releases)
+  # --------------------------------------------------------------------------
+  macos:
+    name: macOS Build
+    needs: analyze
+    runs-on: macos-latest
+    # Only run when macOS requested (dispatch) or on a tag release.
+    if: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'macos' || github.event.inputs.platform == 'all')) || startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ hashFiles('pubspec.lock') }}
+
+      - name: Enable macOS Desktop support
+        run: flutter config --enable-macos-desktop
+
+      - name: Restore pub dependencies
+        run: flutter pub get
+
+      - name: Generate codegen + l10n
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+
+      # Optional: inject Firebase iOS config from secret (base64) into the
+      # macOS target if it shares the same plist (Runner macOS targets use
+      # macos/Runner instead of ios/Runner).
+      # - name: Recreate GoogleService-Info.plist (macOS)
+      #   if: ${{ env.IOS_GOOGLE_SERVICE_PLIST != '' }}
+      #   run: |
+      #     echo "${{ env.IOS_GOOGLE_SERVICE_PLIST }}" | base64 --decode > macos/Runner/GoogleService-Info.plist
+
+      - name: Build macOS release app bundle
+        run: flutter build macos --release --dart-define=APP_ENV=${{ env.APP_ENV }}
+
+      # Notes on signing: macOS apps distributed outside the App Store benefit
+      # from `codesign --deep --force --sign "$CERT_ID"` + `xcrun notarytool`
+      # for notarization. Those steps need:
+      #   MACOS_CERT_P12_BASE64, MACOS_CERT_P12_PASSWORD, MACOS_KEYCHAIN_PASSWORD,
+      #   APPLE_TEAM_ID, APPLE_ID, IOS_APPLE_APP_SPECIFIC_PASSWORD
+      # Add them here when you need to ship signed builds. For now the build is
+      # unsigned; the .app can still be downloaded and run locally by users
+      # who right-click → Open to bypass Gatekeeper.
+
+      - name: Stage artifacts
+        shell: bash
+        run: |
+          mkdir -p dist/macos
+          cp -R build/macos/Build/Products/Release/*.app dist/macos/
+
+      # Convert the .app bundle into a single distributable .zip. `ditto` is
+      # always present on macOS runners and preserves extended attributes
+      # (including the com.apple.quarantine xattr), which plain `zip` strips.
+      - name: Create distributable zip archive
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        run: |
+          cd dist/macos
+          APP_DIR=$(ls -d *.app | head -1)
+          ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "${APP_DIR%.app}.zip"
+
+      - name: Publish macOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: dist/macos/
+
+      - name: Upload macOS assets to GitHub Release
+        if: env.RELEASE_TAG != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: dist/macos/*.zip
 
   # --------------------------------------------------------------------------
   # 3. Android build: debug APK, release APK, release AAB (signed)
