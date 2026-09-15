@@ -4,21 +4,23 @@
 
 name: Format Check
 
-on:
-  push:
-    paths:
-      - 'lib/**/*.dart'
-      - 'test/**/*.dart'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - 'analysis_options.yaml'
-  pull_request:
-    paths:
-      - 'lib/**/*.dart'
-      - 'test/**/*.dart'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - 'analysis_options.yaml'
+# Disabled: superseded by the local pre-commit hook (.githooks/pre-commit).
+# Restore by uncommenting the `on:` block below.
+# on:
+#   push:
+#     paths:
+#       - 'lib/**/*.dart'
+#       - 'test/**/*.dart'
+#       - 'pubspec.yaml'
+#       - 'pubspec.lock'
+#       - 'analysis_options.yaml'
+#   pull_request:
+#     paths:
+#       - 'lib/**/*.dart'
+#       - 'test/**/*.dart'
+#       - 'pubspec.yaml'
+#       - 'pubspec.lock'
+#       - 'analysis_options.yaml'
 
 permissions:
   contents: read

@@ -77,6 +77,16 @@ class RoomStore extends ChangeNotifier {
     await _commit();
   }
 
+  /// Replaces the entire room list with [rooms] and persists it. Used by the
+  /// backup/restore flow to apply a restored room set wholesale.
+  Future<void> replaceAll(List<Room> rooms) async {
+    await init();
+    _rooms
+      ..clear()
+      ..addAll(rooms);
+    await _commit();
+  }
+
   /// Moves the item at [oldIndex] to [newIndex] (ReorderableListView
   /// [onReorderItem] semantics, where newIndex is the drop slot after the
   /// item has been removed from [oldIndex]) and persists the new order.

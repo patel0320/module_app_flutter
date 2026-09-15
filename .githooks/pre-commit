@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Local mirror of .github/workflows/analyze_check.yml and format_check.yml.
+# Runs when staged changes touch lib/**/*.dart, test/**/*.dart, pubspec.* or
+# analysis_options.yaml.
+
+set -euo pipefail
+
+TRIGGER_PATHS=(
+  'lib/*.dart'
+  'test/*.dart'
+  'pubspec.yaml'
+  'pubspec.lock'
+  'analysis_options.yaml'
+)
+
+staged_files() {
+  git diff --cached --name-only --diff-filter=ACMR
+}
+
+is_triggered() {
+  local file
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    case "$file" in
+      lib/*.dart|test/*.dart|pubspec.yaml|pubspec.lock|analysis_options.yaml)
+        return 0
+        ;;
+    esac
+  done < <(staged_files)
+  return 1
+}
+
+if ! is_triggered; then
+  echo "pre-commit: no Dart/pubspec/analysis_options changes staged; skipping checks."
+  exit 0
+fi
+
+echo "pre-commit: running flutter pub get"
+flutter pub get
+
+echo "pre-commit: running flutter analyze --fatal-infos --fatal-warnings"
+flutter analyze --fatal-infos --fatal-warnings
+
+echo "pre-commit: running dart format --output=none --set-exit-if-changed lib test"
+dart format --output=none --set-exit-if-changed lib test
+
+echo "pre-commit: all checks passed."

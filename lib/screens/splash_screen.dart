@@ -29,7 +29,9 @@ class _SplashScreenState extends State<SplashScreen> {
       await SessionStore.shared.init();
       if (!mounted) return;
       Navigator.of(context).restorablePushReplacementNamed(
-          SessionStore.shared.signedIn ? '/root' : '/login');
+          // skip login in current publish
+          // SessionStore.shared.signedIn ? '/root' : '/login');
+          '/root');
     });
   }
 
