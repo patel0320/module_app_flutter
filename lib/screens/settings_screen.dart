@@ -66,27 +66,28 @@ class SettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.outerPadding),
           children: [
-            Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(12),
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: onSurface,
-                  child: Text('AP',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.surface,
-                          fontWeight: FontWeight.w800)),
-                ),
-                title: const Text('Alex Popescu',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                subtitle: const Text('alex.popescu@example.com'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context)
-                    .restorablePushNamed('/settings/account'),
-              ),
-            ),
-            const SizedBox(height: 24),
+            // skip login in current publish
+            // Card(
+            //   child: ListTile(
+            //     contentPadding: const EdgeInsets.all(12),
+            //     leading: CircleAvatar(
+            //       radius: 26,
+            //       backgroundColor: onSurface,
+            //       child: Text('AP',
+            //           style: TextStyle(
+            //               color: Theme.of(context).colorScheme.surface,
+            //               fontWeight: FontWeight.w800)),
+            //     ),
+            //     title: const Text('Alex Popescu',
+            //         style:
+            //             TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            //     subtitle: const Text('alex.popescu@example.com'),
+            //     trailing: const Icon(Icons.chevron_right),
+            //     onTap: () => Navigator.of(context)
+            //         .restorablePushNamed('/settings/account'),
+            //   ),
+            // ),
+            // const SizedBox(height: 24),
             SectionHeader(l10n.settingsPreferences),
             Card(
               child: Column(
@@ -194,21 +195,22 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.offlineAlert,
-                  side: const BorderSide(
-                      color: AppColors.offlineAlert, width: 1.4),
-                ),
-                onPressed: () => _signOut(context),
-                icon: const Icon(Icons.logout),
-                label: Text(l10n.settingsSignOut),
-              ),
-            ),
+            // skip login in current publish
+            // const SizedBox(height: 24),
+            // SizedBox(
+            //   width: double.infinity,
+            //   height: 48,
+            //   child: OutlinedButton.icon(
+            //     style: OutlinedButton.styleFrom(
+            //       foregroundColor: AppColors.offlineAlert,
+            //       side: const BorderSide(
+            //           color: AppColors.offlineAlert, width: 1.4),
+            //     ),
+            //     onPressed: () => _signOut(context),
+            //     icon: const Icon(Icons.logout),
+            //     label: Text(l10n.settingsSignOut),
+            //   ),
+            // ),
             const SizedBox(height: 12),
             Center(
               child: FutureBuilder<PackageInfo>(
