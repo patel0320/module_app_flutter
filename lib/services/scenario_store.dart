@@ -97,4 +97,14 @@ class ScenarioStore extends ChangeNotifier {
     _scenarios.insert(newIndex, scenario);
     await commit();
   }
+
+  /// Replaces the entire scenario list with [scenarios] and persists it. Used
+  /// by the backup/restore flow to apply a restored scenario set wholesale.
+  Future<void> replaceAll(List<Scenario> scenarios) async {
+    await init();
+    _scenarios
+      ..clear()
+      ..addAll(scenarios);
+    await commit();
+  }
 }
