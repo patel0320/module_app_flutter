@@ -295,13 +295,13 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
               SegmentedButton<bool>(
                 segments: [
                   ButtonSegment(
-                      value: false,
-                      label: Text(l10n.actionPickerOutputTarget),
-                      icon: const Icon(Icons.output_outlined)),
-                  ButtonSegment(
                       value: true,
                       label: Text(l10n.actionPickerInputTarget),
                       icon: const Icon(Icons.touch_app_outlined)),
+                  ButtonSegment(
+                      value: false,
+                      label: Text(l10n.actionPickerOutputTarget),
+                      icon: const Icon(Icons.output_outlined)),
                 ],
                 selected: {_deviceIsInput},
                 onSelectionChanged: (s) => setState(() {
