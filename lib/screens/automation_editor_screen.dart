@@ -61,6 +61,16 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
 
   String get _watchTargetName => _deviceIsInput ? _deviceInputName : _deviceChannelName;
 
+  /// True when the selected module exposes at least one output (or input when
+  /// an input trigger is chosen), i.e. there is a concrete target to watch.
+  bool get _hasWatchTarget {
+    final m = _selectedModule;
+    if (m == null) return false;
+    return _deviceIsInput
+        ? _inputNames(m).isNotEmpty
+        : _outputNames(m).isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -300,10 +310,7 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
                 }),
               ),
               const SizedBox(height: 12),
-              if (_selectedModule == null ||
-                  (_deviceIsInput
-                      ? _inputNames(_selectedModule).isEmpty
-                      : _outputNames(_selectedModule).isEmpty))
+              if (!_hasWatchTarget)
                 Text(_deviceIsInput
                     ? l10n.actionPickerNoInputs
                     : l10n.actionPickerNoOutputs)
@@ -331,18 +338,20 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
                     }
                   }),
                 ),
-              const SizedBox(height: 12),
-              SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment(
-                      value: true, label: Text(l10n.automationTurnsOn)),
-                  ButtonSegment(
-                      value: false, label: Text(l10n.automationTurnsOff)),
-                ],
-                selected: {_deviceTurnsOn},
-                onSelectionChanged: (s) =>
-                    setState(() => _deviceTurnsOn = s.first),
-              ),
+              if (_hasWatchTarget) ...[
+                const SizedBox(height: 12),
+                SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(
+                        value: true, label: Text(l10n.automationTurnsOn)),
+                    ButtonSegment(
+                        value: false, label: Text(l10n.automationTurnsOff)),
+                  ],
+                  selected: {_deviceTurnsOn},
+                  onSelectionChanged: (s) =>
+                      setState(() => _deviceTurnsOn = s.first),
+                ),
+              ],
             ],
             const SizedBox(height: 24),
             SectionHeader(
