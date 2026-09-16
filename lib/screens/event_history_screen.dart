@@ -88,8 +88,10 @@ class _EventHistoryScreenState extends State<EventHistoryScreen> {
                 ),
                 Expanded(
                   child: rows.isEmpty
-                      ? EmptyState(
-                          icon: Icons.history, message: l10n.eventHistoryEmpty)
+                      ? Center(
+                          child: EmptyState(
+                              icon: Icons.history,
+                              message: l10n.eventHistoryEmpty))
                       : ListView.builder(
                           padding:
                               const EdgeInsets.all(AppSpacing.outerPadding),
