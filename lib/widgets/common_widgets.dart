@@ -579,7 +579,12 @@ class DimmerChannelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isOn = channel.brightness > 0;
+    // The logical output state comes from the device broadcast
+    // (`output_state_changed`), which may differ from the retained brightness
+    // (a dimmer can be OFF while remembering its level). The filled icon
+    // therefore follows [ChannelOutput.isOn]; the slider/readout keep showing
+    // the brightness.
+    final bool isOn = channel.isOn;
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 4, 4),
