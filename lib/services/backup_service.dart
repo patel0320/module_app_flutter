@@ -325,7 +325,7 @@ class BackupService {
 
   /// Current backup format version. Bump [major] on breaking structural
   /// changes and register a migration in [_migrations].
-  static const BackupVersion currentVersion = BackupVersion(major: 1, minor: 0);
+  static const BackupVersion currentVersion = BackupVersion(major: 1, minor: 1);
 
   /// Migration chain keyed by the *source* major version: each step rewrites
   /// a raw document one major version forward. `0 -> 1` upgrades unversioned

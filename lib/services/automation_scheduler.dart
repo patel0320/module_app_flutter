@@ -209,10 +209,10 @@ class AutomationScheduler {
         continue;
       }
 
-      final channel = _resolveChannel(a.watchChannelName);
-      if (channel == null) continue;
-      final on = channel.isOn || channel.brightness > 0;
-      final signature = '${a.watchChannelName}|${a.watchState}';
+      final on = _resolveWatchOn(a);
+      if (on == null) continue;
+      final signature =
+          '${a.watchModuleName}|${a.watchIsInput}|${a.watchInputName}|${a.watchChannelName}|${a.watchState}';
 
       // First observation (or a changed watch target): record the baseline so
       // the rule never fires for a state that already existed.
@@ -233,12 +233,43 @@ class AutomationScheduler {
     }
   }
 
-  /// Resolves the output named [channelName] across the fleet (first match).
-  ChannelOutput? _resolveChannel(String? channelName) {
+  /// Resolves the live on-state of the output or input [automation] watches
+  /// across the fleet, or null when the target cannot be found.
+  bool? _resolveWatchOn(Automation a) {
+    if (a.watchIsInput) {
+      final input = _resolveInput(a.watchModuleName, a.watchInputName);
+      if (input == null) return null;
+      return input.state;
+    }
+    final channel = _resolveChannel(a.watchModuleName, a.watchChannelName);
+    if (channel == null) return null;
+    return channel.isOn || channel.brightness > 0;
+  }
+
+  /// Resolves the output [channelName] belonging to [moduleName] across the
+  /// fleet (first match). A null [moduleName] (legacy automations) matches any
+  /// module, but when a module is specified the match is confined to it, so
+  /// same-named outputs on different modules don't collide.
+  ChannelOutput? _resolveChannel(String? moduleName, String? channelName) {
     if (channelName == null) return null;
     for (final m in moduleStore.modules) {
+      if (moduleName != null && m.name != moduleName) continue;
       for (final c in m.channels) {
         if (c.name == channelName) return c;
+      }
+    }
+    return null;
+  }
+
+  /// Resolves the [PhysicalInput] [inputName] belonging to [moduleName]
+  /// across the fleet (first match). A null [moduleName] (legacy automations)
+  /// matches any module.
+  PhysicalInput? _resolveInput(String? moduleName, String? inputName) {
+    if (inputName == null) return null;
+    for (final m in moduleStore.modules) {
+      if (moduleName != null && m.name != moduleName) continue;
+      for (final i in m.inputs) {
+        if (i.name == inputName) return i;
       }
     }
     return null;
