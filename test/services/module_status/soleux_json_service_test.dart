@@ -216,6 +216,47 @@ void main() {
     service.dispose();
   });
 
+  test('feed() routes protocol-2 broadcast events (id:null + result payload)',
+      () {
+    final connection = ModuleTcpConnection(
+        host: '127.0.0.1', port: 1, timeout: const Duration(seconds: 1));
+    final service = SoleuxJsonService(connection: connection);
+    final deviceEvents = <SoleuxDeviceEvent>[];
+    service.deviceEventStream.listen(deviceEvents.add);
+
+    // Soleux-Mobile-TCP-Protocol.md broadcasts: id null, ok true, payload under
+    // `result`. They must be routed as device events - never as a command
+    // response (their `id` is null so they cannot match an in-flight request).
+    service.feed('{"protocol":2,"id":null,"ok":true,'
+        '"event":"input_state_changed",'
+        '"result":{"channel":0,"state":true,"revision":1789531200000}}\r\n');
+    service.feed('{"protocol":2,"id":null,"ok":true,'
+        '"event":"output_state_changed",'
+        '"result":{"channel":2,"state":false,"revision":1789531200123}}\r\n');
+    service.feed('{"protocol":2,"id":null,"ok":true,"event":"system_status",'
+        '"result":{"revision":1789531205000,'
+        '"system":{"cpu_temp_c":47.0},'
+        '"network":{"lan_ip":"192.168.1.50"}}}\r\n');
+
+    expect(deviceEvents, hasLength(3));
+    final input = deviceEvents[0];
+    expect(input.type, SoleuxDeviceEventType.inputStateChanged);
+    expect(input.channel, 0);
+    expect(input.state, isTrue);
+    expect(input.revision, 1789531200000);
+
+    final output = deviceEvents[1];
+    expect(output.type, SoleuxDeviceEventType.outputStateChanged);
+    expect(output.channel, 2);
+    expect(output.state, isFalse);
+
+    final status = deviceEvents[2];
+    expect(status.type, SoleuxDeviceEventType.systemStatus);
+    expect(status.system!['cpu_temp_c'], 47.0);
+
+    service.dispose();
+  });
+
   test('request() matches responses by id over a real socket', () async {
     final fake = await _FakeSoleuxDevice.start();
     final connection = ModuleTcpConnection(

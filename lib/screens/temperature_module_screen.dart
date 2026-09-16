@@ -8,9 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../models/models.dart';
+import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/module_polling.dart';
 
 class TemperatureModuleScreen extends StatefulWidget {
   const TemperatureModuleScreen({super.key, required this.module});
@@ -22,12 +22,8 @@ class TemperatureModuleScreen extends StatefulWidget {
       _TemperatureModuleScreenState();
 }
 
-class _TemperatureModuleScreenState extends State<TemperatureModuleScreen>
-    with ModulePollingState<TemperatureModuleScreen> {
+class _TemperatureModuleScreenState extends State<TemperatureModuleScreen> {
   bool _alertsEnabled = true;
-
-  @override
-  String get pollModuleId => widget.module.id;
 
   bool _editDialogOpen = false;
 
@@ -44,7 +40,17 @@ class _TemperatureModuleScreenState extends State<TemperatureModuleScreen>
 
   @override
   Widget build(BuildContext context) {
-    final module = widget.module;
+    // Live temperature arrives as `system_status` broadcasts (every ~5 s while
+    // a client is connected) and flows into the store via ModuleStatusService;
+    // rebuild when it does instead of polling get_device_state every second.
+    return ListenableBuilder(
+      listenable: ModuleStore.shared,
+      builder: (context, _) => _build(context),
+    );
+  }
+
+  Widget _build(BuildContext context) {
+    final module = ModuleStore.shared.byId(widget.module.id) ?? widget.module;
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final l10n = AppLocalizations.of(context);
     final bool alert = module.isOverTemperature;

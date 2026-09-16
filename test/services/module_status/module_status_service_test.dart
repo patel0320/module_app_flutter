@@ -467,6 +467,66 @@ void main() {
     await fake.server.close();
   });
 
+  test('protocol-2 broadcasts (result payload) replace the need to poll',
+      () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-bcast',
+      name: 'Relays',
+      type: ModuleType.relay,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+
+    // Soleux-Mobile-TCP-Protocol.md broadcast envelope: id:null, ok:true, and
+    // the payload under `result`. output_state_changed must flip the channel
+    // without any get_device_state polling.
+    fake.broadcast('{"protocol":2,"id":null,"ok":true,'
+        '"event":"output_state_changed",'
+        '"result":{"channel":1,"state":true,"revision":1789531200123}}');
+    await _flush();
+    expect(store.byId('m-bcast')!.channels[1].isOn, isTrue,
+        reason: 'protocol-2 output_state_changed must flip the relay output');
+
+    fake.broadcast('{"protocol":2,"id":null,"ok":true,'
+        '"event":"input_state_changed",'
+        '"result":{"channel":0,"state":true,"revision":1789531200000}}');
+    await _flush();
+    expect(store.byId('m-bcast')!.inputs[0].state, isTrue,
+        reason: 'protocol-2 input_state_changed must light the input');
+
+    // Periodic system_status broadcasts surface system/network + temperature,
+    // replacing the device-state poll the temperature screen used to run.
+    fake.broadcast('{"protocol":2,"id":null,"ok":true,"event":"system_status",'
+        '"result":{"revision":1789531205000,'
+        '"captured_at":"2026-09-16T12:00:05.123456",'
+        '"sensors":[{"sensor_id":"external","value_c":25.4},'
+        '{"sensor_id":"cpu","value_c":47.0}],'
+        '"system":{"time":"2026/09/16 12:00:05","uptime":"2 hours",'
+        '"external_temp_c":25.4,"cpu_temp_c":47.0,'
+        '"memory_usage_percent":64.06,"cpu_usage_percent":12.5},'
+        '"network":{"lan_ip":"192.168.1.50","wifi_ssid":"Office WiFi"}}}');
+    await _flush();
+    final live = store.byId('m-bcast')!;
+    expect(live.systemInfo, isNotNull);
+    expect(live.systemInfo!.cpuUsagePercent, 12.5);
+    expect(live.systemInfo!.network?.lanIp, '192.168.1.50');
+    expect(live.internalTempC, 25.4,
+        reason: 'system_status must mirror the external temp to internalTempC');
+
+    service.dispose();
+    await fake.server.close();
+  });
+
   test('output_level_changed sets the dimmer brightness on the target module',
       () async {
     final fake = await _FakeDevice.start();

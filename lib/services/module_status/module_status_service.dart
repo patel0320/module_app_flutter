@@ -782,20 +782,6 @@ class ModuleStatusService {
     return ok;
   }
 
-  /// `get_device_state` - polls the current live snapshot for an already-active
-  /// Control API module and applies it to the store (system/network/temperature
-  /// and every output's on/off + dimmer brightness). Unlike [refreshOne] it
-  /// does not probe, greet or re-fetch configuration, so it can run on a
-  /// screen-local periodic timer without disturbing the session. No-op when the
-  /// module has no live Control API unit.
-  Future<void> pollDeviceState(String moduleId) async {
-    final live = store.byId(moduleId);
-    if (live == null) return;
-    final unit = jsonCommandServiceFor(moduleId);
-    if (unit == null || !unit.isConnected) return;
-    await _fetchDeviceState(unit, live);
-  }
-
   /// Tears down the live command/status unit for [moduleId]. Used when a
   /// module is removed so its socket/reconnect timers stop and the fleet
   /// counts reflect exactly the modules that remain.
@@ -1299,13 +1285,7 @@ class ModuleStatusService {
       final result = response.result;
       if (result == null) return;
       if (result['system'] is Map || result['network'] is Map) {
-        live.systemInfo =
-            DeviceSystemInfo.fromJson(Map<String, dynamic>.from(result));
-        if (live.systemInfo!.internalTempC != null) {
-          live.internalTempC = live.systemInfo!.internalTempC!;
-        } else if (live.systemInfo!.externalTempC != null) {
-          live.internalTempC = live.systemInfo!.externalTempC!;
-        }
+        _applySystemSnapshot(live, Map<String, dynamic>.from(result));
       }
       final raw = result['outputs'];
       if (raw is List) _applyDimmerOutputs(live.id, raw);
@@ -1465,13 +1445,7 @@ class ModuleStatusService {
     if (live == null) return;
 
     if (result['system'] is Map || result['network'] is Map) {
-      live.systemInfo =
-          DeviceSystemInfo.fromJson(Map<String, dynamic>.from(result));
-      if (live.systemInfo!.internalTempC != null) {
-        live.internalTempC = live.systemInfo!.internalTempC!;
-      } else if (live.systemInfo!.externalTempC != null) {
-        live.internalTempC = live.systemInfo!.externalTempC!;
-      }
+      _applySystemSnapshot(live, Map<String, dynamic>.from(result));
     }
 
     final rawOutputs = result['outputs'];
@@ -1481,6 +1455,20 @@ class ModuleStatusService {
     if (rawInputs is List) _applyStateInputs(live, rawInputs);
 
     _scheduleCommit();
+  }
+
+  /// Applies the `system`/`network` part of a snapshot (a `get_device_state`
+  /// result or a `system_status` broadcast) to [live]'s
+  /// [DeviceModule.systemInfo] and mirrors the sensor temperature onto
+  /// [DeviceModule.internalTempC].
+  void _applySystemSnapshot(DeviceModule live, Map<String, dynamic> result) {
+    live.systemInfo =
+        DeviceSystemInfo.fromJson(Map<String, dynamic>.from(result));
+    if (live.systemInfo!.internalTempC != null) {
+      live.internalTempC = live.systemInfo!.internalTempC!;
+    } else if (live.systemInfo!.externalTempC != null) {
+      live.internalTempC = live.systemInfo!.externalTempC!;
+    }
   }
 
   /// Applies a `get_device_state` `outputs` list to the live store channels:
@@ -1542,6 +1530,8 @@ class ModuleStatusService {
         _applyInputStateEvent(live, event),
       SoleuxDeviceEventType.temperatureChanged =>
         _applyTemperatureEvent(live, event),
+      SoleuxDeviceEventType.systemStatus =>
+        _applySystemStatusEvent(live, event),
       _ => false,
     };
     if (changed) _scheduleCommit();
@@ -1613,6 +1603,22 @@ class ModuleStatusService {
     final rounded = double.parse(value.toStringAsFixed(1));
     if ((live.internalTempC - rounded).abs() < 0.05) return false;
     live.internalTempC = rounded;
+    return true;
+  }
+
+  /// `system_status` - periodic (~5 s while a client is connected) full
+  /// system/network snapshot. Applies the same system info a `get_device_state`
+  /// result would, so CPU/memory/temperature/uptime and LAN/Wi-Fi stay live
+  /// without polling. Returns true whenever the device reported a system or
+  /// network block (the store commit is debounced).
+  bool _applySystemStatusEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final system = event.system;
+    final network = event.network;
+    if (system == null && network == null) return false;
+    _applySystemSnapshot(live, {
+      if (system != null) 'system': system,
+      if (network != null) 'network': network,
+    });
     return true;
   }
 

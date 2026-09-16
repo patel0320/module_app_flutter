@@ -40,6 +40,7 @@ void main() {
         'input_state_changed': SoleuxDeviceEventType.inputStateChanged,
         'mapping_changed': SoleuxDeviceEventType.mappingChanged,
         'temperature_changed': SoleuxDeviceEventType.temperatureChanged,
+        'system_status': SoleuxDeviceEventType.systemStatus,
         'energy_changed': SoleuxDeviceEventType.energyChanged,
         'schedule_executed': SoleuxDeviceEventType.scheduleExecuted,
         'automation_executed': SoleuxDeviceEventType.automationExecuted,
@@ -112,6 +113,56 @@ void main() {
       expect(event!.kind, 'physical');
       expect(event.channel, 1);
       expect(event.state, isTrue);
+    });
+
+    test('protocol-2 broadcast envelope (result payload) is parsed', () {
+      // Soleux-Mobile-TCP-Protocol.md broadcast shape: id null, ok true, and
+      // the typed payload under `result` instead of `data`.
+      final event = SoleuxDeviceEvent.maybeParse(
+          '{"protocol":2,"id":null,"ok":true,"event":"input_state_changed",'
+          '"result":{"channel":2,"state":true,"revision":1789531200000}}');
+      expect(event, isNotNull);
+      expect(event!.protocol, 2);
+      expect(event.type, SoleuxDeviceEventType.inputStateChanged);
+      expect(event.rawEvent, 'input_state_changed');
+      expect(event.channel, 2);
+      expect(event.state, isTrue);
+      expect(event.revision, 1789531200000);
+
+      final output = SoleuxDeviceEvent.maybeParse(
+          '{"protocol":2,"id":null,"ok":true,"event":"output_state_changed",'
+          '"result":{"channel":2,"state":false,"revision":1789531200123}}');
+      expect(output, isNotNull);
+      expect(output!.type, SoleuxDeviceEventType.outputStateChanged);
+      expect(output.channel, 2);
+      expect(output.state, isFalse);
+      expect(output.revision, 1789531200123);
+    });
+
+    test('system_status exposes the same shape as a get_device_state result',
+        () {
+      final event = SoleuxDeviceEvent.maybeParse(
+          '{"protocol":2,"id":null,"ok":true,"event":"system_status",'
+          '"result":{"revision":1789531205000,'
+          '"captured_at":"2026-09-16T12:00:05.123456",'
+          '"sensors":[{"sensor_id":"external","value_c":25.4},'
+          '{"sensor_id":"cpu","value_c":47.0}],'
+          '"system":{"time":"2026/09/16 12:00:05","uptime":"2 hours",'
+          '"external_temp_c":25.4,"cpu_temp_c":47.0,'
+          '"free_memory_mb":184,"total_memory_mb":512,"used_memory_mb":328,'
+          '"memory_usage_percent":64.06,"cpu_usage_percent":12.5},'
+          '"network":{"lan_ip":"192.168.1.50","wifi_ip":"192.168.1.51",'
+          '"wifi_ssid":"Office WiFi"}}}');
+      expect(event, isNotNull);
+      expect(event!.type, SoleuxDeviceEventType.systemStatus);
+      expect(event.revision, 1789531205000);
+      expect(event.capturedAt, '2026-09-16T12:00:05.123456');
+      expect(event.sensors, hasLength(2));
+      expect(event.system, isNotNull);
+      expect(event.system!['cpu_usage_percent'], 12.5);
+      expect(event.network, isNotNull);
+      expect(event.network!['lan_ip'], '192.168.1.50');
+      expect(event.network!['wifi_ssid'], 'Office WiFi');
     });
 
     test('mapping_changed exposes input/output/behavior/legacy_code', () {

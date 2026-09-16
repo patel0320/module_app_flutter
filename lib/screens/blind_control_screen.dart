@@ -11,7 +11,6 @@ import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/module_polling.dart';
 import 'input_editor_screen.dart';
 
 enum _Motion { idle, up, down }
@@ -25,12 +24,8 @@ class BlindControlScreen extends StatefulWidget {
   State<BlindControlScreen> createState() => _BlindControlScreenState();
 }
 
-class _BlindControlScreenState extends State<BlindControlScreen>
-    with ModulePollingState<BlindControlScreen> {
+class _BlindControlScreenState extends State<BlindControlScreen> {
   final Map<String, _Motion> _motion = {};
-
-  @override
-  String get pollModuleId => widget.module.id;
 
   _Motion _motionOf(ChannelOutput channel) =>
       _motion[channel.id] ?? _Motion.idle;
@@ -80,57 +75,69 @@ class _BlindControlScreenState extends State<BlindControlScreen>
 
   @override
   Widget build(BuildContext context) {
-    final module = widget.module;
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(module.name),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: l10n.refreshTooltip,
-              onPressed: _refresh),
-          IconButton(
-              icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.outerPadding),
-          children: [
-            ModuleStatusHeader(module: module),
-            const SizedBox(height: 24),
-            SectionHeader(l10n.blindHeader),
-            for (final channel in module.channels)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                child: _BlindCard(
-                  channel: channel,
-                  motion: _motionOf(channel),
-                  onUp: () => _press(channel, _Motion.up),
-                  onDown: () => _press(channel, _Motion.down),
-                ),
-              ),
-            if (module.inputs.any((i) => i.enabled)) ...[
-              const SizedBox(height: 24),
-              SectionHeader(l10n.moduleInputs(module.inputs.length)),
-              for (int i = 0; i < module.inputs.length; i++)
-                if (module.inputs[i].enabled)
+    // Rebuild whenever the app-wide store changes: live output/input state
+    // arrives as device broadcasts (`output_state_changed`/`input_state_changed`)
+    // and flows into the module via ModuleStatusService - no get_device_state
+    // polling needed.
+    return ListenableBuilder(
+      listenable: ModuleStore.shared,
+      builder: (context, _) {
+        final module =
+            ModuleStore.shared.byId(widget.module.id) ?? widget.module;
+        final l10n = AppLocalizations.of(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(module.name),
+            actions: [
+              IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: l10n.refreshTooltip,
+                  onPressed: _refresh),
+              IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: _editModuleInfo)
+            ],
+          ),
+          body: SafeArea(
+            top: false,
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.outerPadding),
+              children: [
+                ModuleStatusHeader(module: module),
+                const SizedBox(height: 24),
+                SectionHeader(l10n.blindHeader),
+                for (final channel in module.channels)
                   Padding(
                     padding:
                         const EdgeInsets.only(bottom: AppSpacing.betweenCards),
-                    child: InputFieldCard(
-                      input: module.inputs[i],
-                      onHoldChanged: (held) => _holdInput(module, i, held),
-                      onReleased: _refresh,
-                      onEdit: () => _editInput(module.inputs[i], i),
+                    child: _BlindCard(
+                      channel: channel,
+                      motion: _motionOf(channel),
+                      onUp: () => _press(channel, _Motion.up),
+                      onDown: () => _press(channel, _Motion.down),
                     ),
                   ),
-            ],
-          ],
-        ),
-      ),
+                if (module.inputs.any((i) => i.enabled)) ...[
+                  const SizedBox(height: 24),
+                  SectionHeader(l10n.moduleInputs(module.inputs.length)),
+                  for (int i = 0; i < module.inputs.length; i++)
+                    if (module.inputs[i].enabled)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            bottom: AppSpacing.betweenCards),
+                        child: InputFieldCard(
+                          input: module.inputs[i],
+                          onHoldChanged: (held) => _holdInput(module, i, held),
+                          onReleased: _refresh,
+                          onEdit: () => _editInput(module.inputs[i], i),
+                        ),
+                      ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

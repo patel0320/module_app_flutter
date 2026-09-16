@@ -1,22 +1,31 @@
 // lib/core/soleux/soleux_device_event.dart
 //
 // Codec for the Soleux Control API device events described in
-// doc/Soleux_Control_API_Command_Specification_v0.6.md §"Device events".
+// doc/Soleux_Control_API_Command_Specification_v0.6.md §"Device events" and the
+// protocol-2 broadcast contract (Soleux-Mobile-TCP-Protocol.md).
 //
-// Events are unsolicited messages on subscribed TCP/WebSocket sessions or
-// SSE streams. They use the `protocol`, `event`, `subscription_id` and `data`
-// fields and do not contain `ok` or `result`:
+// Events are unsolicited messages pushed to every connected TCP Control API
+// client (port 5008). Two envelope shapes are accepted:
 //
-//   {"protocol":3,"event":"output_state_changed","subscription_id":"sub-7",
-//    "data":{"channel":0,"previous_state":false,"state":true,"pending":false,
-//            "source":"windows-app","revision":312,
-//            "timestamp":"2026-08-31T10:20:30+00:00"}}
+//   - the v0.6 catalogue shape with a `data` payload and no `ok`/`result`:
+//
+//     {"protocol":3,"event":"output_state_changed","subscription_id":"sub-7",
+//      "data":{"channel":0,"previous_state":false,"state":true,"pending":false,
+//              "source":"windows-app","revision":312,
+//              "timestamp":"2026-08-31T10:20:30+00:00"}}
+//
+//   - the protocol-2 broadcast shape with the payload under `result` and
+//     `id:null`/`ok:true` (so a broadcast is never mistaken for a command
+//     response):
+//
+//     {"protocol":2,"id":null,"ok":true,"event":"input_state_changed",
+//      "result":{"channel":0,"state":true,"revision":1789531200000}}
 //
 // This file is deliberately networking-free: a pure codec that any transport
 // (persistent socket, tests, mock) can use. On the newline-delimited TCP
 // transport the device pushes one such object per line; the parser here both
-// recognises the envelope (`event` plus no `ok`/`result`) and exposes the
-// expected `data` fields of every documented event.
+// recognises the envelope (`event` plus no command `id`) and exposes the
+// expected payload fields of every documented event.
 //
 // Clients must treat events as incremental updates (spec §"Synchronization"):
 // if revisions are skipped, a reconnecting client should call
@@ -33,6 +42,7 @@ enum SoleuxDeviceEventType {
   inputStateChanged('input_state_changed'),
   mappingChanged('mapping_changed'),
   temperatureChanged('temperature_changed'),
+  systemStatus('system_status'),
   energyChanged('energy_changed'),
   scheduleExecuted('schedule_executed'),
   automationExecuted('automation_executed'),
@@ -160,6 +170,33 @@ class SoleuxDeviceEvent {
   String? get readingStatus => _stringData('status');
 
   // ---------------------------------------------------------------------------
+  // System snapshot (system_status).
+  // ---------------------------------------------------------------------------
+
+  /// `data.captured_at` (system_status) - snapshot capture time.
+  String? get capturedAt => _stringData('captured_at');
+
+  /// `data.sensors` (system_status) - `{sensor_id, value_c}` entries.
+  List<dynamic>? get sensors {
+    final raw = data['sensors'];
+    return raw is List ? raw : null;
+  }
+
+  /// `data.system` (system_status) - the same shape as a `get_device_state`
+  /// `result.system` object (`time`, `uptime`, `cpu_temp_c`, ...).
+  Map<String, dynamic>? get system {
+    final raw = data['system'];
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
+  }
+
+  /// `data.network` (system_status) - the same shape as a `get_device_state`
+  /// `result.network` object (`lan_ip`, `wifi_ip`, `wifi_ssid`, ...).
+  Map<String, dynamic>? get network {
+    final raw = data['network'];
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
+  }
+
+  // ---------------------------------------------------------------------------
   // Schedule / automation / sequence / operation (execution events).
   // ---------------------------------------------------------------------------
 
@@ -270,9 +307,13 @@ class SoleuxDeviceEvent {
 
   /// Builds an event from an already-decoded [envelope] map (used by
   /// [maybeParse] and by transports that decode JSON first).
+  ///
+  /// The payload is read from `data` (catalogue envelope) or, when absent,
+  /// from `result` (protocol-2 broadcast envelope with `id:null`/`ok:true`).
+  /// This keeps both wire shapes on the same typed getters below.
   factory SoleuxDeviceEvent.parseEnvelope(Map<String, dynamic> envelope) {
     final rawEvent = envelope['event'];
-    final data = envelope['data'];
+    final data = envelope['data'] ?? envelope['result'];
     final dataMap = data is Map
         ? Map<String, dynamic>.from(data)
         : const <String, dynamic>{};

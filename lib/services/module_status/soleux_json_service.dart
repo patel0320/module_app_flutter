@@ -13,8 +13,9 @@
 //   - the Control API framing (a plain JSON object per line, no `J:` prefix,
 //     with the outer `protocol` field) is the default. [SoleuxJsonFraming.legacyJ]
 //     selects the legacy `J:` framing for pre-Control-API devices;
-//   - unsolicited JSON device events (`event` + `data`, no `ok`/`result`,
-//     doc/...Specification_v0.6.md §"Device events") are routed to
+//   - unsolicited JSON device events (`event` + `data`, or the protocol-2
+//     broadcast `event` + `result` with `id:null`, doc/...Specification_v0.6.md
+//     §"Device events" / Soleux-Mobile-TCP-Protocol.md) are routed to
 //     [deviceEventStream] as parsed [SoleuxDeviceEvent]s;
 //   - non-JSON lines (welcome status dump, unsolicited `OUT:`/`IN:` state,
 //     `OVERRIDE:`, `GETENERGY:`, `OK`, `Error : Function Disabled`, ...) are
@@ -156,11 +157,19 @@ class SoleuxJsonService extends SoleuxControlApiService {
 
   /// Application-level keep-alive that sends a `get_device_state` on the live
   /// socket so proxies/gateways/NAT do not idle-timeout the persistent
-  /// connection and half-open sockets are detected quickly. Unlike a bare
-  /// `hello` ping, the response also carries the live device status, which is
-  /// published on [deviceStateStream] so callers can reflect the current state.
+  /// connection and half-open sockets are detected quickly.
+  ///
+  /// Per the protocol-2 broadcast contract (Soleux-Mobile-TCP-Protocol.md) the
+  /// device's unsolicited broadcasts (`input_state_changed`,
+  /// `output_state_changed`, `system_status`) do **not** reset the 30-second
+  /// receive-idle timeout, so the app must keep sending periodic requests
+  /// (every 15-20 s). The richer `get_device_state` request is sent rather
+  /// than a bare `hello` because its response also carries the live device
+  /// status, which is published on [deviceStateStream] to re-synchronise any
+  /// state change event that was missed while the client was disconnected
+  /// (spec §"Synchronization": reconnecting clients rebuild the snapshot).
   Timer? _keepAliveTimer;
-  static const Duration _keepAliveInterval = Duration(seconds: 10);
+  static const Duration _keepAliveInterval = Duration(seconds: 15);
 
   /// Parsed legacy/event lines from the device.
   Stream<SoleuxLegacyEvent> get eventStream => _events.stream;
@@ -170,8 +179,9 @@ class SoleuxJsonService extends SoleuxControlApiService {
   Stream<Map<String, dynamic>> get jsonEventStream => _jsonEvents.stream;
 
   /// Unsolicited Control API device events
-  /// (doc/...Specification_v0.6.md §"Device events"): parsed JSON envelopes
-  /// carrying `event` + `data` (e.g. `output_state_changed`).
+  /// (doc/...Specification_v0.6.md §"Device events" / the protocol-2 broadcast
+  /// contract): parsed JSON envelopes carrying `event` + `data`/`result`
+  /// (e.g. `output_state_changed`, `system_status`).
   Stream<SoleuxDeviceEvent> get deviceEventStream => _deviceEvents.stream;
 
   /// Live `get_device_state` snapshots produced by the keep-alive heartbeat.
@@ -255,8 +265,8 @@ class SoleuxJsonService extends SoleuxControlApiService {
 
   /// Feeds decoded chunks through the buffered line splitter and routes each
   /// complete line:
-  ///   - Control API device events (JSON with `event` + `data`, no `ok` /
-  ///     `result`, doc/...Specification_v0.6.md §"Device events") surface on
+  ///   - Control API device events (JSON with an `event` field and no command
+  ///     `id`; `data`- or `result`-payload, see [SoleuxDeviceEvent]) surface on
   ///     [deviceEventStream];
   ///   - `J:` / plain JSON responses match pending requests by `id`;
   ///   - everything else becomes a legacy event.
