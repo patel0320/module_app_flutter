@@ -97,7 +97,9 @@ class LocalNotificationService with WidgetsBindingObserver {
     if (_initialized || !_nativeSupported) return;
 
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      // Use the app's launcher icon as the notification icon (Android). On iOS
+      // the OS always shows the app icon for notifications, so nothing to set.
+      android: AndroidInitializationSettings('@mipmap/launcher_icon'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -267,7 +269,10 @@ class LocalNotificationService with WidgetsBindingObserver {
     if (_appInForeground) return;
     final details = NotificationDetails(
       android: AndroidNotificationDetails(channel, _channelName(channel),
-          importance: Importance.high, priority: Priority.high),
+          importance: Importance.high,
+          priority: Priority.high,
+          // Show the app icon as the large icon on Android too.
+          largeIcon: const DrawableResourceAndroidBitmap('mipmap/launcher_icon')),
       iOS: const DarwinNotificationDetails(),
     );
     await _plugin.show(_nextId++, title, body, details);
