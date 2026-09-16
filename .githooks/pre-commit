@@ -5,6 +5,16 @@
 
 set -euo pipefail
 
+# Git hooks on Windows may not inherit LOCALAPPDATA, which Dart needs to
+# locate the pub cache. Pin it explicitly (Windows + macOS/Linux both handled).
+if [ -z "${PUB_CACHE:-}" ]; then
+  if [ -n "${LOCALAPPDATA:-}" ]; then
+    export PUB_CACHE="${LOCALAPPDATA}/Pub/Cache"
+  else
+    export PUB_CACHE="${HOME}/.pub-cache"
+  fi
+fi
+
 TRIGGER_PATHS=(
   'lib/*.dart'
   'test/*.dart'
@@ -35,8 +45,8 @@ if ! is_triggered; then
   exit 0
 fi
 
-echo "pre-commit: running flutter pub get"
-flutter pub get
+#echo "pre-commit: running flutter pub get"
+#flutter pub get
 
 echo "pre-commit: running flutter analyze --fatal-infos --fatal-warnings"
 flutter analyze --fatal-infos --fatal-warnings

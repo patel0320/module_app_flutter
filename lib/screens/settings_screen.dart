@@ -12,7 +12,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:soleux_device_manager/l10n/gen/app_localizations.dart';
 
 import '../services/event_log_store.dart';
-import '../services/session_store.dart';
+// import '../services/session_store.dart';
 import '../services/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -40,20 +40,20 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _signOut(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final bool confirmed = await showConfirmDialog(
-      context,
-      title: l10n.settingsSignOutDialog,
-      message: l10n.settingsSignOutMsg,
-      confirmLabel: l10n.settingsSignOutDialog,
-    );
-    if (confirmed && context.mounted) {
-      SessionStore.shared.setSignedIn(false);
-      Navigator.of(context)
-          .restorablePushNamedAndRemoveUntil('/login', (route) => false);
-    }
-  }
+  // Future<void> _signOut(BuildContext context) async {
+  //   final l10n = AppLocalizations.of(context);
+  //   final bool confirmed = await showConfirmDialog(
+  //     context,
+  //     title: l10n.settingsSignOutDialog,
+  //     message: l10n.settingsSignOutMsg,
+  //     confirmLabel: l10n.settingsSignOutDialog,
+  //   );
+  //   if (confirmed && context.mounted) {
+  //     SessionStore.shared.setSignedIn(false);
+  //     Navigator.of(context)
+  //         .restorablePushNamedAndRemoveUntil('/login', (route) => false);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
