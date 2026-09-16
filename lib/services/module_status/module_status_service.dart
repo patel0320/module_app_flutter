@@ -1424,37 +1424,11 @@ class ModuleStatusService {
         _scheduleCommit();
       }
     });
-    // Control API device events (output/input/level changes, temperature, ...,
-    // doc/...Specification_v0.6.md §"Device events") update the live module so
-    // its target screen reflects device-initiated changes without a re-fetch.
+    // Control API device events (output/input/level changes, temperature,
+    // system_status, ...) update the live module so its target screen reflects
+    // device-initiated changes without a re-fetch.
     unit.deviceEventStream
         .listen((event) => _applyDeviceEvent(module.id, event));
-    // `get_device_state` snapshots from the keep-alive heartbeat: fold the live
-    // inputs/outputs/system into the module so relay, dimmer, blind and all
-    // other module screens stay in sync with the device.
-    unit.deviceStateStream
-        .listen((result) => _applyDeviceStateSnapshot(module.id, result));
-  }
-
-  /// Applies a `get_device_state` snapshot produced by the keep-alive heartbeat
-  /// to the live module in the store (and therefore to its screen, which
-  /// rebuilds on [ModuleStore] changes). It mirrors inputs/outputs (relay on/off,
-  /// dimmer level, blind direction state) and the system/network temperature.
-  void _applyDeviceStateSnapshot(String moduleId, Map<String, dynamic> result) {
-    final live = store.byId(moduleId);
-    if (live == null) return;
-
-    if (result['system'] is Map || result['network'] is Map) {
-      _applySystemSnapshot(live, Map<String, dynamic>.from(result));
-    }
-
-    final rawOutputs = result['outputs'];
-    if (rawOutputs is List) _applyStateOutputs(live, rawOutputs);
-
-    final rawInputs = result['inputs'];
-    if (rawInputs is List) _applyStateInputs(live, rawInputs);
-
-    _scheduleCommit();
   }
 
   /// Applies the `system`/`network` part of a snapshot (a `get_device_state`
@@ -1468,48 +1442,6 @@ class ModuleStatusService {
       live.internalTempC = live.systemInfo!.internalTempC!;
     } else if (live.systemInfo!.externalTempC != null) {
       live.internalTempC = live.systemInfo!.externalTempC!;
-    }
-  }
-
-  /// Applies a `get_device_state` `outputs` list to the live store channels:
-  /// on/off state from `state`/`actual_state` and brightness from
-  /// `set_pwm`/`actual_pwm` (dimmers). Works for relay, dimmer and blind
-  /// outputs alike.
-  void _applyStateOutputs(DeviceModule live, List rawOutputs) {
-    for (final item in rawOutputs) {
-      if (item is! Map) continue;
-      final data = Map<String, dynamic>.from(item);
-      final channel = (data['channel'] as num?)?.toInt();
-      if (channel == null || channel < 0 || channel >= live.channels.length) {
-        continue;
-      }
-      final output = live.channels[channel];
-
-      final rawState = data['state'] ?? data['actual_state'];
-      if (rawState is bool) output.isOn = rawState;
-
-      final rawLevel = data['set_pwm'] ??
-          data['actual_pwm'] ??
-          data['requested_level'] ??
-          data['actual_level'];
-      if (rawLevel is num) {
-        output.brightness = rawLevel.round().clamp(0, 100);
-      }
-    }
-  }
-
-  /// Applies a `get_device_state` `inputs` list to the live store inputs,
-  /// mirroring each input's on/off `state` so its screen indicator stays live.
-  void _applyStateInputs(DeviceModule live, List rawInputs) {
-    for (final item in rawInputs) {
-      if (item is! Map) continue;
-      final data = Map<String, dynamic>.from(item);
-      final channel = (data['channel'] as num?)?.toInt();
-      if (channel == null || channel < 0 || channel >= live.inputs.length) {
-        continue;
-      }
-      final state = data['state'];
-      if (state is bool) live.inputs[channel].state = state;
     }
   }
 
