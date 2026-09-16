@@ -147,27 +147,22 @@ class SoleuxJsonService extends SoleuxControlApiService {
       StreamController<Map<String, dynamic>>.broadcast(sync: true);
   final StreamController<SoleuxDeviceEvent> _deviceEvents =
       StreamController<SoleuxDeviceEvent>.broadcast(sync: true);
-  final StreamController<Map<String, dynamic>> _deviceState =
-      StreamController<Map<String, dynamic>>.broadcast(sync: true);
   final SoleuxLineSplitter _splitter = SoleuxLineSplitter();
   final Map<int, _JsonPending> _pending = {};
 
   StreamSubscription<String>? _dataSubscription;
   int _nextId = 1;
 
-  /// Application-level keep-alive that sends a `get_device_state` on the live
-  /// socket so proxies/gateways/NAT do not idle-timeout the persistent
+  /// Application-level keep-alive that periodically sends a `hello` request on
+  /// the live socket so proxies/gateways/NAT do not idle-timeout the persistent
   /// connection and half-open sockets are detected quickly.
   ///
   /// Per the protocol-2 broadcast contract (Soleux-Mobile-TCP-Protocol.md) the
   /// device's unsolicited broadcasts (`input_state_changed`,
   /// `output_state_changed`, `system_status`) do **not** reset the 30-second
   /// receive-idle timeout, so the app must keep sending periodic requests
-  /// (every 15-20 s). The richer `get_device_state` request is sent rather
-  /// than a bare `hello` because its response also carries the live device
-  /// status, which is published on [deviceStateStream] to re-synchronise any
-  /// state change event that was missed while the client was disconnected
-  /// (spec §"Synchronization": reconnecting clients rebuild the snapshot).
+  /// (every 15-20 s). Live state is driven entirely by those broadcasts, so a
+  /// light `hello` is enough to keep the session alive.
   Timer? _keepAliveTimer;
   static const Duration _keepAliveInterval = Duration(seconds: 15);
 
@@ -183,12 +178,6 @@ class SoleuxJsonService extends SoleuxControlApiService {
   /// contract): parsed JSON envelopes carrying `event` + `data`/`result`
   /// (e.g. `output_state_changed`, `system_status`).
   Stream<SoleuxDeviceEvent> get deviceEventStream => _deviceEvents.stream;
-
-  /// Live `get_device_state` snapshots produced by the keep-alive heartbeat.
-  /// Each entry is a `get_device_state` `result`, so callers can reflect the
-  /// device's current inputs/outputs/sensors/system/network without an extra
-  /// poll.
-  Stream<Map<String, dynamic>> get deviceStateStream => _deviceState.stream;
 
   /// Connection up/down transitions, forwarded from [ModuleTcpConnection].
   @override
@@ -236,17 +225,14 @@ class SoleuxJsonService extends SoleuxControlApiService {
         Timer.periodic(_keepAliveInterval, (_) => unawaited(_sendKeepAlive()));
   }
 
-  /// Sends a non-fatal `get_device_state` keep-alive while the socket is live.
-  /// On success the returned snapshot is published on [deviceStateStream] so
-  /// callers reflect the live device status.
+  /// Sends a non-fatal `hello` keep-alive while the socket is live. Live state
+  /// flows in through the device's broadcast events, so a bare `hello` (the
+  /// documented keep-alive request, Soleux-Mobile-TCP-Protocol.md) is enough
+  /// to stop the 30-second receive-idle timeout from closing the session.
   Future<void> _sendKeepAlive() async {
     if (!_connection.isConnected) return;
     try {
-      final response =
-          await getDeviceState(timeout: const Duration(seconds: 5));
-      if (response.ok && response.result != null) {
-        _deviceState.add(response.result!);
-      }
+      await hello(timeout: const Duration(seconds: 5));
     } catch (_) {
       // Keep-alive failures are non-fatal; the socket layer handles reconnect.
     }
@@ -387,7 +373,6 @@ class SoleuxJsonService extends SoleuxControlApiService {
     _events.close();
     _jsonEvents.close();
     _deviceEvents.close();
-    _deviceState.close();
     _connection.dispose();
   }
 
