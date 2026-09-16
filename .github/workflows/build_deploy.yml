@@ -1,7 +1,7 @@
 # ============================================================================
-# Flutter Cross-Platform Build & Deploy Pipeline
-# Targets: Android (APK/AAB → Google Play), iOS (IPA → TestFlight/App Store),
-#          Windows (EXE/MSIX → GitHub Releases), macOS (.app → GitHub Releases)
+# Flutter iOS Build & Deploy Pipeline
+# Target: iOS (IPA → TestFlight/App Store).
+# Android, Windows and macOS build jobs are disabled (see each job).
 #
 # Triggers:
 #   - Manual via GitHub Actions "Run workflow" (workflow_dispatch)
@@ -47,14 +47,10 @@ on:
       platform:
         description: 'Platform(s) to build'
         required: true
-        default: 'all'
+        default: 'ios'
         type: choice
         options:
-          - android
           - ios
-          - windows
-          - macos
-          - all
       release_tag:
         description: 'GitHub release tag to attach build artifacts (e.g. v1.0.0). Required to upload to a release on manual runs; on tag pushes the trigger tag is used automatically.'
         required: false
@@ -131,10 +127,12 @@ jobs:
 
   # --------------------------------------------------------------------------
   # 2. Windows executable build (fastest, runs on Windows runner)
+  # DISABLED: iOS is the only active build target.
   # --------------------------------------------------------------------------
   windows:
     name: Windows Build
     needs: analyze
+    if: ${{ false }}
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -197,13 +195,14 @@ jobs:
 
   # --------------------------------------------------------------------------
   # 2b. macOS desktop build (.app bundle → GitHub Releases)
+  # DISABLED: iOS is the only active build target.
   # --------------------------------------------------------------------------
   macos:
     name: macOS Build
     needs: analyze
     runs-on: macos-latest
     # Only run when macOS requested (dispatch) or on a tag release.
-    if: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'macos' || github.event.inputs.platform == 'all')) || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -278,10 +277,12 @@ jobs:
 
   # --------------------------------------------------------------------------
   # 3. Android build: debug APK, release APK, release AAB (signed)
+  # DISABLED: iOS is the only active build target.
   # --------------------------------------------------------------------------
   android:
     name: Android Build
     needs: analyze
+    if: ${{ false }}
     runs-on: ubuntu-latest
     env:
       # Instruct the Gradle signing block (see README) to use CI values.
@@ -377,8 +378,8 @@ jobs:
     name: iOS Build & Deploy
     needs: analyze
     runs-on: macos-latest
-    # Only run when iOS is requested (dispatch) or on a tag release.
-    if: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || github.event.inputs.deploy_ios == 'true')) || startsWith(github.ref, 'refs/tags/v') }}
+    # Only active build target: runs on every dispatch and on tag releases.
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     env:
       # True when we must produce a signed build for TestFlight.
       SHOULD_DEPLOY: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ios == 'true') || startsWith(github.ref, 'refs/tags/v') }}
