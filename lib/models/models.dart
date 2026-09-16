@@ -803,6 +803,9 @@ class Automation {
     this.enabled = true,
     this.scheduleHour,
     this.scheduleMinute,
+    this.watchModuleName,
+    this.watchIsInput = false,
+    this.watchInputName,
     this.watchChannelName,
     this.watchState = true,
     List<ScenarioAction>? actions,
@@ -823,12 +826,27 @@ class Automation {
   /// [triggerType] == AutomationTriggerType.time.
   int? scheduleMinute;
 
+  /// Name of the module the device-state trigger watches. Only meaningful when
+  /// [triggerType] == AutomationTriggerType.deviceState; null means "any
+  /// module" (legacy automations saved before module selection existed).
+  String? watchModuleName;
+
+  /// Whether the device-state trigger watches a [PhysicalInput] (true) or a
+  /// [ChannelOutput] (false).
+  bool watchIsInput;
+
+  /// [PhysicalInput] name watched by an input-based device-state trigger. Only
+  /// meaningful when [triggerType] == AutomationTriggerType.deviceState and
+  /// [watchIsInput] is true; use [watchChannelName] for output triggers.
+  String? watchInputName;
+
   /// Output name watched by a device-state trigger. Only meaningful when
-  /// [triggerType] == AutomationTriggerType.deviceState.
+  /// [triggerType] == AutomationTriggerType.deviceState and [watchIsInput] is
+  /// false.
   String? watchChannelName;
 
   /// The state change that fires the rule: true = fires when the watched
-  /// output turns ON, false = fires when it turns OFF.
+  /// target turns ON, false = fires when it turns OFF.
   bool watchState;
 
   /// Falls back to a sensible default (20:00) for time-triggered rules that
@@ -845,6 +863,9 @@ class Automation {
         'triggerSummary': triggerSummary,
         'scheduleHour': scheduleHour,
         'scheduleMinute': scheduleMinute,
+        'watchModuleName': watchModuleName,
+        'watchIsInput': watchIsInput,
+        'watchInputName': watchInputName,
         'watchChannelName': watchChannelName,
         'watchState': watchState,
         'actions': actions.map((a) => a.toJson()).toList(),
@@ -859,6 +880,9 @@ class Automation {
         triggerSummary: json['triggerSummary'] as String? ?? '',
         scheduleHour: (json['scheduleHour'] as num?)?.toInt(),
         scheduleMinute: (json['scheduleMinute'] as num?)?.toInt(),
+        watchModuleName: json['watchModuleName'] as String?,
+        watchIsInput: json['watchIsInput'] as bool? ?? false,
+        watchInputName: json['watchInputName'] as String?,
         watchChannelName: json['watchChannelName'] as String?,
         watchState: json['watchState'] as bool? ?? true,
         actions: [
