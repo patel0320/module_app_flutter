@@ -892,6 +892,130 @@ class Automation {
       );
 }
 
+/// A column definition of the device's system log table
+/// (`get_page_configuration` "system" page, `system_logs` section `columns`).
+class SystemLogColumn {
+  const SystemLogColumn({required this.key, required this.label});
+
+  final String key;
+
+  /// Localized (by the device) column header, e.g. "Date / Time".
+  final String label;
+
+  factory SystemLogColumn.fromJson(Map<String, dynamic> json) =>
+      SystemLogColumn(
+        key: json['key'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+      );
+}
+
+/// A single row in the device's system log (`get_page_configuration` "system"
+/// page, `system_logs` section `rows`).
+class SystemLogEntry {
+  const SystemLogEntry({
+    required this.dateTime,
+    required this.tag,
+    required this.state,
+    required this.note,
+  });
+
+  /// Device-formatted timestamp, e.g. `2026/09/17 17:25:26`.
+  final String dateTime;
+
+  /// Output/hardware identifier the event belongs to, e.g. `Out-1`.
+  final String tag;
+
+  /// Reported status string, e.g. `ON`.
+  final String state;
+
+  /// Human-readable event description, e.g. `Duty Set`.
+  final String note;
+
+  factory SystemLogEntry.fromJson(Map<String, dynamic> json) => SystemLogEntry(
+        dateTime: json['date_time'] as String? ?? '',
+        tag: json['tag'] as String? ?? '',
+        state: json['state'] as String? ?? '',
+        note: json['note'] as String? ?? '',
+      );
+}
+
+/// One page of the device's system log, parsed from the `system_logs` section
+/// of a `get_page_configuration` "system" page response.
+class SystemLogPage {
+  const SystemLogPage({
+    required this.rows,
+    required this.columns,
+    required this.page,
+    required this.pageSize,
+    required this.totalPages,
+    required this.totalCount,
+  });
+
+  final List<SystemLogEntry> rows;
+  final List<SystemLogColumn> columns;
+
+  /// Current one-based page number.
+  final int page;
+
+  /// Entries per page.
+  final int pageSize;
+
+  final int totalPages;
+
+  /// Total entries available on the device.
+  final int totalCount;
+
+  /// Whether more pages remain after this one.
+  bool get hasMore => page < totalPages;
+
+  /// Parses the `system_logs` section out of a `get_page_configuration`
+  /// "system" page result, or null when the section is absent.
+  static SystemLogPage? fromResult(Map<String, dynamic>? result) {
+    if (result == null) return null;
+    final sections = result['sections'];
+    if (sections is! List) return null;
+    Map<String, dynamic>? logs;
+    for (final raw in sections) {
+      if (raw is! Map) continue;
+      final map = Map<String, dynamic>.from(raw);
+      if (map['key'] == 'system_logs') {
+        logs = map;
+        break;
+      }
+    }
+    if (logs == null) return null;
+
+    final rows = <SystemLogEntry>[];
+    final rawRows = logs['rows'];
+    if (rawRows is List) {
+      for (final raw in rawRows) {
+        if (raw is Map) {
+          rows.add(SystemLogEntry.fromJson(Map<String, dynamic>.from(raw)));
+        }
+      }
+    }
+
+    final columns = <SystemLogColumn>[];
+    final rawColumns = logs['columns'];
+    if (rawColumns is List) {
+      for (final raw in rawColumns) {
+        if (raw is Map) {
+          columns.add(SystemLogColumn.fromJson(Map<String, dynamic>.from(raw)));
+        }
+      }
+    }
+
+    return SystemLogPage(
+      rows: rows,
+      columns: columns,
+      page: (logs['page'] as num?)?.toInt() ?? 1,
+      pageSize: (logs['page_size'] as num?)?.toInt() ?? 10,
+      totalPages: (logs['total_pages'] as num?)?.toInt() ?? 1,
+      totalCount: (logs['total_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 /// A single row in the 30-day event history (brief section 2.4).
 class EventLogEntry {
   EventLogEntry(

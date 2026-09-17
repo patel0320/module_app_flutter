@@ -11,6 +11,7 @@ import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dimmer_controls_section.dart';
+import '../widgets/system_log_dialog.dart';
 import 'channel_editor_screen.dart';
 import 'input_editor_screen.dart';
 
@@ -83,6 +84,10 @@ class _DimmerDcScreenState extends State<DimmerDcScreen> {
               icon: const Icon(Icons.refresh),
               tooltip: l10n.refreshTooltip,
               onPressed: _refresh),
+          IconButton(
+              icon: const Icon(Icons.receipt_long_outlined),
+              tooltip: l10n.systemLogTooltip,
+              onPressed: () => showSystemLogDialog(context, module)),
           IconButton(
               icon: const Icon(Icons.edit_outlined), onPressed: _editModuleInfo)
         ],

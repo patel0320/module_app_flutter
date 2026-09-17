@@ -368,6 +368,14 @@
   "moduleInputs": "Intrări ({count})",
   "inputHoldToActivate": "Apăsați și mențineți",
 
+  "systemLogTooltip": "Jurnal sistem",
+  "systemLogTitle": "Jurnal sistem",
+  "systemLogLoading": "Se încarcă...",
+  "systemLogEmpty": "Nu există intrări în jurnal.",
+  "systemLogLoadFailed": "Jurnalul sistemului nu a putut fi încărcat.",
+  "systemLogLoadMoreFailed": "Nu s-au putut încărca mai multe intrări.",
+  "retry": "Reîncearcă",
+
   "dimmerAcSubtitle": "Ieșiri dimare 220V AC",
   "dimmerDcSubtitle": "Ieșiri dimare 12-24V DC (PWM)",
   "dimmingChannelsHeader": "Canaluri de dimare ({count})",

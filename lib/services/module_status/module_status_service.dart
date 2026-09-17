@@ -704,6 +704,35 @@ class ModuleStatusService {
     }
   }
 
+  /// `get_page_configuration` "system" page - fetches one page of the device's
+  /// system log (`system_logs` section: [SystemLogPage]). Returns null when the
+  /// module has no live Control API unit or the command was rejected.
+  Future<SystemLogPage?> fetchSystemLogPage(
+    String moduleId, {
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    final unit = jsonCommandServiceFor(moduleId);
+    if (unit == null || !unit.isConnected) return null;
+    try {
+      final response = await unit.getPageConfiguration(
+        SoleuxJsonPages.system,
+        logPage: page,
+        logPageSize: pageSize,
+      );
+      if (!response.ok) {
+        debugPrint('ModuleStatusService: get_page_configuration (system log) '
+            'on $moduleId rejected: ${response.error?.summary}');
+        return null;
+      }
+      return SystemLogPage.fromResult(response.result);
+    } catch (e, st) {
+      debugPrint('ModuleStatusService: get_page_configuration (system log) '
+          'on $moduleId failed: $e\n$st');
+      return null;
+    }
+  }
+
   Future<bool> _setOutputState(String moduleId, int index, bool state) async {
     final protocol = commandProtocolFor(moduleId);
     if (protocol == null) return false;
@@ -1458,8 +1487,7 @@ class ModuleStatusService {
         _applyOutputStateEvent(live, event),
       SoleuxDeviceEventType.outputLevelChanged =>
         _applyOutputLevelEvent(live, event),
-      SoleuxDeviceEventType.pwmStateChanged =>
-        _applyPwmStateEvent(live, event),
+      SoleuxDeviceEventType.pwmStateChanged => _applyPwmStateEvent(live, event),
       SoleuxDeviceEventType.inputStateChanged =>
         _applyInputStateEvent(live, event),
       SoleuxDeviceEventType.temperatureChanged =>

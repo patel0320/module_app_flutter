@@ -81,8 +81,19 @@ abstract class SoleuxControlApiService {
           timeout: timeout);
 
   /// `get_page_configuration` - reads a device-driven configuration page.
-  Future<SoleuxJsonResponse> getPageConfiguration(String page) =>
-      request(SoleuxJsonActions.getPageConfiguration, {'page': page});
+  ///
+  /// [logPage]/[logPageSize] are optional pagination for the `system` page's
+  /// `system_logs` section.
+  Future<SoleuxJsonResponse> getPageConfiguration(
+    String page, {
+    int? logPage,
+    int? logPageSize,
+  }) =>
+      request(SoleuxJsonActions.getPageConfiguration, {
+        'page': page,
+        if (logPage != null) 'log_page': logPage,
+        if (logPageSize != null) 'log_page_size': logPageSize,
+      });
 
   /// `set_page_configuration` - saves one page section.
   Future<SoleuxJsonResponse> setPageConfiguration(

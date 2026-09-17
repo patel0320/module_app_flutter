@@ -363,7 +363,7 @@ def _release_virtual(state, channel):
             state, state.profile["input_count"] + channel, False)
 
 
-def build_page(state, page):
+def build_page(state, page, log_page=1, log_page_size=10):
     p = state.profile
     common = {
         "device": p["json_device"], "name": state.name,
@@ -383,7 +383,50 @@ def build_page(state, page):
     if page == "system":
         sections.append({"section": "actions", "fields": {"reboot": True,
                                                           "sync_time": True}})
+        sections.append(system_logs_section(state, log_page, log_page_size))
     return {"page": page, "device": p["json_device"], "sections": sections}
+
+
+SYSTEM_LOG_COLUMNS = [
+    {"key": "date_time", "label": "Date / Time"},
+    {"key": "tag", "label": "Tag"},
+    {"key": "state", "label": "Status"},
+    {"key": "note", "label": "Note"},
+]
+
+SYSTEM_LOG_NOTES = [
+    "Duty Set", "Request from Web", "Request from App",
+    "Output changed", "Firmware updated", "Reboot scheduled", "OFF",
+]
+
+
+def system_logs_section(state, page, page_size):
+    total = 3661
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * page_size
+    rows = []
+    for i in range(start, min(start + page_size, total)):
+        nr = i % len(SYSTEM_LOG_NOTES)
+        rows.append({
+            "note": SYSTEM_LOG_NOTES[nr],
+            "date_time": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "state": "ON" if i % 3 else "OFF",
+            "tag": f"Out-{(i % 4) + 1}",
+        })
+    return {
+        "key": "system_logs",
+        "title": "System Logs",
+        "description": f"Most recent device events ({total} total).",
+        "can_delete": True,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "total_count": total,
+        "rows": rows,
+        "fields": [],
+        "columns": SYSTEM_LOG_COLUMNS,
+    }
 
 
 def _output_config_result(out, channel):
@@ -437,7 +480,9 @@ def handle_json_action(state, action, params, req_id):
         page = params.get("page")
         if page not in PAGES:
             raise RequestError(f"unknown page '{page}'")
-        return build_page(state, page)
+        return build_page(state, page,
+                          log_page=int(params.get("log_page", 1) or 1),
+                          log_page_size=int(params.get("log_page_size", 10) or 10))
 
     if action == "set_page_configuration":
         page = params.get("page", "")

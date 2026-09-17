@@ -398,6 +398,14 @@
   "@moduleInputs": {"placeholders": {"count": {"type": "int"}}},
   "inputHoldToActivate": "Hold to act",
 
+  "systemLogTooltip": "System log",
+  "systemLogTitle": "System Logs",
+  "systemLogLoading": "Loading...",
+  "systemLogEmpty": "No log entries.",
+  "systemLogLoadFailed": "Could not load the system log.",
+  "systemLogLoadMoreFailed": "Failed to load more entries.",
+  "retry": "Retry",
+
   "dimmerAcSubtitle": "220V AC dimming outputs",
   "dimmerDcSubtitle": "12-24V DC dimming outputs (PWM)",
   "dimmingChannelsHeader": "Dimming Channels ({count})",
