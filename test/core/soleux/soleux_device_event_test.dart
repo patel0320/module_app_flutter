@@ -37,6 +37,7 @@ void main() {
       const samples = <String, SoleuxDeviceEventType>{
         'output_state_changed': SoleuxDeviceEventType.outputStateChanged,
         'output_level_changed': SoleuxDeviceEventType.outputLevelChanged,
+        'pwm_state_changed': SoleuxDeviceEventType.pwmStateChanged,
         'input_state_changed': SoleuxDeviceEventType.inputStateChanged,
         'mapping_changed': SoleuxDeviceEventType.mappingChanged,
         'temperature_changed': SoleuxDeviceEventType.temperatureChanged,
@@ -113,6 +114,25 @@ void main() {
       expect(event!.kind, 'physical');
       expect(event.channel, 1);
       expect(event.state, isTrue);
+    });
+
+    test('pwm_state_changed exposes set/actual PWM + direction + confirmed', () {
+      // Protocol-2 broadcast shape (Soleux-Mobile-TCP-Protocol.md): the payload
+      // under `result` with id null / ok true.
+      final event = SoleuxDeviceEvent.maybeParse('{"result":{"direction":"UP",'
+          '"confirmed":true,"actual_pwm":83,"set_pwm":100,"channel":3,'
+          '"revision":1789633582100},"ok":true,"protocol":2,"id":null,'
+          '"event":"pwm_state_changed"}');
+      expect(event, isNotNull);
+      expect(event!.protocol, 2);
+      expect(event.type, SoleuxDeviceEventType.pwmStateChanged);
+      expect(event.rawEvent, 'pwm_state_changed');
+      expect(event.channel, 3);
+      expect(event.setPwm, 100.0);
+      expect(event.actualPwm, 83.0);
+      expect(event.direction, 'UP');
+      expect(event.confirmed, isTrue);
+      expect(event.revision, 1789633582100);
     });
 
     test('protocol-2 broadcast envelope (result payload) is parsed', () {

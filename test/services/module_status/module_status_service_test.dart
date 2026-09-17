@@ -562,6 +562,41 @@ void main() {
     await fake.server.close();
   });
 
+  test('pwm_state_changed sets the dimmer brightness to actual_pwm', () async {
+    final fake = await _FakeDevice.start();
+    final store = ModuleStore.forTesting();
+    final module = DeviceModule(
+      id: 'm-dimmer',
+      name: 'Dimmer',
+      type: ModuleType.dimmerDc,
+      ipAddress: '127.0.0.1',
+      status: ConnectionStatus.offline,
+      roomName: 'Room',
+      internalTempC: 30,
+      tcpPort: fake.port - 3,
+    );
+    await store.replaceAll([module]);
+
+    final service = ModuleStatusService(store: store);
+    expect(await service.refreshOne(module), isTrue);
+    await _flush();
+    expect(store.byId('m-dimmer')!.channels, hasLength(2));
+
+    // Protocol-2 broadcast: the dimmer settled at actual_pwm 83 (set 100).
+    fake.broadcast('{"protocol":2,"id":null,"ok":true,'
+        '"event":"pwm_state_changed",'
+        '"result":{"channel":1,"direction":"UP","confirmed":true,'
+        '"set_pwm":100,"actual_pwm":83,"revision":1789633582100}}');
+    await _flush();
+    final live = store.byId('m-dimmer')!;
+    expect(live.channels[1].brightness, 83,
+        reason: 'pwm_state_changed must reflect the actual PWM level');
+    expect(live.channels[1].isOn, isTrue);
+
+    service.dispose();
+    await fake.server.close();
+  });
+
   test('temperature_changed keeps the module temperature reading live',
       () async {
     final fake = await _FakeDevice.start();

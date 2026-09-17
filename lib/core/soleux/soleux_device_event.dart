@@ -39,6 +39,7 @@ import 'dart:convert';
 enum SoleuxDeviceEventType {
   outputStateChanged('output_state_changed'),
   outputLevelChanged('output_level_changed'),
+  pwmStateChanged('pwm_state_changed'),
   inputStateChanged('input_state_changed'),
   mappingChanged('mapping_changed'),
   temperatureChanged('temperature_changed'),
@@ -139,6 +140,20 @@ class SoleuxDeviceEvent {
 
   /// `data.transitioning` (output_level_changed) - dimmer is still settling.
   bool? get transitioning => _boolData('transitioning');
+
+  /// `data.set_pwm` (pwm_state_changed, 0-100) - the dimmer's set/target PWM.
+  double? get setPwm => _numData('set_pwm');
+
+  /// `data.actual_pwm` (pwm_state_changed, 0-100) - the PWM the dimmer is
+  /// actually producing.
+  double? get actualPwm => _numData('actual_pwm');
+
+  /// `data.direction` (pwm_state_changed) - `UP`/`DOWN` dim direction.
+  String? get direction => _stringData('direction');
+
+  /// `data.confirmed` (pwm_state_changed) - true once the hardware settled on
+  /// the reported PWM.
+  bool? get confirmed => _boolData('confirmed');
 
   // ---------------------------------------------------------------------------
   // Mapping (mapping_changed).

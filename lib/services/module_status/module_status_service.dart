@@ -1458,6 +1458,8 @@ class ModuleStatusService {
         _applyOutputStateEvent(live, event),
       SoleuxDeviceEventType.outputLevelChanged =>
         _applyOutputLevelEvent(live, event),
+      SoleuxDeviceEventType.pwmStateChanged =>
+        _applyPwmStateEvent(live, event),
       SoleuxDeviceEventType.inputStateChanged =>
         _applyInputStateEvent(live, event),
       SoleuxDeviceEventType.temperatureChanged =>
@@ -1509,6 +1511,27 @@ class ModuleStatusService {
       return true;
     }
     return false;
+  }
+
+  /// `pwm_state_changed` - a dimmer channel's PWM level changed; the display
+  /// brightness follows the device-reported actual PWM.
+  bool _applyPwmStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
+    final channel = event.channel;
+    final actual = event.actualPwm;
+    if (channel == null ||
+        actual == null ||
+        channel < 0 ||
+        channel >= live.channels.length) {
+      return false;
+    }
+    final output = live.channels[channel];
+    final brightness = actual.round().clamp(0, 100);
+    if (output.brightness == brightness && output.isOn == (brightness > 0)) {
+      return false;
+    }
+    output.brightness = brightness;
+    output.isOn = brightness > 0;
+    return true;
   }
 
   /// `input_state_changed` - a physical/virtual input changed state.
