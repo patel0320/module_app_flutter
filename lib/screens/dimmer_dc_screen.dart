@@ -11,7 +11,6 @@ import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dimmer_controls_section.dart';
-import '../widgets/module_polling.dart';
 import 'channel_editor_screen.dart';
 import 'input_editor_screen.dart';
 
@@ -24,11 +23,7 @@ class DimmerDcScreen extends StatefulWidget {
   State<DimmerDcScreen> createState() => _DimmerDcScreenState();
 }
 
-class _DimmerDcScreenState extends State<DimmerDcScreen>
-    with ModulePollingState<DimmerDcScreen> {
-  @override
-  String get pollModuleId => widget.module.id;
-
+class _DimmerDcScreenState extends State<DimmerDcScreen> {
   Future<void> _editChannel(ChannelOutput channel, int index) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(

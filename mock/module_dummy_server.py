@@ -58,7 +58,7 @@ import socket
 import struct
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # ─── Well-known protocol constants (doc / lib/core/soleux) ───────────────────
 
@@ -359,6 +359,8 @@ CODE_TO_BEHAVIOR = {0: "none", 1: "on", 2: "off", 3: "toggle",
 def _release_virtual(state, channel):
     if 0 <= channel < len(state.virtual_inputs):
         state.virtual_inputs[channel]["state"] = False
+        broadcast_input_change(
+            state, state.profile["input_count"] + channel, False)
 
 
 def build_page(state, page):
@@ -670,6 +672,9 @@ def handle_control_api_action(state, action, params, req_id):
         new_state = bool(params.get("state", False))
         changed = vin["state"] != new_state
         vin["state"] = new_state
+        if changed:
+            broadcast_input_change(state,
+                                   p["input_count"] + channel, new_state)
         return {"channel": channel, "state": new_state, "changed": changed}
 
     if action == "trigger_virtual_input":
@@ -681,6 +686,7 @@ def handle_control_api_action(state, action, params, req_id):
             raise RequestError("virtual input disabled", "input_disabled")
         duration = int(params.get("duration_ms", 100))
         vin["state"] = True
+        broadcast_input_change(state, p["input_count"] + channel, True)
         threading.Timer(duration / 1000.0,
                         lambda: _release_virtual(state, channel)).start()
         return {"channel": channel, "triggered": True,
@@ -729,6 +735,11 @@ def handle_control_api_action(state, action, params, req_id):
 tcp_clients = {}
 tcp_clients_lock = threading.Lock()
 
+# Control API clients (port 5008, legacy + 3). Legacy AT-only clients get the
+# `OUT:`/`IN:` lines; Control API clients get the protocol-2 JSON broadcast
+# events (Soleux-Mobile-TCP-Protocol.md).
+tcp_api_clients = set()
+
 
 def send_tcp(sock, text):
     try:
@@ -738,9 +749,27 @@ def send_tcp(sock, text):
 
 
 def broadcast(text):
+    """Sends a legacy text line to the AT-only legacy clients."""
     with tcp_clients_lock:
-        for sock in list(tcp_clients.values()):
+        for client_id, sock in list(tcp_clients.items()):
+            if client_id in tcp_api_clients:
+                continue
             send_tcp(sock, text)
+
+
+def broadcast_api(line):
+    """Sends a protocol-2 JSON broadcast line to the Control API clients."""
+    with tcp_clients_lock:
+        for client_id, sock in list(tcp_clients.items()):
+            if client_id in tcp_api_clients:
+                send_tcp(sock, line)
+
+
+def broadcast_event(event, result):
+    """Protocol-2 broadcast envelope: id null, ok true, payload under result."""
+    return json.dumps({"protocol": 2, "id": None, "ok": True,
+                       "event": event, "result": result},
+                      ensure_ascii=False) + "\r\n"
 
 
 def broadcast_close_all():
@@ -751,6 +780,7 @@ def broadcast_close_all():
             except Exception:
                 pass
         tcp_clients.clear()
+        tcp_api_clients.clear()
 
 
 def broadcast_output_change(state, ch):
@@ -759,6 +789,59 @@ def broadcast_output_change(state, ch):
     if state.profile["is_dimmer"]:
         line_out += f"PWM:{ch}:{out.get('pwm', 0)}\r\n"
     broadcast(line_out)
+    broadcast_api(broadcast_event("output_state_changed", {
+        "channel": ch, "state": out["state"],
+        "revision": int(time.time() * 1000),
+    }))
+
+
+def broadcast_input_change(state, ch, value):
+    """Protocol-2 `input_state_changed` broadcast for a physical/virtual
+    input. `ch` is the zero-based input number from the Control API's point of
+    view (virtual inputs are offset by `input_count` so they land after the
+    physical inputs the app lists)."""
+    if value is None:
+        return
+    broadcast_api(broadcast_event("input_state_changed", {
+        "channel": ch, "state": bool(value),
+        "revision": int(time.time() * 1000),
+    }))
+
+
+def system_status_payload(state):
+    cpu = 12.5
+    return {
+        "revision": int(time.time() * 1000),
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "sensors": [{"sensor_id": "external", "value_c": 25.4},
+                    {"sensor_id": "cpu", "value_c": 47.0}],
+        "system": {
+            "time": now_str(),
+            "uptime": uptime_str(start_time),
+            "external_temp_c": 25.4,
+            "cpu_temp_c": 47.0,
+            "free_memory_mb": 184,
+            "total_memory_mb": 512,
+            "used_memory_mb": 328,
+            "memory_usage_percent": 64.06,
+            "cpu_usage_percent": cpu,
+        },
+        "network": {
+            "lan_ip": state.ip,
+            "wifi_ip": "192.168.1.51",
+            "wifi_ssid": "Office WiFi",
+        },
+    }
+
+
+def broadcast_system_status(state):
+    broadcast_api(broadcast_event("system_status", system_status_payload(state)))
+
+
+def system_status_sender(state):
+    while True:
+        time.sleep(5)
+        broadcast_system_status(state)
 
 
 def broadcast_energy_line(state):
@@ -1185,6 +1268,8 @@ def tcp_client_handler(state, client_sock, addr, control_api=False):
             except Exception:
                 pass
         tcp_clients[client_id] = client_sock
+        if control_api:
+            tcp_api_clients.add(client_id)
 
     buf = ""
     try:
@@ -1207,6 +1292,7 @@ def tcp_client_handler(state, client_sock, addr, control_api=False):
     finally:
         with tcp_clients_lock:
             tcp_clients.pop(client_id, None)
+            tcp_api_clients.discard(client_id)
         client_sock.close()
         print(f"[TCP] disconnected {addr}")
 
@@ -1505,6 +1591,10 @@ def main():
                          daemon=True),
         threading.Thread(target=udp_heartbeat_server,
                          args=(state, args.bind, state.heartbeat_port),
+                         daemon=True),
+        # Protocol-2 broadcast contract: push system_status every ~5 s while a
+        # Control API client is connected.
+        threading.Thread(target=system_status_sender, args=(state,),
                          daemon=True),
     ]
     if not args.no_dcp:
