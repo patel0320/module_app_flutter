@@ -48,8 +48,7 @@ void main() {
         ],
       };
 
-  test('parses rows, columns and pagination from the system_logs section',
-      () {
+  test('parses rows, columns and pagination from the system_logs section', () {
     final logs = SystemLogPage.fromResult(result());
     expect(logs, isNotNull);
     expect(logs!.rows, hasLength(2));
@@ -59,7 +58,8 @@ void main() {
     expect(logs.rows.first.tag, 'Out-1');
     expect(logs.rows[1].note, 'Request from Web');
     expect(logs.columns, hasLength(4));
-    expect(logs.columns.map((c) => c.key), ['date_time', 'tag', 'state', 'note']);
+    expect(
+        logs.columns.map((c) => c.key), ['date_time', 'tag', 'state', 'note']);
     expect(logs.columns.map((c) => c.label),
         ['Date / Time', 'Tag', 'Status', 'Note']);
     expect(logs.page, 1);

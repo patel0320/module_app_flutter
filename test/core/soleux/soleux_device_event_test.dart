@@ -116,7 +116,8 @@ void main() {
       expect(event.state, isTrue);
     });
 
-    test('pwm_state_changed exposes set/actual PWM + direction + confirmed', () {
+    test('pwm_state_changed exposes set/actual PWM + direction + confirmed',
+        () {
       // Protocol-2 broadcast shape (Soleux-Mobile-TCP-Protocol.md): the payload
       // under `result` with id null / ok true.
       final event = SoleuxDeviceEvent.maybeParse('{"result":{"direction":"UP",'
