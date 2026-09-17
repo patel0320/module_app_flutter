@@ -56,8 +56,7 @@ class _FakeDevice {
       var text = buffer.toString();
       var idx = text.indexOf('\n');
       while (idx >= 0) {
-        final line =
-            text.substring(0, idx).replaceAll(RegExp(r'\r$'), '');
+        final line = text.substring(0, idx).replaceAll(RegExp(r'\r$'), '');
         _reply(line, socket);
         text = text.substring(idx + 1);
         idx = text.indexOf('\n');
@@ -168,8 +167,7 @@ void main() {
     await tester.pump();
 
     // Both outputs start OFF, both inputs OFF.
-    expect(
-        find.byWidgetPredicate((w) => w is FilledButton && w.enabled),
+    expect(find.byWidgetPredicate((w) => w is FilledButton && w.enabled),
         findsNothing,
         reason: 'no output is ON before the broadcast');
     expect(find.text('ON'), findsNothing,
@@ -231,11 +229,9 @@ void main() {
     ));
     await tester.pump();
 
-    List<IconAvatar> avatars() => tester
-        .widgetList<IconAvatar>(find.byType(IconAvatar))
-        .toList();
-    expect(avatars().first.filled, isFalse,
-        reason: 'dimmer starts OFF');
+    List<IconAvatar> avatars() =>
+        tester.widgetList<IconAvatar>(find.byType(IconAvatar)).toList();
+    expect(avatars().first.filled, isFalse, reason: 'dimmer starts OFF');
 
     // Device confirms the output turned on: the logical state must surface in
     // the UI even though the retained brightness level (0%) has not changed.

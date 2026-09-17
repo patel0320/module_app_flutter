@@ -43,8 +43,10 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
 
   /// Modules that expose at least one channel output or input, i.e. everything
   /// the device-state trigger can watch.
-  List<DeviceModule> get _modulesWithTargets =>
-      [for (final m in _modules) if (m.channels.isNotEmpty || m.inputs.isNotEmpty) m];
+  List<DeviceModule> get _modulesWithTargets => [
+        for (final m in _modules)
+          if (m.channels.isNotEmpty || m.inputs.isNotEmpty) m
+      ];
 
   DeviceModule? get _selectedModule {
     for (final m in _modulesWithTargets) {
@@ -59,7 +61,8 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
   List<String> _inputNames(DeviceModule? m) =>
       [for (final i in m?.inputs ?? const <PhysicalInput>[]) i.name];
 
-  String get _watchTargetName => _deviceIsInput ? _deviceInputName : _deviceChannelName;
+  String get _watchTargetName =>
+      _deviceIsInput ? _deviceInputName : _deviceChannelName;
 
   /// True when the selected module exposes at least one output (or input when
   /// an input trigger is chosen), i.e. there is a concrete target to watch.
@@ -129,7 +132,8 @@ class _AutomationEditorScreenState extends State<AutomationEditorScreen> {
     if (_deviceIsInput) {
       _deviceInputName = _inputNames(m).isNotEmpty ? _inputNames(m).first : '';
     } else {
-      _deviceChannelName = _outputNames(m).isNotEmpty ? _outputNames(m).first : '';
+      _deviceChannelName =
+          _outputNames(m).isNotEmpty ? _outputNames(m).first : '';
     }
   }
 

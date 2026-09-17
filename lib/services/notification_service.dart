@@ -272,7 +272,8 @@ class LocalNotificationService with WidgetsBindingObserver {
           importance: Importance.high,
           priority: Priority.high,
           // Show the app icon as the large icon on Android too.
-          largeIcon: const DrawableResourceAndroidBitmap('mipmap/launcher_icon')),
+          largeIcon:
+              const DrawableResourceAndroidBitmap('mipmap/launcher_icon')),
       iOS: const DarwinNotificationDetails(),
     );
     await _plugin.show(_nextId++, title, body, details);
