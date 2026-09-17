@@ -1514,18 +1514,18 @@ class ModuleStatusService {
   }
 
   /// `pwm_state_changed` - a dimmer channel's PWM level changed; the display
-  /// brightness follows the device-reported set PWM.
+  /// brightness follows the device-reported actual PWM.
   bool _applyPwmStateEvent(DeviceModule live, SoleuxDeviceEvent event) {
     final channel = event.channel;
-    final pwm = event.setPwm;
+    final actual = event.actualPwm;
     if (channel == null ||
-        pwm == null ||
+        actual == null ||
         channel < 0 ||
         channel >= live.channels.length) {
       return false;
     }
     final output = live.channels[channel];
-    final brightness = pwm.round().clamp(0, 100);
+    final brightness = actual.round().clamp(0, 100);
     if (output.brightness == brightness && output.isOn == (brightness > 0)) {
       return false;
     }
