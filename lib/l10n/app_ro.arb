@@ -391,6 +391,11 @@
   "@systemLogPage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
   "systemLogEntries": "{count} intrări",
   "@systemLogEntries": {"placeholders": {"count": {"type": "int"}}},
+  "systemLogGotoTitle": "Mergi la pagina",
+  "systemLogGotoLabel": "Numărul paginii",
+  "systemLogGotoRange": "Introduceți o pagină de la 1 la {total}",
+  "@systemLogGotoRange": {"placeholders": {"total": {"type": "int"}}},
+  "systemLogGoto": "Mergi",
 
   "dimmerAcSubtitle": "Ieșiri dimare 220V AC",
   "dimmerDcSubtitle": "Ieșiri dimare 12-24V DC (PWM)",

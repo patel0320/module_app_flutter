@@ -421,6 +421,11 @@
   "@systemLogPage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
   "systemLogEntries": "{count} entries",
   "@systemLogEntries": {"placeholders": {"count": {"type": "int"}}},
+  "systemLogGotoTitle": "Go to page",
+  "systemLogGotoLabel": "Page number",
+  "systemLogGotoRange": "Enter a page from 1 to {total}",
+  "@systemLogGotoRange": {"placeholders": {"total": {"type": "int"}}},
+  "systemLogGoto": "Go",
 
   "dimmerAcSubtitle": "220V AC dimming outputs",
   "dimmerDcSubtitle": "12-24V DC dimming outputs (PWM)",

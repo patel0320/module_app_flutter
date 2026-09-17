@@ -119,6 +119,47 @@ class _SystemLogScreenState extends State<SystemLogScreen> {
 
   void _goToPage(int page) => _loadPage(page);
 
+  /// Opens a dialog to jump to an explicit page number.
+  Future<void> _openGotoPage() async {
+    if (_totalPages <= 1 || _loading) return;
+    final controller = TextEditingController(text: '$_page');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l10n.systemLogGotoTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.systemLogGotoLabel,
+              helperText: l10n.systemLogGotoRange(_totalPages),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text.trim());
+                Navigator.pop(context, value);
+              },
+              child: Text(l10n.systemLogGoto),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == null) return;
+    if (!mounted) return;
+    final target = result.clamp(1, _totalPages);
+    _goToPage(target);
+  }
+
   void _reload() {
     setState(() {
       _page = 0;
@@ -253,13 +294,35 @@ class _SystemLogScreenState extends State<SystemLogScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    l10n.systemLogPage(_page, _totalPages),
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: _loading
-                            ? onSurface.withValues(alpha: 0.4)
-                            : onSurface),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: _totalPages > 1 ? _openGotoPage : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              l10n.systemLogPage(_page, _totalPages),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: _loading
+                                      ? onSurface.withValues(alpha: 0.4)
+                                      : onSurface),
+                            ),
+                          ),
+                          if (_totalPages > 1) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.edit,
+                                size: 14,
+                                color: onSurface.withValues(alpha: 0.45)),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                   Text(
                     l10n.systemLogEntries(_totalCount),
