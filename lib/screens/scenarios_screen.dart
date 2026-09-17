@@ -87,12 +87,12 @@ class ScenariosScreen extends StatelessWidget {
                 onPressed: () =>
                     Navigator.of(context).restorablePushNamed('/automations'),
               ),
-              IconButton(
-                tooltip: l10n.scenariosEventHistory,
-                icon: const Icon(Icons.history),
-                onPressed: () =>
-                    Navigator.of(context).restorablePushNamed('/event-history'),
-              ),
+              // IconButton(
+              //   tooltip: l10n.scenariosEventHistory,
+              //   icon: const Icon(Icons.history),
+              //   onPressed: () =>
+              //       Navigator.of(context).restorablePushNamed('/event-history'),
+              // ),
             ],
           ),
           body: SafeArea(
