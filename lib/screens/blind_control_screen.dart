@@ -11,7 +11,7 @@ import '../services/module_status/module_status_service.dart';
 import '../services/module_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/system_log_dialog.dart';
+import '../widgets/system_log_screen.dart';
 import 'input_editor_screen.dart';
 
 enum _Motion { idle, up, down }
@@ -97,7 +97,7 @@ class _BlindControlScreenState extends State<BlindControlScreen> {
               IconButton(
                   icon: const Icon(Icons.receipt_long_outlined),
                   tooltip: l10n.systemLogTooltip,
-                  onPressed: () => showSystemLogDialog(context, module)),
+                  onPressed: () => showSystemLogScreen(context, module)),
               IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: _editModuleInfo)

@@ -1,4 +1,4 @@
-// lib/widgets/system_log_dialog.dart
+// lib/widgets/system_log_screen.dart
 //
 // Full-screen system log viewer for a device module: fetches the "system"
 // page's `system_logs` section through `get_page_configuration`,
@@ -12,25 +12,23 @@ import '../services/module_status/module_status_service.dart';
 import '../theme/app_theme.dart';
 import 'common_widgets.dart';
 
-/// Opens the full-screen system log dialog for [module].
-Future<void> showSystemLogDialog(BuildContext context, DeviceModule module) {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    builder: (_) => SystemLogDialog(module: module),
+/// Opens the full-screen system log page for [module].
+Future<void> showSystemLogScreen(BuildContext context, DeviceModule module) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => SystemLogScreen(module: module)),
   );
 }
 
-class SystemLogDialog extends StatefulWidget {
-  const SystemLogDialog({super.key, required this.module});
+class SystemLogScreen extends StatefulWidget {
+  const SystemLogScreen({super.key, required this.module});
 
   final DeviceModule module;
 
   @override
-  State<SystemLogDialog> createState() => _SystemLogDialogState();
+  State<SystemLogScreen> createState() => _SystemLogScreenState();
 }
 
-class _SystemLogDialogState extends State<SystemLogDialog> {
+class _SystemLogScreenState extends State<SystemLogScreen> {
   static const int _pageSize = 10;
 
   final ScrollController _scrollController = ScrollController();
@@ -63,9 +61,21 @@ class _SystemLogDialogState extends State<SystemLogDialog> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 200) {
+    if (position.pixels >= position.maxScrollExtent - 300) {
       _loadNextPage();
     }
+  }
+
+  /// After a page lands, keep loading until the viewport is filled (the first
+  /// page(s) may be too short to scroll) or no more pages remain.
+  void _fillViewport() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (position.maxScrollExtent <= 0 && _hasMore && !_loading) {
+        _loadNextPage();
+      }
+    });
   }
 
   Future<void> _loadNextPage() async {
@@ -93,6 +103,7 @@ class _SystemLogDialogState extends State<SystemLogDialog> {
         _entries.addAll(page.rows);
       }
     });
+    if (page != null && page.rows.isNotEmpty) _fillViewport();
   }
 
   void _retry() {
@@ -115,32 +126,12 @@ class _SystemLogDialogState extends State<SystemLogDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    return Dialog.fullscreen(
-      child: SafeArea(
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.systemLogTitle)),
+      body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(AppSpacing.outerPadding, 8, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.systemLogTitle,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: l10n.close,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
             if (_columns.isNotEmpty)
               _ColumnHeaderRow(columns: _columns, onSurface: onSurface),
             const Divider(height: 1),
@@ -181,7 +172,8 @@ class _SystemLogDialogState extends State<SystemLogDialog> {
       );
     }
 
-    final itemCount = _entries.length + (_hasMore || _loading ? 1 : 0);
+    final showFooter = _loading || _loadMoreFailed || _hasMore;
+    final itemCount = _entries.length + (showFooter ? 1 : 0);
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -201,22 +193,36 @@ class _SystemLogDialogState extends State<SystemLogDialog> {
     );
   }
 
-  Widget _buildFooter(AppLocalizations l10n) => SizedBox(
+  /// Footer shown only when there is more data: a spinner while a page is in
+  /// flight, a retry row after a failed page, or an empty spacer while idle
+  /// (the scroll listener keeps prefetching).
+  Widget _buildFooter(AppLocalizations l10n) {
+    if (_loading) {
+      return const SizedBox(
         height: 56,
         child: Center(
-          child: _loadMoreFailed
-              ? TextButton.icon(
-                  onPressed: _retry,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.systemLogLoadMoreFailed),
-                )
-              : const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
         ),
       );
+    }
+    if (_loadMoreFailed) {
+      return SizedBox(
+        height: 56,
+        child: Center(
+          child: TextButton.icon(
+            onPressed: _retry,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.systemLogLoadMoreFailed),
+          ),
+        ),
+      );
+    }
+    return const SizedBox(height: 24);
+  }
 }
 
 /// The fixed header row listing every column the device returned.
