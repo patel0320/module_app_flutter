@@ -363,7 +363,8 @@ def _release_virtual(state, channel):
             state, state.profile["input_count"] + channel, False)
 
 
-def build_page(state, page, log_page=1, log_page_size=10):
+def build_page(state, page, log_page=1, log_page_size=10,
+               log_from=None, log_to=None, log_tag=None):
     p = state.profile
     common = {
         "device": p["json_device"], "name": state.name,
@@ -383,7 +384,8 @@ def build_page(state, page, log_page=1, log_page_size=10):
     if page == "system":
         sections.append({"section": "actions", "fields": {"reboot": True,
                                                           "sync_time": True}})
-        sections.append(system_logs_section(state, log_page, log_page_size))
+        sections.append(system_logs_section(state, log_page, log_page_size,
+                                            log_from, log_to, log_tag))
     return {"page": page, "device": p["json_device"], "sections": sections}
 
 
@@ -400,20 +402,38 @@ SYSTEM_LOG_NOTES = [
 ]
 
 
-def system_logs_section(state, page, page_size):
-    total = 3661
-    total_pages = max(1, (total + page_size - 1) // page_size)
-    page = max(1, min(page, total_pages))
-    start = (page - 1) * page_size
+def _system_log_pool():
+    base = datetime.now().replace(second=0, microsecond=0)
     rows = []
-    for i in range(start, min(start + page_size, total)):
-        nr = i % len(SYSTEM_LOG_NOTES)
+    for i in range(3661):
         rows.append({
-            "note": SYSTEM_LOG_NOTES[nr],
-            "date_time": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "note": SYSTEM_LOG_NOTES[i % len(SYSTEM_LOG_NOTES)],
+            "date_time": (base - timedelta(minutes=i)).strftime(
+                "%Y/%m/%d %H:%M:%S"),
             "state": "ON" if i % 3 else "OFF",
             "tag": f"Out-{(i % 4) + 1}",
         })
+    return rows
+
+
+def system_logs_section(state, page, page_size, log_from=None, log_to=None,
+                        log_tag=None):
+    pool = _system_log_pool()
+    if log_from or log_to:
+        def _parse(v):
+            return datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+        frm = _parse(log_from) if log_from else datetime.min
+        to = _parse(log_to) if log_to else datetime.max
+        pool = [r for r in pool
+                if frm <= datetime.strptime(r["date_time"],
+                                            "%Y/%m/%d %H:%M:%S") <= to]
+    if log_tag:
+        pool = [r for r in pool if r["tag"] == log_tag]
+    total = len(pool)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * page_size
+    rows = pool[start: start + page_size]
     return {
         "key": "system_logs",
         "title": "System Logs",
@@ -482,7 +502,10 @@ def handle_json_action(state, action, params, req_id):
             raise RequestError(f"unknown page '{page}'")
         return build_page(state, page,
                           log_page=int(params.get("log_page", 1) or 1),
-                          log_page_size=int(params.get("log_page_size", 10) or 10))
+                          log_page_size=int(params.get("log_page_size", 10) or 10),
+                          log_from=params.get("log_from"),
+                          log_to=params.get("log_to"),
+                          log_tag=params.get("log_tag"))
 
     if action == "set_page_configuration":
         page = params.get("page", "")

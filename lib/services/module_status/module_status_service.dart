@@ -51,6 +51,15 @@ import 'soleux_http_service.dart';
 import 'soleux_json_fetcher.dart';
 import 'soleux_json_service.dart';
 
+/// Formats a [DateTime] for the device's system-log filters
+/// (`log_from`/`log_to`, `YYYY-MM-DD HH:MM:SS`).
+String _formatLogDateTime(DateTime time) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${time.year.toString().padLeft(4, '0')}-${two(time.month)}-'
+      '${two(time.day)} ${two(time.hour)}:${two(time.minute)}:'
+      '${two(time.second)}';
+}
+
 /// Resolves the app's chosen Control API command transport (TCP 5008 vs
 /// HTTP/HTTPS POST /api/v1/command) at call time, so a Settings change is
 /// picked up by the next refresh without restarting the service.
@@ -707,10 +716,16 @@ class ModuleStatusService {
   /// `get_page_configuration` "system" page - fetches one page of the device's
   /// system log (`system_logs` section: [SystemLogPage]). Returns null when the
   /// module has no live Control API unit or the command was rejected.
+  ///
+  /// [from]/[to] bound the row timestamps (inclusive) and [tag] the output tag;
+  /// all are optional and applied device-side before pagination.
   Future<SystemLogPage?> fetchSystemLogPage(
     String moduleId, {
     int page = 1,
     int pageSize = 10,
+    DateTime? from,
+    DateTime? to,
+    String? tag,
   }) async {
     final unit = jsonCommandServiceFor(moduleId);
     if (unit == null || !unit.isConnected) return null;
@@ -719,6 +734,9 @@ class ModuleStatusService {
         SoleuxJsonPages.system,
         logPage: page,
         logPageSize: pageSize,
+        logFrom: from == null ? null : _formatLogDateTime(from),
+        logTo: to == null ? null : _formatLogDateTime(to),
+        logTag: tag,
       );
       if (!response.ok) {
         debugPrint('ModuleStatusService: get_page_configuration (system log) '

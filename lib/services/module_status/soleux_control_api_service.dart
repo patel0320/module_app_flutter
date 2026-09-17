@@ -82,17 +82,24 @@ abstract class SoleuxControlApiService {
 
   /// `get_page_configuration` - reads a device-driven configuration page.
   ///
-  /// [logPage]/[logPageSize] are optional pagination for the `system` page's
-  /// `system_logs` section.
+  /// [logPage]/[logPageSize] are the `system` page's `system_logs` pagination;
+  /// [logFrom]/[logTo] (device format `YYYY-MM-DD HH:MM:SS`) and [logTag]
+  /// optionally filter the returned log rows.
   Future<SoleuxJsonResponse> getPageConfiguration(
     String page, {
     int? logPage,
     int? logPageSize,
+    String? logFrom,
+    String? logTo,
+    String? logTag,
   }) =>
       request(SoleuxJsonActions.getPageConfiguration, {
         'page': page,
         if (logPage != null) 'log_page': logPage,
         if (logPageSize != null) 'log_page_size': logPageSize,
+        if (logFrom != null) 'log_from': logFrom,
+        if (logTo != null) 'log_to': logTo,
+        if (logTag != null) 'log_tag': logTag,
       });
 
   /// `set_page_configuration` - saves one page section.
